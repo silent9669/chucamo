@@ -1,0 +1,560 @@
+import React, { useState, useEffect } from 'react';
+import { FiUser, FiEdit, FiCamera, FiEye, FiEyeOff, FiAward, FiTrendingUp, FiBookOpen, FiTarget } from 'react-icons/fi';
+import { authAPI, resultsAPI, usersAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+
+const Profile = () => {
+  const { user, updateUser } = useAuth();
+  const [profileData, setProfileData] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    email: '',
+    school: '',
+    profilePicture: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [testStats, setTestStats] = useState({
+    totalTests: 0,
+    averageAccuracy: 0,
+    averageScore: 0,
+    bestScore: 0
+  });
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        username: user.username || '',
+        email: user.email || '',
+        school: user.school || '',
+        profilePicture: user.profilePicture || ''
+      });
+    }
+    fetchUserStats();
+    fetchLeaderboard();
+  }, [user]);
+
+  const fetchUserStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await resultsAPI.getAnalytics();
+      if (response.data) {
+        const stats = response.data.analytics;
+        setTestStats({
+          totalTests: stats.totalTests || 0,
+          averageAccuracy: stats.averageScore ? Math.round((stats.averageScore / 1600) * 100) : 0,
+          averageScore: stats.averageScore || 0,
+          bestScore: stats.bestScore || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      setTestStats({
+        totalTests: 0,
+        averageAccuracy: 0,
+        averageScore: 0,
+        bestScore: 0
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      setLeaderboardLoading(true);
+      const response = await fetch('/api/users/leaderboard?limit=10', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data.users || []);
+      } else {
+        setLeaderboard([]);
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      setLeaderboard([]);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const response = await authAPI.updateProfile(profileData);
+      if (response.data) {
+        updateUser(response.data);
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setIsEditing(false);
+      }
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Failed to update profile' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage({ type: 'error', text: 'New passwords do not match' });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await authAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      setMessage({ type: 'success', text: 'Password changed successfully!' });
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setIsChangingPassword(false);
+    } catch (error) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.message || 'Failed to change password' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileData(prev => ({
+          ...prev,
+          profilePicture: e.target.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadProfilePicture = async () => {
+    if (!selectedFile) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('profilePicture', selectedFile);
+      
+      const response = await fetch('/api/upload/profile-picture', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProfileData(prev => ({
+          ...prev,
+          profilePicture: data.fileUrl
+        }));
+        // Update the user context
+        updateUser({
+          ...user,
+          profilePicture: data.fileUrl
+        });
+        setMessage({ type: 'success', text: 'Profile picture updated!' });
+        setSelectedFile(null);
+      } else {
+        const errorData = await response.json();
+        setMessage({ type: 'error', text: errorData.message || 'Failed to upload profile picture' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to upload profile picture' });
+    }
+  };
+
+  const getInitials = (firstName, lastName) => {
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  };
+
+  const getAccuracyColor = (accuracy) => {
+    if (accuracy >= 90) return 'text-green-600';
+    if (accuracy >= 80) return 'text-blue-600';
+    if (accuracy >= 70) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Profile</h1>
+          <p className="text-gray-600">Manage your account and view your progress</p>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Left Column - Profile Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Profile Card */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Profile Information</h2>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <FiEdit className="w-4 h-4" />
+                  {isEditing ? 'Cancel' : 'Edit'}
+                </button>
+              </div>
+
+              <form onSubmit={handleProfileUpdate}>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                    <input
+                      type="text"
+                      value={profileData.firstName}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      value={profileData.lastName}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input
+                      type="text"
+                      value={profileData.username}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={profileData.email}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">School Name</label>
+                    <input
+                      type="text"
+                      value={profileData.school}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, school: e.target.value }))}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                </div>
+
+                {isEditing && (
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      {loading ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
+
+            {/* Password Change Card */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>
+                <button
+                  onClick={() => setIsChangingPassword(!isChangingPassword)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                >
+                  <FiEdit className="w-4 h-4" />
+                  {isChangingPassword ? 'Cancel' : 'Change Password'}
+                </button>
+              </div>
+
+              {isChangingPassword && (
+                <form onSubmit={handlePasswordChange}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.current ? 'text' : 'password'}
+                          value={passwordData.currentPassword}
+                          onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors pr-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(prev => ({ ...prev, current: !prev.current }))}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword.current ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.new ? 'text' : 'password'}
+                          value={passwordData.newPassword}
+                          onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors pr-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(prev => ({ ...prev, new: !prev.new }))}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword.new ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword.confirm ? 'text' : 'password'}
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors pr-12"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(prev => ({ ...prev, confirm: !prev.confirm }))}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword.confirm ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? 'Changing...' : 'Change Password'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Test Statistics */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Test Statistics</h2>
+              {statsLoading ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="text-center p-4 bg-gray-100 rounded-lg animate-pulse">
+                      <div className="w-8 h-8 bg-gray-300 rounded mx-auto mb-2"></div>
+                      <div className="h-8 bg-gray-300 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-300 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <FiBookOpen className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-blue-800">{testStats.totalTests}</p>
+                    <p className="text-sm text-blue-600">Tests Taken</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <FiTrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                    <p className={`text-2xl font-bold ${getAccuracyColor(testStats.averageAccuracy)}`}>
+                      {testStats.averageAccuracy.toFixed(1)}%
+                    </p>
+                    <p className="text-sm text-green-600">Average Accuracy</p>
+                  </div>
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <FiTarget className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-purple-800">{testStats.averageScore}</p>
+                    <p className="text-sm text-purple-600">Average Score</p>
+                  </div>
+                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                    <FiAward className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-yellow-800">{testStats.bestScore}</p>
+                    <p className="text-sm text-yellow-600">Best Score</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Avatar & Leaderboard */}
+          <div className="space-y-6">
+            {/* Avatar Card */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Profile Picture</h2>
+              <div className="text-center">
+                <div className="relative inline-block mb-4">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                    {profileData.profilePicture ? (
+                      <img
+                        src={profileData.profilePicture}
+                        alt="Profile"
+                        className="w-32 h-32 rounded-full object-cover"
+                      />
+                    ) : (
+                      getInitials(profileData.firstName, profileData.lastName)
+                    )}
+                  </div>
+                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
+                    <FiCamera className="w-4 h-4" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {selectedFile && (
+                  <button
+                    onClick={uploadProfilePicture}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Upload Picture
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Leaderboard */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Leaderboard</h2>
+              {leaderboardLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg animate-pulse">
+                      <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+                      <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-300 rounded w-2/3"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {leaderboard.map((user, index) => (
+                    <div key={user._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-shrink-0">
+                        {index < 3 ? (
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                            index === 0 ? 'bg-yellow-500' : 
+                            index === 1 ? 'bg-gray-400' : 
+                            'bg-orange-500'
+                          }`}>
+                            {index + 1}
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-sm font-bold">
+                            {index + 1}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                          {user.profilePicture ? (
+                            <img
+                              src={user.profilePicture}
+                              alt={`${user.firstName} ${user.lastName}`}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            getInitials(user.firstName, user.lastName)
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {`${user.firstName} ${user.lastName}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {user.testCount || 0} tests taken • Avg: {user.averageScore || 0}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {leaderboard.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No test data available yet</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Message Display */}
+        {message.text && (
+          <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg ${
+            message.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}>
+            {message.text}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Profile; 
