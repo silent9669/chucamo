@@ -1860,6 +1860,7 @@ const RealTestManagement = () => {
         setCurrentSection(sectionFromTest);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTest.sections, editingSection]);
 
   // Debug: Monitor currentSection changes
@@ -1879,6 +1880,7 @@ const RealTestManagement = () => {
     if (editingSection && currentTest.sections) {
       syncSectionState(editingSection.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTest.sections, editingSection]);
 
     return (
