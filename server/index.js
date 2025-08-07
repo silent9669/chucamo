@@ -143,6 +143,16 @@ app.use((err, req, res, next) => {
 // Database connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bluebook-sat-simulator';
 
+// Debug: Log the MongoDB URI (without sensitive info)
+console.log('MongoDB URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
+console.log('MongoDB URI starts with:', MONGODB_URI ? MONGODB_URI.substring(0, 20) + '...' : 'undefined');
+
+// Validate MongoDB URI format
+const isValidMongoURI = (uri) => {
+  if (!uri) return false;
+  return uri.startsWith('mongodb://') || uri.startsWith('mongodb+srv://');
+};
+
 // Start server even if database connection fails (for healthcheck)
 const startServer = () => {
   app.listen(PORT, () => {
@@ -152,19 +162,26 @@ const startServer = () => {
 };
 
 // Connect to MongoDB
-mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 10000,
-  socketTimeoutMS: 45000,
-  connectTimeoutMS: 10000,
-})
-  .then(() => {
-    console.log('Connected to MongoDB');
-    startServer();
+if (isValidMongoURI(MONGODB_URI)) {
+  console.log('Attempting to connect to MongoDB...');
+  mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
   })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-    console.log('Starting server without database connection...');
-    startServer();
-  });
+    .then(() => {
+      console.log('Connected to MongoDB successfully');
+      startServer();
+    })
+    .catch((err) => {
+      console.error('MongoDB connection error:', err);
+      console.log('Starting server without database connection...');
+      startServer();
+    });
+} else {
+  console.error('Invalid MongoDB URI format. Please check your MONGODB_URI environment variable.');
+  console.log('Starting server without database connection...');
+  startServer();
+}
 
 module.exports = app; 
