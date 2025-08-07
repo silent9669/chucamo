@@ -108,14 +108,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root endpoint for Railway healthcheck
-app.get('/', (req, res) => {
-  res.status(200).json({
+// Health check endpoints (before React app)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
     status: 'OK', 
-    message: 'Bluebook SAT Simulator is running',
+    message: 'Bluebook SAT Simulator API is running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    uptime: process.uptime()
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Bluebook SAT Simulator API is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
