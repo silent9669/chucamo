@@ -30,16 +30,28 @@ const Login = () => {
       console.log('Login result:', result);
       if (result.success) {
         toast.success('Login successful!');
-        navigate('/dashboard');
+        // Add a small delay before navigation
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1000);
       } else {
         toast.error(result.error || 'Login failed');
+        // Add a delay to show the error
+        setTimeout(() => {
+          setLoading(false);
+        }, 2000);
+        return;
       }
     } catch (error) {
       console.error('Login error:', error);
       toast.error(error.message || 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
+      // Add a delay to show the error
+      setTimeout(() => {
+        setLoading(false);
+      }, 2000);
+      return;
     }
+    setLoading(false);
   };
 
   const handleGoogleSignIn = async (googleData) => {
