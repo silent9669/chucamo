@@ -1,4 +1,4 @@
-# Bluebook SAT Simulator
+# xyz babi
 
 A comprehensive SAT preparation platform built with modern web technologies, featuring practice tests, detailed analytics, and personalized learning paths.
 
