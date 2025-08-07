@@ -30,12 +30,14 @@ app.use(helmet({
         "'unsafe-eval'",
         "https://apis.google.com",
         "https://www.gstatic.com",
-        "https://accounts.google.com"
+        "https://accounts.google.com",
+        "https://www.desmos.com"
       ],
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
-        "https://fonts.googleapis.com"
+        "https://fonts.googleapis.com",
+        "https://accounts.google.com"
       ],
       fontSrc: [
         "'self'",
@@ -50,11 +52,13 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "https://apis.google.com",
-        "https://accounts.google.com"
+        "https://accounts.google.com",
+        "https://www.desmos.com"
       ],
       frameSrc: [
         "'self'",
-        "https://accounts.google.com"
+        "https://accounts.google.com",
+        "https://www.desmos.com"
       ]
     }
   }

@@ -19,12 +19,14 @@ const createAdminUser = async () => {
     const hashedPassword = await bcrypt.hash('admin123', 12);
     
     const adminUser = new User({
-      name: 'Admin User',
+      firstName: 'Admin',
+      lastName: 'User',
+      username: 'admin',
       email: 'admin@example.com',
       password: hashedPassword,
       role: 'admin',
-      accountType: 'student', // or 'free' depending on your preference
-      isEmailVerified: true
+      accountType: 'student',
+      emailVerified: true
     });
 
     await adminUser.save();
