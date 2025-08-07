@@ -110,13 +110,24 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint for Railway healthcheck
 app.get('/', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    message: 'Bluebook SAT Simulator is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+  try {
+    res.status(200).json({ 
+      status: 'OK', 
+      message: 'Bluebook SAT Simulator is running',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      port: PORT,
+      mongodb: 'connected'
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ 
+      status: 'ERROR', 
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
 });
 
 // Serve React app in production
@@ -176,30 +187,71 @@ const isValidMongoURI = (uri) => {
 
 // Start server even if database connection fails (for healthcheck)
 const startServer = () => {
-  const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Health check available at: http://localhost:${PORT}/`);
-  });
-
-  // Graceful shutdown handling
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully...');
-    server.close(() => {
-      console.log('Server closed');
-      process.exit(0);
+  try {
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`✅ Health check available at: http://localhost:${PORT}/`);
+      console.log(`✅ Server ready to accept connections`);
     });
-  });
 
-  process.on('SIGINT', () => {
-    console.log('SIGINT received, shutting down gracefully...');
-    server.close(() => {
-      console.log('Server closed');
-      process.exit(0);
+    // Handle server errors
+    server.on('error', (error) => {
+      console.error('Server error:', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
+        process.exit(1);
+      } else {
+        console.error('Unknown server error:', error);
+        process.exit(1);
+      }
     });
-  });
 
-  return server;
+    // Graceful shutdown handling
+    process.on('SIGTERM', () => {
+      console.log('🛑 SIGTERM received, shutting down gracefully...');
+      server.close(() => {
+        console.log('✅ Server closed gracefully');
+        process.exit(0);
+      });
+      
+      // Force exit after 10 seconds if graceful shutdown fails
+      setTimeout(() => {
+        console.log('⚠️ Forcing exit after timeout');
+        process.exit(1);
+      }, 10000);
+    });
+
+    process.on('SIGINT', () => {
+      console.log('🛑 SIGINT received, shutting down gracefully...');
+      server.close(() => {
+        console.log('✅ Server closed gracefully');
+        process.exit(0);
+      });
+    });
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught Exception:', error);
+      server.close(() => {
+        console.log('Server closed due to uncaught exception');
+        process.exit(1);
+      });
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      server.close(() => {
+        console.log('Server closed due to unhandled rejection');
+        process.exit(1);
+      });
+    });
+
+    return server;
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 };
 
 // Connect to MongoDB
@@ -211,17 +263,20 @@ if (isValidMongoURI(MONGODB_URI)) {
     connectTimeoutMS: 10000,
   })
     .then(() => {
-      console.log('Connected to MongoDB successfully');
-      startServer();
+      console.log('✅ Connected to MongoDB successfully');
+      // Add a small delay to ensure everything is ready
+      setTimeout(() => {
+        startServer();
+      }, 1000);
     })
     .catch((err) => {
-      console.error('MongoDB connection error:', err);
-      console.log('Starting server without database connection...');
+      console.error('❌ MongoDB connection error:', err);
+      console.log('⚠️ Starting server without database connection...');
       startServer();
     });
 } else {
-  console.error('Invalid MongoDB URI format. Please check your MONGODB_URI environment variable.');
-  console.log('Starting server without database connection...');
+  console.error('❌ Invalid MongoDB URI format. Please check your MONGODB_URI environment variable.');
+  console.log('⚠️ Starting server without database connection...');
   startServer();
 }
 
