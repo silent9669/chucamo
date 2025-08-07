@@ -89,11 +89,28 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Health check endpoint
+// Health check endpoints
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Bluebook SAT Simulator API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'Bluebook SAT Simulator API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint for Railway healthcheck
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Bluebook SAT Simulator is running',
     timestamp: new Date().toISOString()
   });
 });
@@ -124,22 +141,30 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-// TODO: Replace with your actual MongoDB Atlas connection string
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bluebook-sat-simulator';
+
+// Start server even if database connection fails (for healthcheck)
+const startServer = () => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+};
+
+// Connect to MongoDB
 mongoose.connect(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000,
 })
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    });
+    startServer();
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    console.log('Starting server without database connection...');
+    startServer();
   });
 
 module.exports = app; 
