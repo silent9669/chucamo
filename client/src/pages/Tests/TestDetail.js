@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiFileText, FiPlay, FiClock, FiList } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testsAPI } from '../../services/api';
@@ -10,12 +10,7 @@ const TestDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    loadTestData();
-  }, [testId, loadTestData]);
-
-  const loadTestData = async () => {
+  const loadTestData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -29,7 +24,12 @@ const TestDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadTestData();
+  }, [loadTestData]);
 
   const handleStartTest = () => {
     navigate(`/tests/${testId}/take`);

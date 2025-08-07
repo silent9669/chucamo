@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
@@ -19,12 +19,7 @@ const TestDetails = () => {
   
 
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    loadTestDetails();
-  }, [testId, loadTestDetails]);
-
-  const loadTestDetails = async () => {
+  const loadTestDetails = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -146,7 +141,12 @@ const TestDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadTestDetails();
+  }, [loadTestDetails]);
 
   const getCurrentSectionData = () => {
     if (!test || !test.sections) return null;
@@ -736,7 +736,7 @@ const TestDetails = () => {
                          <div key={index} className="flex justify-center">
                            <img 
                              src={image.url} 
-                             alt={`Question image ${index + 1}`}
+                             alt={`Question ${index + 1}`}
                              className="max-w-full h-auto rounded-lg shadow-md"
                              style={{ maxHeight: '400px' }}
                            />

@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo } from 'react-icons/fi';
 import { testsAPI, usersAPI } from '../../services/api';
@@ -91,12 +91,7 @@ const UserManagement = () => {
   });
   const [editingUser, setEditingUser] = useState(null);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    fetchUsers();
-  }, [pagination.current, searchTerm, roleFilter, accountTypeFilter, pagination.limit, fetchUsers]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -120,7 +115,13 @@ const UserManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.current, searchTerm, roleFilter, accountTypeFilter, pagination.limit]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleUpdateUser = async (userId, updates) => {
     try {
@@ -1526,6 +1527,7 @@ const RealTestManagement = () => {
     const [filteredTests, setFilteredTests] = useState([]);
 
     // Filter tests based on search term
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       if (searchTerm.trim() === '') {
         setFilteredTests(tests);
@@ -1848,6 +1850,7 @@ const RealTestManagement = () => {
 
   const RealSectionBuilder = () => {
       // Ensure currentSection is in sync with currentTest when this component renders
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (editingSection && currentTest.sections) {
       const sectionFromTest = currentTest.sections.find(s => s.id === editingSection.id);
@@ -1858,6 +1861,7 @@ const RealTestManagement = () => {
   }, [currentTest.sections, editingSection]);
 
   // Debug: Monitor currentSection changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     console.log('CurrentSection updated:', currentSection);
     console.log('Questions count:', currentSection.questions?.length || 0);
@@ -1868,6 +1872,7 @@ const RealTestManagement = () => {
   }, [currentSection]);
 
   // Auto-sync section state when component renders
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (editingSection && currentTest.sections) {
       syncSectionState(editingSection.id);
@@ -3444,6 +3449,7 @@ const MockTestManagement = () => {
 
   const MockSectionBuilder = () => {
     // Ensure currentSection is in sync with currentTest when this component renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       if (editingSection && currentTest.sections) {
         const sectionFromTest = currentTest.sections.find(s => s.id === editingSection.id);
