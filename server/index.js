@@ -110,43 +110,22 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint for Railway healthcheck
 app.get('/', (req, res) => {
-  console.log('Health check request received at:', new Date().toISOString());
-  try {
-    const response = {
-      status: 'OK', 
-      message: 'Bluebook SAT Simulator is running',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV || 'development',
-      port: PORT,
-      mongodb: 'connected',
-      request: {
-        method: req.method,
-        url: req.url,
-        headers: req.headers.host
-      }
-    };
-    console.log('Health check response:', response);
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ 
-      status: 'ERROR', 
-      message: 'Health check failed',
-      error: error.message
-    });
-  }
+  res.status(200).json({
+    status: 'OK', 
+    message: 'Bluebook SAT Simulator is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Additional simple health check endpoint
+// Super simple health check endpoint for Railway
 app.get('/ping', (req, res) => {
-  console.log('Ping request received at:', new Date().toISOString());
   res.status(200).send('pong');
 });
 
 // Test endpoint for Railway
 app.get('/test', (req, res) => {
-  console.log('Test endpoint hit');
   res.status(200).json({
     message: 'Server is working!',
     timestamp: new Date().toISOString(),
@@ -278,7 +257,11 @@ const startServer = () => {
   }
 };
 
-// Connect to MongoDB
+// Start server immediately for Railway health check
+console.log('🚀 Starting server immediately for Railway...');
+startServer();
+
+// Connect to MongoDB in background
 if (isValidMongoURI(MONGODB_URI)) {
   console.log('Attempting to connect to MongoDB...');
   mongoose.connect(MONGODB_URI, {
@@ -288,21 +271,14 @@ if (isValidMongoURI(MONGODB_URI)) {
   })
     .then(() => {
       console.log('✅ Connected to MongoDB successfully');
-      // Add a longer delay to ensure everything is ready
-      console.log('⏳ Waiting 3 seconds before starting server...');
-      setTimeout(() => {
-        startServer();
-      }, 3000);
     })
     .catch((err) => {
       console.error('❌ MongoDB connection error:', err);
-      console.log('⚠️ Starting server without database connection...');
-      startServer();
+      console.log('⚠️ Server running without database connection...');
     });
 } else {
   console.error('❌ Invalid MongoDB URI format. Please check your MONGODB_URI environment variable.');
-  console.log('⚠️ Starting server without database connection...');
-  startServer();
+  console.log('⚠️ Server running without database connection...');
 }
 
 module.exports = app; 
