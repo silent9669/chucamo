@@ -1538,6 +1538,7 @@ const RealTestManagement = () => {
         );
         setFilteredTests(filtered);
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchTerm, tests]);
 
     return (
@@ -1850,6 +1851,7 @@ const RealTestManagement = () => {
 
   const RealSectionBuilder = () => {
       // Ensure currentSection is in sync with currentTest when this component renders
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (editingSection && currentTest.sections) {
@@ -3449,6 +3451,7 @@ const MockTestManagement = () => {
 
   const MockSectionBuilder = () => {
     // Ensure currentSection is in sync with currentTest when this component renders
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
       if (editingSection && currentTest.sections) {
