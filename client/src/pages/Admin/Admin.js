@@ -1872,6 +1872,7 @@ const RealTestManagement = () => {
       console.log('Last question data:', currentSection.questions[currentSection.questions.length - 1]);
       console.log('Last question has KaTeX:', currentSection.questions[currentSection.questions.length - 1]?.question?.includes('$'));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSection]);
 
   // Auto-sync section state when component renders
@@ -3462,6 +3463,7 @@ const MockTestManagement = () => {
           setCurrentSection(sectionFromTest);
         }
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentTest.sections, editingSection]);
 
     return (
