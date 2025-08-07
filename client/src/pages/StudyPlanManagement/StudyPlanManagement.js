@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiBookOpen, FiUpload, FiX, FiLink, FiPlay, FiSave, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiUpload, FiX, FiLink, FiPlay, FiSave } from 'react-icons/fi';
 
 // Direct HTML elements to completely eliminate typing issues
 const DirectInput = ({ value, onChange, placeholder }) => (

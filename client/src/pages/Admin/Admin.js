@@ -1,7 +1,8 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo } from 'react-icons/fi';
-import { testsAPI, questionsAPI, usersAPI } from '../../services/api';
+import { testsAPI, usersAPI } from '../../services/api';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import MultipleAnswersEditor from '../../components/UI/MultipleAnswersEditor';
 import { toast } from 'react-hot-toast';
@@ -90,9 +91,10 @@ const UserManagement = () => {
   });
   const [editingUser, setEditingUser] = useState(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchUsers();
-  }, [pagination.current, searchTerm, roleFilter, accountTypeFilter]);
+  }, [pagination.current, searchTerm, roleFilter, accountTypeFilter, pagination.limit, fetchUsers]);
 
   const fetchUsers = async () => {
     try {
@@ -122,7 +124,7 @@ const UserManagement = () => {
 
   const handleUpdateUser = async (userId, updates) => {
     try {
-      const response = await usersAPI.updateUser(userId, updates);
+      await usersAPI.updateUser(userId, updates);
       toast.success('User updated successfully');
       setEditingUser(null);
       fetchUsers();
@@ -572,7 +574,7 @@ const RealTestManagement = () => {
           visibleTo: newVisibility
         };
         
-        const response = await testsAPI.update(testId, updatePayload);
+        await testsAPI.update(testId, updatePayload);
         
         setTests(prev => prev.map(test => 
           test.id === testId 

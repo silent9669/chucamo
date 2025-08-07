@@ -10,8 +10,6 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
-  FiUsers,
-  FiPlus,
   FiTarget,
   FiPieChart
 } from 'react-icons/fi';

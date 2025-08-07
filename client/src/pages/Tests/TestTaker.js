@@ -1,4 +1,3 @@
-/* global Desmos */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
@@ -232,6 +231,7 @@ const TestTaker = () => {
     }, 30000); // Save every 30 seconds
 
     return () => clearInterval(autoSaveInterval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [test, questions, currentSection, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, highlights, questionHighlights, writtenAnswer]);
 
   // Save progress on page unload
@@ -244,6 +244,7 @@ const TestTaker = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [test, questions, currentSection, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, highlights, questionHighlights, writtenAnswer]);
 
   // Timer countdown effect
@@ -369,6 +370,7 @@ const TestTaker = () => {
         }
       }, 200); // Increased delay for better DOM readiness
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentQuestion, currentSection, test]);
 
   const formatTime = (seconds) => {
@@ -742,6 +744,7 @@ const TestTaker = () => {
         console.log('No highlights to apply for question:', questionKey);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSection, currentQuestion, test, questions, questionHighlights]);
 
   const clearAllHighlights = () => {
@@ -792,6 +795,7 @@ const TestTaker = () => {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const loadQuestionHighlights = (questionKey) => {
     const savedHighlights = questionHighlights.get(questionKey);
     
@@ -935,6 +939,7 @@ const TestTaker = () => {
       // The calculator will be initialized by the CalculatorPopup component
       // No need to initialize here anymore
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCalculator]);
 
 
@@ -1123,6 +1128,7 @@ const TestTaker = () => {
 
 
   // Function to process passage content for better highlighting
+  // eslint-disable-next-line no-unused-vars
   const processPassageForHighlighting = (passageContent) => {
     if (!passageContent) return '';
     

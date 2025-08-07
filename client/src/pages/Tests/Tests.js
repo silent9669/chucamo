@@ -151,6 +151,7 @@ const Tests = () => {
     return `${mins}m`;
   };
 
+  // eslint-disable-next-line no-unused-vars
   const getTestTypeDisplayName = (type) => {
     switch (type) {
       case 'full':

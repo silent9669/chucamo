@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiUser, FiEdit, FiCamera, FiEye, FiEyeOff, FiAward, FiTrendingUp, FiBookOpen, FiTarget } from 'react-icons/fi';
-import { authAPI, resultsAPI, usersAPI } from '../../services/api';
+import { FiEdit, FiCamera, FiEye, FiEyeOff, FiAward, FiTrendingUp, FiBookOpen, FiTarget } from 'react-icons/fi';
+import { authAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Profile = () => {

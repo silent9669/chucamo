@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiInfo, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiInfo, FiCheckCircle } from 'react-icons/fi';
 import KaTeXDisplay from './KaTeXDisplay';
 
 const WrittenAnswerInput = ({ 

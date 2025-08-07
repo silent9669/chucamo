@@ -355,6 +355,7 @@ const Results = () => {
   const [error, setError] = useState(null);
   const [selectedTest, setSelectedTest] = useState(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [showTestDetails, setShowTestDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 

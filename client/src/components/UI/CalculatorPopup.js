@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiX, FiMinimize, FiMaximize, FiMove, FiMaximize2, FiRefreshCw } from 'react-icons/fi';
+import { FiX, FiMinimize, FiMove, FiMaximize2, FiRefreshCw } from 'react-icons/fi';
 
 /* global Desmos */
 
@@ -100,7 +100,7 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
         console.error('Error initializing Desmos calculator:', error);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, calculatorRef]);
 
 
 
@@ -116,7 +116,7 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
         }
       }
     };
-  }, []);
+  }, [calculatorInstance]);
 
   const handleHeaderMouseDown = (e) => {
     // Only allow dragging from the header
