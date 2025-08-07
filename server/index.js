@@ -60,12 +60,14 @@ app.use(helmet({
         "'self'",
         "https://apis.google.com",
         "https://accounts.google.com",
-        "https://www.desmos.com"
+        "https://www.desmos.com",
+        "https://*.railway.app"
       ],
       frameSrc: [
         "'self'",
         "https://accounts.google.com",
-        "https://www.desmos.com"
+        "https://www.desmos.com",
+        "https://*.railway.app"
       ]
     }
   }
