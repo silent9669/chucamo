@@ -110,16 +110,24 @@ app.get('/api/health', (req, res) => {
 
 // Root endpoint for Railway healthcheck
 app.get('/', (req, res) => {
+  console.log('Health check request received at:', new Date().toISOString());
   try {
-    res.status(200).json({ 
+    const response = {
       status: 'OK', 
       message: 'Bluebook SAT Simulator is running',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
       port: PORT,
-      mongodb: 'connected'
-    });
+      mongodb: 'connected',
+      request: {
+        method: req.method,
+        url: req.url,
+        headers: req.headers.host
+      }
+    };
+    console.log('Health check response:', response);
+    res.status(200).json(response);
   } catch (error) {
     console.error('Health check error:', error);
     res.status(500).json({ 
@@ -128,6 +136,22 @@ app.get('/', (req, res) => {
       error: error.message
     });
   }
+});
+
+// Additional simple health check endpoint
+app.get('/ping', (req, res) => {
+  console.log('Ping request received at:', new Date().toISOString());
+  res.status(200).send('pong');
+});
+
+// Test endpoint for Railway
+app.get('/test', (req, res) => {
+  console.log('Test endpoint hit');
+  res.status(200).json({
+    message: 'Server is working!',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
 });
 
 // Serve React app in production
@@ -264,10 +288,11 @@ if (isValidMongoURI(MONGODB_URI)) {
   })
     .then(() => {
       console.log('✅ Connected to MongoDB successfully');
-      // Add a small delay to ensure everything is ready
+      // Add a longer delay to ensure everything is ready
+      console.log('⏳ Waiting 3 seconds before starting server...');
       setTimeout(() => {
         startServer();
-      }, 1000);
+      }, 3000);
     })
     .catch((err) => {
       console.error('❌ MongoDB connection error:', err);
