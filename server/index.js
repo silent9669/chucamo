@@ -141,10 +141,27 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bluebook-sat-simulator';
+let MONGODB_URI = process.env.MONGODB_URI;
+
+// Debug: Log environment variables
+console.log('Environment check:');
+console.log('- NODE_ENV:', process.env.NODE_ENV);
+console.log('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
+console.log('- MONGODB_URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
+
+// If no MONGODB_URI is set, use a fallback for development
+if (!MONGODB_URI) {
+  console.log('No MONGODB_URI found in environment variables');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('MONGODB_URI is required in production!');
+    process.exit(1);
+  } else {
+    MONGODB_URI = 'mongodb://localhost:27017/bluebook-sat-simulator';
+    console.log('Using local MongoDB for development');
+  }
+}
 
 // Debug: Log the MongoDB URI (without sensitive info)
-console.log('MongoDB URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
 console.log('MongoDB URI starts with:', MONGODB_URI ? MONGODB_URI.substring(0, 20) + '...' : 'undefined');
 
 // Validate MongoDB URI format
