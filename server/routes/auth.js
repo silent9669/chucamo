@@ -230,6 +230,7 @@ router.post('/login', [
     const { username, password } = req.body;
 
     // Check if user exists by username or email
+    console.log('🔍 Looking for user with:', username);
     const user = await User.findOne({
       $or: [
         { username: username },
@@ -238,8 +239,11 @@ router.post('/login', [
     }).select('+password');
     
     if (!user) {
+      console.log('❌ User not found:', username);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+    console.log('✅ User found:', user.username, 'Role:', user.role);
 
     // Check if user is active
     if (!user.isActive) {
@@ -249,8 +253,11 @@ router.post('/login', [
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('❌ Password mismatch for user:', user.username);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+    console.log('✅ Password verified for user:', user.username);
 
     // Update last login
     user.lastLogin = new Date();

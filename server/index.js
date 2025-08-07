@@ -23,7 +23,7 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'self'", "data:"],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
@@ -41,9 +41,16 @@ app.use(helmet({
       ],
       fontSrc: [
         "'self'",
-        "https://fonts.gstatic.com"
+        "https://fonts.gstatic.com",
+        "data:"
       ],
       imgSrc: [
+        "'self'",
+        "data:",
+        "https:",
+        "blob:"
+      ],
+      mediaSrc: [
         "'self'",
         "data:",
         "https:",
