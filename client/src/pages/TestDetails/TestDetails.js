@@ -37,38 +37,13 @@ const TestDetails = () => {
   const getQuestionResult = useCallback((questionId) => {
     if (!testResults || !testResults.answers) return null;
     
-    console.log('🔍 Looking for question result with ID:', questionId);
-    console.log('📋 Available answer keys:', Object.keys(testResults.answers));
-    
     // Try multiple formats for question ID
     let result = testResults.answers[questionId];
     if (result) {
-      console.log('✅ Found result with exact ID match');
       return result;
-    }
-    
-    // If not found, try with the current question's actual ID
-    const currentQuestionData = getCurrentQuestionData();
-    if (currentQuestionData && currentQuestionData.id) {
-      const questionDbId = currentQuestionData.id.toString();
-      result = testResults.answers[questionDbId];
-      if (result) {
-        console.log('✅ Found result with question DB ID:', questionDbId);
-        return result;
-      }
     }
     
     // If still not found, try with section-question format
-    const sectionIndex = currentSection;
-    const questionIndex = currentQuestion - 1;
-    const formattedId = `${sectionIndex}-${questionIndex + 1}`;
-    result = testResults.answers[formattedId];
-    if (result) {
-      console.log('✅ Found result with formatted ID:', formattedId);
-      return result;
-    }
-    
-    // Try to find by parsing the questionId and looking up the actual question
     if (questionId.includes('-')) {
       const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
       const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
@@ -76,42 +51,23 @@ const TestDetails = () => {
         const questionDbId = question.id.toString();
         result = testResults.answers[questionDbId];
         if (result) {
-          console.log('✅ Found result by looking up question DB ID:', questionDbId);
           return result;
         }
       }
     }
     
-    console.log('❌ No result found for question ID:', questionId);
     return null;
-  }, [testResults, currentSection, currentQuestion, getCurrentQuestionData, test]);
+  }, [testResults, test]);
 
   const isAnswerCorrect = useCallback((questionId, selectedAnswer) => {
     // Parse the questionId to get section and question indices
     const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
     
-    console.log('🔍 Checking answer for questionId:', questionId);
-    console.log('📊 Parsed indices - sectionIndex:', sectionIndex, 'questionIndex:', questionIndex);
-    console.log('📋 Test sections count:', test?.sections?.length || 0);
-    
     const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
     
     if (!question) {
-      console.warn('❌ Question not found for ID:', questionId);
-      console.log('🔍 Available sections:', test?.sections?.map((section, idx) => ({
-        sectionIndex: idx,
-        sectionName: section.name,
-        questionsCount: section.questions?.length || 0
-      })));
-      
-      if (test?.sections?.[sectionIndex]) {
-        console.log('🔍 Section exists but question not found. Available questions in section', sectionIndex, ':', 
-          test.sections[sectionIndex].questions?.length || 0);
-      }
       return false;
     }
-    
-    console.log('✅ Question found:', question.question?.substring(0, 50) + '...');
     
     // For multiple choice questions
     if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
@@ -198,7 +154,7 @@ const TestDetails = () => {
     return totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
   }, [isAnswerCorrect]);
 
-  const getAnswerStatus = (questionId, optionContent) => {
+  const getAnswerStatus = useCallback((questionId, optionContent) => {
     const questionResult = getQuestionResult(questionId);
     
     // Parse the questionId to get section and question indices
@@ -249,9 +205,9 @@ const TestDetails = () => {
     if (userSelected && !isCorrect) return 'incorrect';
     if (isCorrectAnswer && !userSelected) return 'correct-answer';
     return 'unanswered';
-  };
+  }, [getQuestionResult, test, isAnswerCorrect]);
 
-  const getQuestionBoxColor = (questionId) => {
+  const getQuestionBoxColor = useCallback((questionId) => {
     if (!testResults) return '';
     
     const questionResult = getQuestionResult(questionId);
@@ -259,7 +215,7 @@ const TestDetails = () => {
     
     const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
     return isCorrect ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500';
-  };
+  }, [testResults, getQuestionResult, isAnswerCorrect]);
 
   const handleQuestionChange = (questionNum) => {
     setCurrentQuestion(questionNum);
