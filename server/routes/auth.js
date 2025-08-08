@@ -259,8 +259,22 @@ router.post('/login', [
     
     console.log('✅ Password verified for user:', user.username);
 
-    // Update last login
-    user.lastLogin = new Date();
+    // Update login streak and last login
+    const now = new Date();
+    const lastLoginDate = user.lastLoginDate || new Date(0);
+    const daysSinceLastLogin = Math.floor((now - lastLoginDate) / (1000 * 60 * 60 * 24));
+    
+    // Update login streak
+    if (daysSinceLastLogin === 1) {
+      user.loginStreak += 1;
+    } else if (daysSinceLastLogin > 1) {
+      user.loginStreak = 1;
+    } else if (daysSinceLastLogin === 0 && user.loginStreak === 0) {
+      user.loginStreak = 1;
+    }
+    
+    user.lastLogin = now;
+    user.lastLoginDate = now;
     await user.save();
 
     // Generate token
@@ -281,7 +295,10 @@ router.post('/login', [
         school: user.school,
         targetScore: user.targetScore,
         profilePicture: user.profilePicture,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        loginStreak: user.loginStreak,
+        totalTestsTaken: user.totalTestsTaken,
+        averageAccuracy: user.averageAccuracy
       }
     });
   } catch (error) {

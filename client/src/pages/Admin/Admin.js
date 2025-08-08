@@ -279,6 +279,9 @@ const UserManagement = () => {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tests Taken
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -291,21 +294,6 @@ const UserManagement = () => {
                     <tr key={user._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            {user.profilePicture ? (
-                              <img
-                                className="h-10 w-10 rounded-full"
-                                src={user.profilePicture}
-                                alt={user.fullName}
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center">
-                                <span className="text-white font-medium">
-                                  {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {user.firstName} {user.lastName}
@@ -329,7 +317,17 @@ const UserManagement = () => {
                         {getRoleBadge(user.role)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(user.isActive)}
+                        <div className="text-sm">
+                          {getStatusBadge(user.isActive)}
+                          {!user.isActive && user.lastLogin && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Inactive for {user.inactivityPeriod}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.testCount || 0} tests
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString()}

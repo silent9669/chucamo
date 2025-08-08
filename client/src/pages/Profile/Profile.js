@@ -10,8 +10,7 @@ const Profile = () => {
     lastName: '',
     username: '',
     email: '',
-    school: '',
-    profilePicture: ''
+    school: ''
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -29,14 +28,9 @@ const Profile = () => {
   const [statsLoading, setStatsLoading] = useState(true);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [testStats, setTestStats] = useState({
-    totalTests: 0,
-    averageAccuracy: 0,
-    averageScore: 0,
-    bestScore: 0
-  });
+
   const [leaderboard, setLeaderboard] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
+
 
   useEffect(() => {
     if (user) {
@@ -45,39 +39,13 @@ const Profile = () => {
         lastName: user.lastName || '',
         username: user.username || '',
         email: user.email || '',
-        school: user.school || '',
-        profilePicture: user.profilePicture || ''
+        school: user.school || ''
       });
     }
-    fetchUserStats();
     fetchLeaderboard();
   }, [user]);
 
-  const fetchUserStats = async () => {
-    try {
-      setStatsLoading(true);
-      const response = await resultsAPI.getAnalytics();
-      if (response.data) {
-        const stats = response.data.analytics;
-        setTestStats({
-          totalTests: stats.totalTests || 0,
-          averageAccuracy: stats.averageScore ? Math.round((stats.averageScore / 1600) * 100) : 0,
-          averageScore: stats.averageScore || 0,
-          bestScore: stats.bestScore || 0
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-      setTestStats({
-        totalTests: 0,
-        averageAccuracy: 0,
-        averageScore: 0,
-        bestScore: 0
-      });
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+
 
   const fetchLeaderboard = async () => {
     try {
@@ -153,58 +121,7 @@ const Profile = () => {
     }
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileData(prev => ({
-          ...prev,
-          profilePicture: e.target.result
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const uploadProfilePicture = async () => {
-    if (!selectedFile) return;
-
-    try {
-      const formData = new FormData();
-      formData.append('profilePicture', selectedFile);
-      
-      const response = await fetch('/api/upload/profile-picture', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProfileData(prev => ({
-          ...prev,
-          profilePicture: data.fileUrl
-        }));
-        // Update the user context
-        updateUser({
-          ...user,
-          profilePicture: data.fileUrl
-        });
-        setMessage({ type: 'success', text: 'Profile picture updated!' });
-        setSelectedFile(null);
-      } else {
-        const errorData = await response.json();
-        setMessage({ type: 'error', text: errorData.message || 'Failed to upload profile picture' });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to upload profile picture' });
-    }
-  };
 
   const getInitials = (firstName, lastName) => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
@@ -436,44 +353,8 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Right Column - Avatar & Leaderboard */}
+          {/* Right Column - Leaderboard */}
           <div className="space-y-6">
-            {/* Avatar Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Profile Picture</h2>
-              <div className="text-center">
-                <div className="relative inline-block mb-4">
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
-                    {profileData.profilePicture ? (
-                      <img
-                        src={profileData.profilePicture}
-                        alt="Profile"
-                        className="w-32 h-32 rounded-full object-cover"
-                      />
-                    ) : (
-                      getInitials(profileData.firstName, profileData.lastName)
-                    )}
-                  </div>
-                  <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-                    <FiCamera className="w-4 h-4" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                {selectedFile && (
-                  <button
-                    onClick={uploadProfilePicture}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Upload Picture
-                  </button>
-                )}
-              </div>
-            </div>
 
             {/* Leaderboard */}
             <div className="bg-white rounded-xl shadow-lg p-6">
@@ -528,8 +409,16 @@ const Profile = () => {
                           {`${user.firstName} ${user.lastName}`}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {user.testCount || 0} tests taken • Avg: {user.averageScore || 0}
+                          {user.testCount || 0} tests taken • {user.averageAccuracy || 0}% accuracy
                         </p>
+                      </div>
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        {user.loginStreak > 0 && (
+                          <div className="flex items-center gap-1 text-orange-500">
+                            <span className="text-lg">🔥</span>
+                            <span className="text-xs font-medium">{user.loginStreak}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

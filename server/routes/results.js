@@ -143,6 +143,28 @@ router.put('/:id', protect, async (req, res) => {
 
     await result.save();
 
+    // Update user statistics if test is completed
+    if (status === 'completed') {
+      const User = require('../models/User');
+      const user = await User.findById(req.user.id);
+      
+      if (user) {
+        // Calculate accuracy from question results
+        const correctAnswers = questionResults.filter(q => q.isCorrect).length;
+        const totalQuestions = questionResults.length;
+        const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+        
+        // Update user statistics
+        user.totalTestsTaken += 1;
+        
+        // Update average accuracy
+        const currentTotal = user.averageAccuracy * (user.totalTestsTaken - 1);
+        user.averageAccuracy = (currentTotal + accuracy) / user.totalTestsTaken;
+        
+        await user.save();
+      }
+    }
+
     res.json({
       success: true,
       message: 'Test completed successfully',

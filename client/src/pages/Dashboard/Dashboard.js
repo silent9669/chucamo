@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { 
   FiBookOpen, 
   FiBarChart2, 
-  FiTarget
+  FiTarget,
+  FiTrendingUp,
+  FiAward,
+  FiZap
 } from 'react-icons/fi';
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +15,13 @@ import LoadingSpinner from '../../components/UI/LoadingSpinner';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [userStats, setUserStats] = useState({
+    loginStreak: 0,
+    totalTestsTaken: 0,
+    averageAccuracy: 0,
+    ranking: 0
+  });
+  const [leaderboard, setLeaderboard] = useState([]);
   
   const { isLoading, error } = useQuery(
     'analytics',
@@ -20,6 +30,48 @@ const Dashboard = () => {
       refetchOnWindowFocus: false,
     }
   );
+
+  useEffect(() => {
+    fetchUserStats();
+    fetchLeaderboard();
+  }, [user]);
+
+  const fetchUserStats = async () => {
+    try {
+      // Get user's current stats from the user object
+      setUserStats({
+        loginStreak: user?.loginStreak || 0,
+        totalTestsTaken: user?.totalTestsTaken || 0,
+        averageAccuracy: user?.averageAccuracy || 0,
+        ranking: 0 // Will be calculated from leaderboard
+      });
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await fetch('/api/users/leaderboard?limit=50', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLeaderboard(data.users || []);
+        
+        // Calculate user's ranking
+        const userRanking = data.users.findIndex(u => u._id === user?.id) + 1;
+        setUserStats(prev => ({
+          ...prev,
+          ranking: userRanking > 0 ? userRanking : 0
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+    }
+  };
 
   const quickActions = [
     {
@@ -64,8 +116,6 @@ const Dashboard = () => {
     );
   }
 
-
-
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -84,7 +134,64 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Login Streak */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Login Streak</p>
+              <p className="text-2xl font-bold text-gray-900">{userStats.loginStreak}</p>
+            </div>
+            <div className="p-3 bg-orange-100 rounded-full">
+              <span className="text-2xl">🔥</span>
+            </div>
+          </div>
+        </div>
 
+        {/* Ranking */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Ranking</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {userStats.ranking > 0 ? `#${userStats.ranking}` : 'N/A'}
+              </p>
+            </div>
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <FiAward className="w-6 h-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Tests Taken */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Tests Taken</p>
+              <p className="text-2xl font-bold text-gray-900">{userStats.totalTestsTaken}</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <FiBookOpen className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Accuracy */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Accuracy</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {userStats.averageAccuracy.toFixed(1)}%
+              </p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-full">
+              <FiTrendingUp className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Quick Actions */}
       <div className="card">
@@ -118,8 +225,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-
 
       {/* Study Tips */}
       <div className="card">

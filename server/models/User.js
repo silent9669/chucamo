@@ -86,6 +86,23 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // New fields for tracking
+  loginStreak: {
+    type: Number,
+    default: 0
+  },
+  lastLoginDate: {
+    type: Date,
+    default: Date.now
+  },
+  totalTestsTaken: {
+    type: Number,
+    default: 0
+  },
+  averageAccuracy: {
+    type: Number,
+    default: 0
+  },
   resetPasswordToken: String,
   resetPasswordExpire: Date
 }, {
@@ -109,6 +126,23 @@ userSchema.methods.comparePassword = async function(enteredPassword) {
 // Get full name
 userSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
+});
+
+// Calculate inactivity period
+userSchema.virtual('inactivityPeriod').get(function() {
+  if (!this.lastLogin) return 'Never logged in';
+  
+  const now = new Date();
+  const lastLogin = new Date(this.lastLogin);
+  const diffTime = Math.abs(now - lastLogin);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return '1 day ago';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
 });
 
 // Ensure virtual fields are serialized

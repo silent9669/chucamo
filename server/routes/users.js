@@ -28,14 +28,35 @@ router.get('/leaderboard', protect, async (req, res) => {
   try {
     const { limit = 10 } = req.query;
     
-    // Aggregate users with their test counts
+    // Get current user to determine account type filter
+    const currentUser = await User.findById(req.user.id);
+    const accountTypeFilter = currentUser.accountType;
+    
+    // Aggregate users with their test counts, filtered by account type
     const leaderboard = await Result.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userInfo'
+        }
+      },
+      {
+        $unwind: '$userInfo'
+      },
+      {
+        $match: {
+          'userInfo.accountType': accountTypeFilter
+        }
+      },
       {
         $group: {
           _id: '$user',
           testCount: { $sum: 1 },
           averageScore: { $avg: '$score' },
-          bestScore: { $max: '$score' }
+          bestScore: { $max: '$score' },
+          averageAccuracy: { $avg: '$accuracy' }
         }
       },
       {
@@ -56,9 +77,12 @@ router.get('/leaderboard', protect, async (req, res) => {
           lastName: '$userInfo.lastName',
           username: '$userInfo.username',
           profilePicture: '$userInfo.profilePicture',
+          accountType: '$userInfo.accountType',
+          loginStreak: '$userInfo.loginStreak',
           testCount: 1,
           averageScore: { $round: ['$averageScore', 1] },
-          bestScore: 1
+          bestScore: 1,
+          averageAccuracy: { $round: ['$averageAccuracy', 1] }
         }
       },
       {
@@ -114,13 +138,23 @@ router.get('/', protect, async (req, res) => {
       .select('-password')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
+
+    // Add test statistics for each user
+    const usersWithStats = await Promise.all(users.map(async (user) => {
+      const testCount = await Result.countDocuments({ user: user._id, status: 'completed' });
+      return {
+        ...user,
+        testCount
+      };
+    }));
 
     const total = await User.countDocuments(query);
 
     res.json({
       success: true,
-      users,
+      users: usersWithStats,
       pagination: {
         current: parseInt(page),
         pages: Math.ceil(total / limit),
