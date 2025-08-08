@@ -6,7 +6,8 @@ import {
   FiBarChart2, 
   FiTarget,
   FiTrendingUp,
-  FiAward
+  FiAward,
+  FiDollarSign
 } from 'react-icons/fi';
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,7 +19,8 @@ const Dashboard = () => {
     loginStreak: 0,
     totalTestsTaken: 0,
     averageAccuracy: 0,
-    ranking: 0
+    ranking: 0,
+    coins: 0
   });
 
   
@@ -37,7 +39,8 @@ const Dashboard = () => {
         loginStreak: user?.loginStreak || 0,
         totalTestsTaken: user?.totalTestsTaken || 0,
         averageAccuracy: user?.averageAccuracy || 0,
-        ranking: 0 // Will be calculated from leaderboard
+        ranking: 0, // Will be calculated from leaderboard
+        coins: user?.coins || 0
       });
     } catch (error) {
       console.error('Error fetching user stats:', error);
@@ -162,15 +165,15 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Tests Taken */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+        {/* Coins */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Tests Taken</p>
-              <p className="text-2xl font-bold text-gray-900">{userStats.totalTestsTaken}</p>
+              <p className="text-sm font-medium text-gray-600">Coins Earned</p>
+              <p className="text-2xl font-bold text-gray-900">🪙 {userStats.coins}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <FiBookOpen className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-yellow-100 rounded-full">
+              <FiDollarSign className="w-6 h-6 text-yellow-600" />
             </div>
           </div>
         </div>

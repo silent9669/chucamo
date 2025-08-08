@@ -154,21 +154,42 @@ router.put('/:id', protect, async (req, res) => {
         const totalQuestions = questionResults.length;
         const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
         
+        // Award coins based on accuracy
+        let coinsEarned = 0;
+        if (accuracy >= 90) {
+          coinsEarned = 5;
+        } else if (accuracy >= 80) {
+          coinsEarned = 4;
+        } else if (accuracy >= 70) {
+          coinsEarned = 3;
+        } else if (accuracy >= 60) {
+          coinsEarned = 2;
+        } else if (accuracy >= 50) {
+          coinsEarned = 1;
+        } else {
+          coinsEarned = 0;
+        }
+        
         // Update user statistics
         user.totalTestsTaken += 1;
+        user.coins += coinsEarned;
         
         // Update average accuracy
         const currentTotal = user.averageAccuracy * (user.totalTestsTaken - 1);
         user.averageAccuracy = (currentTotal + accuracy) / user.totalTestsTaken;
         
         await user.save();
+        
+        // Add coins earned to response
+        result.coinsEarned = coinsEarned;
       }
     }
 
     res.json({
       success: true,
       message: 'Test completed successfully',
-      result
+      result,
+      coinsEarned: result.coinsEarned || 0
     });
   } catch (error) {
     console.error('Update result error:', error);

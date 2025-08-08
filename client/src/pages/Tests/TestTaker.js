@@ -1107,6 +1107,55 @@ const TestTaker = () => {
       // Clear progress data
       localStorage.removeItem(`test_progress_${testId}`);
       
+      // Submit results to API and show coins earned
+      try {
+        const questionResults = [];
+        const answers = Array.from(answeredQuestions.entries());
+        
+        // Convert answers to question results format
+        answers.forEach(([questionKey, selectedAnswer]) => {
+          const [sectionIndex, questionIndex] = questionKey.split('-').map(Number);
+          const section = test.sections[sectionIndex];
+          const question = section.questions[questionIndex - 1];
+          
+          if (question) {
+            const isCorrect = question.correctAnswer === selectedAnswer ||
+                             question.options?.find(opt => opt.isCorrect)?.content === selectedAnswer;
+            
+            questionResults.push({
+              question: question._id || question.id,
+              selectedAnswer,
+              isCorrect,
+              timeSpent: 0 // Could be calculated if needed
+            });
+          }
+        });
+        
+        const response = await fetch('/api/results', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            testId,
+            questionResults,
+            endTime: new Date().toISOString(),
+            status: 'completed'
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.coinsEarned > 0) {
+            // Show coins earned notification
+            alert(`🎉 Congratulations! You earned ${result.coinsEarned} coins! 🪙`);
+          }
+        }
+      } catch (error) {
+        console.error('Error submitting results:', error);
+      }
+      
       // Navigate to results page
       navigate('/results');
     }

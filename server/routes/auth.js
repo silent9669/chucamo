@@ -122,7 +122,11 @@ router.post('/google', [
         school: user.school,
         targetScore: user.targetScore,
         profilePicture: user.profilePicture,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        loginStreak: user.loginStreak,
+        totalTestsTaken: user.totalTestsTaken,
+        averageAccuracy: user.averageAccuracy,
+        coins: user.coins
       }
     });
   } catch (error) {
@@ -298,7 +302,8 @@ router.post('/login', [
         lastLogin: user.lastLogin,
         loginStreak: user.loginStreak,
         totalTestsTaken: user.totalTestsTaken,
-        averageAccuracy: user.averageAccuracy
+        averageAccuracy: user.averageAccuracy,
+        coins: user.coins
       }
     });
   } catch (error) {

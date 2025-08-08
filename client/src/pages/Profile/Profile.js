@@ -364,7 +364,7 @@ const Profile = () => {
                           {`${user.firstName} ${user.lastName}`}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {user.testCount || 0} tests taken • {user.averageAccuracy || 0}% accuracy
+                          🪙 {user.coins || 0} coins • {user.averageAccuracy || 0}% accuracy
                         </p>
                       </div>
                       <div className="flex-shrink-0 flex items-center gap-2">

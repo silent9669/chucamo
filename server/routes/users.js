@@ -79,6 +79,7 @@ router.get('/leaderboard', protect, async (req, res) => {
           profilePicture: '$userInfo.profilePicture',
           accountType: '$userInfo.accountType',
           loginStreak: '$userInfo.loginStreak',
+          coins: '$userInfo.coins',
           testCount: 1,
           averageScore: { $round: ['$averageScore', 1] },
           bestScore: 1,
@@ -86,7 +87,7 @@ router.get('/leaderboard', protect, async (req, res) => {
         }
       },
       {
-        $sort: { testCount: -1, averageScore: -1 }
+        $sort: { coins: -1, testCount: -1, averageScore: -1 }
       },
       {
         $limit: parseInt(limit)
