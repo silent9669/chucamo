@@ -11,7 +11,7 @@ const createAdmin = async () => {
     const existingAdmin = await User.findOne({ 
       $or: [
         { email: 'admin@example.com' },
-        { username: 'admin' },
+        { username: 'superadmin' },
         { role: 'admin' }
       ]
     });
@@ -32,9 +32,9 @@ const createAdmin = async () => {
 
     // Create new admin user
     const adminUser = new User({
-      firstName: 'Admin',
-      lastName: 'User',
-      username: 'admin',
+      firstName: 'Super',
+      lastName: 'Admin',
+      username: 'superadmin',
       email: 'admin@example.com',
       password: 'admin123', // Will be hashed automatically by the model
       role: 'admin',
@@ -49,7 +49,7 @@ const createAdmin = async () => {
     await adminUser.save();
     console.log('✅ Admin user created successfully!');
     console.log('📧 Email: admin@example.com');
-    console.log('👤 Username: admin');
+    console.log('👤 Username: superadmin');
     console.log('🔑 Password: admin123');
     console.log('👑 Role: admin');
 
