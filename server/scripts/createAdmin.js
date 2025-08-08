@@ -1,12 +1,11 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
 
-const checkAndCreateAdmin = async () => {
+const createAdmin = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Connected to MongoDB');
+    console.log('✅ Connected to MongoDB');
 
     // Check if admin user exists
     const existingAdmin = await User.findOne({ 
@@ -23,36 +22,36 @@ const checkAndCreateAdmin = async () => {
       console.log('- Username:', existingAdmin.username);
       console.log('- Role:', existingAdmin.role);
       
-      // Update password if needed
-      const hashedPassword = await bcrypt.hash('admin123', 12);
-      existingAdmin.password = hashedPassword;
+      // Reset password to default
+      existingAdmin.password = 'admin123'; // Will be hashed by the model
       await existingAdmin.save();
-      console.log('✅ Admin password updated to: admin123');
+      console.log('✅ Admin password reset to: admin123');
       
       return;
     }
 
-    // Create admin user
-    const hashedPassword = await bcrypt.hash('admin123', 12);
-    
+    // Create new admin user
     const adminUser = new User({
       firstName: 'Admin',
       lastName: 'User',
       username: 'admin',
       email: 'admin@example.com',
-      password: hashedPassword,
+      password: 'admin123', // Will be hashed automatically by the model
       role: 'admin',
       accountType: 'student',
       emailVerified: true,
-      isActive: true
+      isActive: true,
+      grade: 12,
+      school: 'Admin School',
+      targetScore: 1600
     });
 
     await adminUser.save();
     console.log('✅ Admin user created successfully!');
-    console.log('Email: admin@example.com');
-    console.log('Username: admin');
-    console.log('Password: admin123');
-    console.log('Role: admin');
+    console.log('📧 Email: admin@example.com');
+    console.log('👤 Username: admin');
+    console.log('🔑 Password: admin123');
+    console.log('👑 Role: admin');
 
   } catch (error) {
     console.error('❌ Error:', error);
@@ -61,4 +60,4 @@ const checkAndCreateAdmin = async () => {
   }
 };
 
-checkAndCreateAdmin();
+createAdmin();
