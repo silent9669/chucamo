@@ -1053,7 +1053,7 @@ const TestTaker = () => {
     setIsMarkedForReview(markedForReviewQuestions.has(questionKey));
   };
 
-  const handleReviewNext = () => {
+  const handleReviewNext = async () => {
     // Move to next section
     if (currentSection < test.sections.length - 1) {
       setCurrentSection(currentSection + 1);
