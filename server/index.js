@@ -74,7 +74,11 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.RAILWAY_URL || 'https://your-app-name.railway.app'] 
+    ? [
+        'https://bunchable-production.up.railway.app',
+        'https://railway.com',
+        process.env.RAILWAY_URL || 'https://bunchable-production.up.railway.app'
+      ] 
     : ['http://localhost:3000'],
   credentials: true
 }));

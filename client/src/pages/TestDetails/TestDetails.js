@@ -121,19 +121,19 @@ const TestDetails = () => {
     
     // Calculate score based on test structure
     if (testData.sections) {
-      testData.sections.forEach((section, sectionIndex) => {
-        if (section.questions) {
-          section.questions.forEach((question, questionIndex) => {
+    testData.sections.forEach((section, sectionIndex) => {
+      if (section.questions) {
+        section.questions.forEach((question, questionIndex) => {
             totalQuestions++;
-            const questionId = `${sectionIndex}-${questionIndex + 1}`;
+          const questionId = `${sectionIndex}-${questionIndex + 1}`;
             const questionResult = answers[questionId];
             
             if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
               correctAnswers++;
             }
-          });
-        }
-      });
+        });
+      }
+    });
     } else if (testData.questions) {
       // Handle legacy test format
       testData.questions.forEach((question, index) => {
@@ -259,7 +259,7 @@ const TestDetails = () => {
               // Format: numeric ID (e.g., 1754466772119) - this is the question ID from the database
               // We need to map this to the section-question format for the review page
               questionId = questionKey.toString();
-            } else {
+    } else {
               // Fallback for unknown formats
               console.warn('Unknown questionKey format:', questionKey);
               questionId = questionKey?.toString() || 'unknown';
