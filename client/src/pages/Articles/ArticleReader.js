@@ -71,6 +71,9 @@ const ArticleReader = () => {
     const loadArticle = () => {
       try {
         console.log('🔍 Loading article with ID:', id);
+        setLoading(true);
+        setArticle(null); // Reset article state
+        
         const savedArticles = localStorage.getItem('articles');
         if (savedArticles) {
           const articles = JSON.parse(savedArticles);

@@ -124,10 +124,11 @@ const ArticlesManagement = () => {
     }
   }, []);
 
-  // Save articles to localStorage whenever articles change (without cleanup)
+  // Save articles to localStorage whenever articles change
   useEffect(() => {
     if (articles.length > 0) {
       localStorage.setItem('articles', JSON.stringify(articles));
+      console.log(`💾 Saved ${articles.length} articles to localStorage`);
     }
   }, [articles]);
 
@@ -151,10 +152,21 @@ const ArticlesManagement = () => {
       totalTime: 0,
       difficulty: 'Medium',
       type: 'article',
-      status: 'published' // Always set to published
+      status: 'published', // Always set to published
+      // Ensure all data is included
+      questions: currentArticle.questions || [],
+      thumbnail: currentArticle.thumbnail,
+      images: currentArticle.images || [],
+      readingPassage: currentArticle.readingPassage || ''
     };
 
     console.log('💾 Saving article:', articleToSave.title, 'with ID:', articleToSave.id);
+    console.log('📊 Article data:', {
+      questions: articleToSave.questions?.length || 0,
+      hasThumbnail: !!articleToSave.thumbnail,
+      images: articleToSave.images?.length || 0,
+      hasReadingPassage: !!articleToSave.readingPassage
+    });
 
     if (isEditing) {
       setArticles(prev => {
@@ -205,15 +217,18 @@ const ArticlesManagement = () => {
   const handleThumbnailUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      const thumbnail = {
-        id: Date.now(),
-        name: file.name,
-        size: (file.size / 1024).toFixed(1) + ' KB',
-        type: file.type,
-        file: file,
-        url: URL.createObjectURL(file)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const thumbnail = {
+          id: Date.now(),
+          name: file.name,
+          size: (file.size / 1024).toFixed(1) + ' KB',
+          type: file.type,
+          url: e.target.result // Store as base64
+        };
+        setCurrentArticle(prev => ({ ...prev, thumbnail }));
       };
-      setCurrentArticle(prev => ({ ...prev, thumbnail }));
+      reader.readAsDataURL(file);
     }
   };
 
@@ -223,15 +238,20 @@ const ArticlesManagement = () => {
 
   const handleImageUpload = (event) => {
     const files = Array.from(event.target.files);
-    const newImages = files.map(file => ({
-        id: Date.now() + Math.random(),
-        name: file.name,
-        size: (file.size / 1024).toFixed(1) + ' KB',
-        type: file.type,
-      file: file,
-      url: URL.createObjectURL(file)
-    }));
-    setCurrentArticle(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newImage = {
+          id: Date.now() + Math.random(),
+          name: file.name,
+          size: (file.size / 1024).toFixed(1) + ' KB',
+          type: file.type,
+          url: e.target.result // Store as base64
+        };
+        setCurrentArticle(prev => ({ ...prev, images: [...prev.images, newImage] }));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const removeImage = (imageId) => {
@@ -312,18 +332,28 @@ const ArticlesManagement = () => {
       images: currentQuestion.images || []
     };
 
+    console.log('💾 Saving question:', questionToSave.question, 'with ID:', questionToSave.id);
+
     if (editingQuestion) {
-      setCurrentArticle(prev => ({
-      ...prev,
-        questions: prev.questions.map(q => 
-          q.id === editingQuestion.id ? questionToSave : q
-      )
-    }));
+      setCurrentArticle(prev => {
+        const updated = {
+          ...prev,
+          questions: prev.questions.map(q => 
+            q.id === editingQuestion.id ? questionToSave : q
+          )
+        };
+        console.log('📝 Updated question in article. Total questions:', updated.questions.length);
+        return updated;
+      });
     } else {
-      setCurrentArticle(prev => ({
-        ...prev,
-        questions: [...prev.questions, questionToSave]
-      }));
+      setCurrentArticle(prev => {
+        const updated = {
+          ...prev,
+          questions: [...prev.questions, questionToSave]
+        };
+        console.log('➕ Added new question to article. Total questions:', updated.questions.length);
+        return updated;
+      });
     }
 
     setShowQuestionEditor(false);
@@ -341,6 +371,7 @@ const ArticlesManagement = () => {
       images: []
     });
     setEditingQuestion(null);
+    console.log('✅ Question saved successfully!');
   };
 
   const handleDeleteQuestion = (questionId) => {
