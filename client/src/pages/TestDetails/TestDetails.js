@@ -117,43 +117,6 @@ const TestDetails = () => {
     return false;
   }, [test]);
 
-  const calculateScore = useCallback((testData, answers) => {
-    if (!testData || !answers) return 0;
-    
-    let totalQuestions = 0;
-    let correctAnswers = 0;
-    
-    // Calculate score based on test structure
-    if (testData.sections) {
-    testData.sections.forEach((section, sectionIndex) => {
-      if (section.questions) {
-        section.questions.forEach((question, questionIndex) => {
-            totalQuestions++;
-          const questionId = `${sectionIndex}-${questionIndex + 1}`;
-            const questionResult = answers[questionId];
-            
-            if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
-              correctAnswers++;
-            }
-        });
-      }
-    });
-    } else if (testData.questions) {
-      // Handle legacy test format
-      testData.questions.forEach((question, index) => {
-        totalQuestions++;
-        const questionId = `0-${index + 1}`;
-        const questionResult = answers[questionId];
-        
-        if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
-          correctAnswers++;
-        }
-      });
-    }
-    
-    return totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-  }, [isAnswerCorrect]);
-
   const getAnswerStatus = useCallback((questionId, optionContent) => {
     const questionResult = getQuestionResult(questionId);
     
@@ -263,7 +226,7 @@ const TestDetails = () => {
               // Format: numeric ID (e.g., 1754466772119) - this is the question ID from the database
               // We need to map this to the section-question format for the review page
               questionId = questionKey.toString();
-    } else {
+            } else {
               // Fallback for unknown formats
               console.warn('Unknown questionKey format:', questionKey);
               questionId = questionKey?.toString() || 'unknown';
@@ -287,26 +250,26 @@ const TestDetails = () => {
           });
         });
         
-        // Calculate overall test score and metrics
-        const overallScore = calculateScore(testData, answers);
-        
-        // Count correct and incorrect answers
+        // Calculate overall test score and metrics directly here
+        let totalQuestions = 0;
+        let correctAnswers = 0;
         let correctCount = 0;
         let incorrectCount = 0;
         
         testData.sections?.forEach((section, sectionIndex) => {
           section.questions?.forEach((question, questionIndex) => {
+            totalQuestions++;
             const questionId = `${sectionIndex}-${questionIndex + 1}`;
-            const userAnswer = answers[questionId]?.selectedAnswer;
+            const questionResult = answers[questionId];
             
-            if (userAnswer) {
-              // Use the same logic as calculateScore to determine if answer is correct
+            if (questionResult) {
+              // Check if answer is correct using the same logic as isAnswerCorrect
               let isCorrect = false;
               
               if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
                 // Method 1: Check if the selected answer matches an option with isCorrect flag
                 if (question.options) {
-                  const selectedOption = question.options.find(opt => opt.content === userAnswer);
+                  const selectedOption = question.options.find(opt => opt.content === questionResult.selectedAnswer);
                   if (selectedOption && selectedOption.isCorrect === true) {
                     isCorrect = true;
                   }
@@ -315,28 +278,22 @@ const TestDetails = () => {
                 // Method 2: Check if the selected answer matches the correctAnswer field
                 if (!isCorrect) {
                   if (typeof question.correctAnswer === 'string') {
-                    isCorrect = userAnswer === question.correctAnswer;
+                    isCorrect = questionResult.selectedAnswer === question.correctAnswer;
                   } else if (typeof question.correctAnswer === 'number' && question.options) {
                     const correctOption = question.options[question.correctAnswer];
                     const correctContent = correctOption?.content || correctOption;
-                    isCorrect = userAnswer === correctContent;
+                    isCorrect = questionResult.selectedAnswer === correctContent;
                   } else if (typeof question.correctAnswer === 'number') {
-                    isCorrect = userAnswer === question.correctAnswer.toString();
+                    isCorrect = questionResult.selectedAnswer === question.correctAnswer.toString();
                   }
                 }
                 
                 // Method 3: Check if the selected answer matches any option marked as correct
                 if (!isCorrect && question.options) {
                   const correctOption = question.options.find(opt => opt.isCorrect === true);
-                  if (correctOption && correctOption.content === userAnswer) {
+                  if (correctOption && correctOption.content === questionResult.selectedAnswer) {
                     isCorrect = true;
                   }
-                }
-                
-                if (isCorrect) {
-                  correctCount++;
-                } else {
-                  incorrectCount++;
                 }
               } else if (question.answerType === 'written' || question.type === 'grid-in') {
                 const acceptableAnswers = question.acceptableAnswers || [];
@@ -348,13 +305,16 @@ const TestDetails = () => {
                   allAcceptableAnswers.push(writtenAnswer);
                 }
                 
-                if (allAcceptableAnswers.some(answer => 
-                  userAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
-                )) {
-                  correctCount++;
-                } else {
-                  incorrectCount++;
-                }
+                isCorrect = allAcceptableAnswers.some(answer => 
+                  questionResult.selectedAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
+                );
+              }
+              
+              if (isCorrect) {
+                correctAnswers++;
+                correctCount++;
+              } else {
+                incorrectCount++;
               }
             } else {
               // Unanswered questions count as incorrect
@@ -362,6 +322,8 @@ const TestDetails = () => {
             }
           });
         });
+        
+        const overallScore = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
         
         setTestResults({
           answers,
@@ -381,12 +343,12 @@ const TestDetails = () => {
     } finally {
       setLoading(false);
     }
-  }, [testId, calculateScore]);
+  }, [testId]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Load test details only once when component mounts
   useEffect(() => {
     loadTestDetails();
-  }, [loadTestDetails]);
+  }, []); // Empty dependency array to run only once
 
   if (loading) {
     return (
