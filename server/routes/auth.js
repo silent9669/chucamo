@@ -4,6 +4,7 @@ const { OAuth2Client } = require('google-auth-library');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
+const mongoose = require('mongoose'); // Added for database connection status
 
 const router = express.Router();
 
@@ -258,6 +259,8 @@ router.post('/login', [
 
     // Check if user exists by username or email
     console.log('🔍 Looking for user with:', username);
+    console.log('🔍 Database connection status:', mongoose.connection.readyState === 1 ? 'Connected' : 'Not connected');
+    
     const user = await User.findOne({
       $or: [
         { username: username },
@@ -267,6 +270,14 @@ router.post('/login', [
     
     if (!user) {
       console.log('❌ User not found:', username);
+      // Let's also check if there are any users in the database
+      const totalUsers = await User.countDocuments();
+      console.log('🔍 Total users in database:', totalUsers);
+      
+      // Check for any admin users
+      const adminUsers = await User.find({ role: 'admin' });
+      console.log('🔍 Admin users in database:', adminUsers.map(u => ({ username: u.username, email: u.email })));
+      
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
