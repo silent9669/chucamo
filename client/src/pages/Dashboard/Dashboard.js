@@ -103,7 +103,7 @@ const Dashboard = () => {
       fetchUserStats();
       fetchLeaderboard();
     }
-  }, [user?.id]); // Only re-run when user ID changes
+  }, [user, fetchUserStats, fetchLeaderboard]);
 
   const quickActions = [
     {

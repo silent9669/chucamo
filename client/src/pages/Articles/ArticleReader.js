@@ -73,7 +73,7 @@ const ArticleReader = () => {
         const savedArticles = localStorage.getItem('articles');
         if (savedArticles) {
           const articles = JSON.parse(savedArticles);
-          const foundArticle = articles.find(a => a.id == id);
+          const foundArticle = articles.find(a => a.id === id);
           if (foundArticle) {
             setArticle(foundArticle);
           } else {
@@ -325,7 +325,7 @@ const ArticleReader = () => {
                   <div key={index} className="text-center">
                     <img
                       src={image.url}
-                      alt={`Article image ${index + 1}`}
+                      alt={`Article ${index + 1}`}
                       className="max-w-full h-auto rounded-lg shadow-lg"
                     />
                   </div>

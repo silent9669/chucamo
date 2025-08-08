@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiFileText, FiLock, FiClock, FiPlay, FiSearch } from 'react-icons/fi';
+import { FiFileText, FiClock, FiPlay, FiSearch } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
-import { testsAPI } from '../../services/api';
 
 const Articles = () => {
-  const { user } = useAuth();
-
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -68,16 +65,6 @@ const ArticlesList = () => {
     return status === 'published' 
       ? 'bg-green-100 text-green-800' 
       : 'bg-gray-100 text-gray-800';
-  };
-
-  const formatDuration = (minutes) => {
-    if (!minutes || minutes === 0) return 'N/A';
-    const hrs = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hrs > 0) {
-      return `${hrs}h ${mins}m`;
-    }
-    return `${mins}m`;
   };
 
   // Calculate word count and reading time for an article

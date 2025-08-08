@@ -283,109 +283,40 @@ const TestDetails = () => {
   };
 
   const calculateScore = (testData, answers) => {
-    if (!testData || !testData.sections || !answers) return 0;
+    if (!testData || !answers) return 0;
     
-    let correctCount = 0;
-    let totalCount = 0;
+    let totalQuestions = 0;
+    let correctAnswers = 0;
     
-    testData.sections.forEach((section, sectionIndex) => {
-      if (section.questions) {
-        section.questions.forEach((question, questionIndex) => {
-          totalCount++;
-          const questionId = `${sectionIndex}-${questionIndex + 1}`;
-          const userAnswer = answers[questionId]?.selectedAnswer;
-          
-          if (userAnswer) {
-            // Check if answer is correct using the same logic as isAnswerCorrect
-            if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
-              let isCorrect = false;
-              
-              // Method 1: Check if the selected answer matches an option with isCorrect flag
-              if (question.options) {
-                const selectedOption = question.options.find(opt => opt.content === userAnswer);
-                if (selectedOption && selectedOption.isCorrect === true) {
-                  isCorrect = true;
-                }
-              }
-              
-              // Method 2: Check if the selected answer matches the correctAnswer field
-              if (!isCorrect) {
-                if (typeof question.correctAnswer === 'string') {
-                  isCorrect = userAnswer === question.correctAnswer;
-                } else if (typeof question.correctAnswer === 'number' && question.options) {
-                  // If correctAnswer is an index, get the content from options
-                  const correctOption = question.options[question.correctAnswer];
-                  const correctContent = correctOption?.content || correctOption;
-                  isCorrect = userAnswer === correctContent;
-                } else if (typeof question.correctAnswer === 'number') {
-                  // Handle case where correctAnswer is just a number (index)
-                  isCorrect = userAnswer === question.correctAnswer.toString();
-                }
-              }
-              
-              // Method 3: Check if the selected answer matches any option marked as correct
-              if (!isCorrect && question.options) {
-                const correctOption = question.options.find(opt => opt.isCorrect === true);
-                if (correctOption && correctOption.content === userAnswer) {
-                  isCorrect = true;
-                }
-              }
-              
-              if (isCorrect) {
-                correctCount++;
-              }
-            } else if (question.answerType === 'written' || question.type === 'grid-in') {
-              const acceptableAnswers = question.acceptableAnswers || [];
-              const writtenAnswer = question.writtenAnswer || '';
-              
-              // Add writtenAnswer to acceptable answers if it's not already there
-              const allAcceptableAnswers = [...acceptableAnswers];
-              if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
-                allAcceptableAnswers.push(writtenAnswer);
-              }
-              
-              if (allAcceptableAnswers.some(answer => 
-                userAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
-              )) {
-                correctCount++;
-              }
+    // Calculate score based on test structure
+    if (testData.sections) {
+      testData.sections.forEach((section, sectionIndex) => {
+        if (section.questions) {
+          section.questions.forEach((question, questionIndex) => {
+            totalQuestions++;
+            const questionId = `${sectionIndex}-${questionIndex + 1}`;
+            const questionResult = getQuestionResult(questionId);
+            
+            if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
+              correctAnswers++;
             }
-          }
-          // Note: Unanswered questions count as incorrect (0 points) in the score calculation
-        });
-      }
-    });
+          });
+        }
+      });
+    } else if (testData.questions) {
+      // Handle legacy test format
+      testData.questions.forEach((question, index) => {
+        totalQuestions++;
+        const questionId = `0-${index + 1}`;
+        const questionResult = getQuestionResult(questionId);
+        
+        if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
+          correctAnswers++;
+        }
+      });
+    }
     
-    return totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
-  };
-
-  const getSectionStats = (sectionIndex) => {
-    if (!testResults || !test?.sections) return { score: 0, correct: 0, incorrect: 0 };
-    
-    const section = test.sections[sectionIndex];
-    if (!section?.questions) return { score: 0, correct: 0, incorrect: 0 };
-    
-    let correctCount = 0;
-    let totalCount = section.questions.length;
-    
-    section.questions.forEach((question, questionIndex) => {
-      const questionId = `${sectionIndex}-${questionIndex + 1}`;
-      const questionResult = getQuestionResult(questionId);
-      
-      if (questionResult) {
-        const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
-        if (isCorrect) correctCount++;
-      }
-    });
-    
-    const score = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
-    const incorrectCount = totalCount - correctCount;
-    
-    return {
-      score,
-      correct: correctCount,
-      incorrect: incorrectCount
-    };
+    return totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
   };
 
   const getAnswerStatus = (questionId, optionContent) => {
@@ -458,22 +389,6 @@ const TestDetails = () => {
   const handleSectionChange = (sectionIndex) => {
     setCurrentSection(sectionIndex);
     setCurrentQuestion(1);
-  };
-
-  const formatTime = (seconds) => {
-    if (!seconds) return '0s';
-    
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
-    }
   };
 
   if (loading) {
