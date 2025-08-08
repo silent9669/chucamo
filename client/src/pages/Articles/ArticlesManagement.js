@@ -154,12 +154,22 @@ const ArticlesManagement = () => {
       status: 'published' // Always set to published
     };
 
+    console.log('💾 Saving article:', articleToSave.title, 'with ID:', articleToSave.id);
+
     if (isEditing) {
-      setArticles(prev => prev.map(article => 
-        article.id === currentArticle.id ? articleToSave : article
-      ));
+      setArticles(prev => {
+        const updated = prev.map(article => 
+          article.id === currentArticle.id ? articleToSave : article
+        );
+        console.log('📝 Updated article in list. Total articles:', updated.length);
+        return updated;
+      });
     } else {
-      setArticles(prev => [...prev, articleToSave]);
+      setArticles(prev => {
+        const updated = [...prev, articleToSave];
+        console.log('➕ Added new article to list. Total articles:', updated.length);
+        return updated;
+      });
     }
 
     // Reset form
@@ -176,6 +186,7 @@ const ArticlesManagement = () => {
     setIsEditing(false);
     setShowEditor(false);
     
+    console.log('✅ Article saved successfully!');
     alert('Article saved successfully!');
   };
 

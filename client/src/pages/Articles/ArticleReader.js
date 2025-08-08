@@ -70,18 +70,27 @@ const ArticleReader = () => {
   useEffect(() => {
     const loadArticle = () => {
       try {
+        console.log('🔍 Loading article with ID:', id);
         const savedArticles = localStorage.getItem('articles');
         if (savedArticles) {
           const articles = JSON.parse(savedArticles);
+          console.log(`📚 Found ${articles.length} articles in localStorage`);
+          console.log('📋 Available article IDs:', articles.map(a => a.id));
+          
           const foundArticle = articles.find(a => a.id === id);
           if (foundArticle) {
+            console.log('✅ Article found:', foundArticle.title);
             setArticle(foundArticle);
           } else {
-            console.log('Article not found in localStorage');
+            console.log('❌ Article not found in localStorage');
+            console.log('🔍 Looking for ID:', id);
+            console.log('📋 Available articles:', articles.map(a => ({ id: a.id, title: a.title })));
           }
+        } else {
+          console.log('❌ No articles found in localStorage');
         }
       } catch (error) {
-        console.error('Error loading article:', error);
+        console.error('❌ Error loading article:', error);
       } finally {
         setLoading(false);
       }

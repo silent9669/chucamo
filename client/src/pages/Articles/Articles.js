@@ -26,24 +26,25 @@ const ArticlesList = () => {
   useEffect(() => {
     const savedArticles = localStorage.getItem('articles');
     if (savedArticles) {
-      setArticles(JSON.parse(savedArticles));
+      try {
+        const parsedArticles = JSON.parse(savedArticles);
+        setArticles(parsedArticles);
+        console.log(`Loaded ${parsedArticles.length} articles from localStorage`);
+      } catch (error) {
+        console.error('Error parsing articles from localStorage:', error);
+        setArticles([]);
+      }
+    } else {
+      console.log('No articles found in localStorage');
     }
     setLoading(false);
-    
-    // Set up cleanup timer only once when component mounts
-    const cleanupTimer = setTimeout(() => {
-      console.log('Cleaning up articles after 5 minutes...');
-      localStorage.removeItem('articles');
-      setArticles([]);
-    }, 5 * 60 * 1000); // 5 minutes
-
-    return () => clearTimeout(cleanupTimer);
   }, []);
 
-  // Save articles to localStorage whenever articles change (without cleanup)
+  // Save articles to localStorage whenever articles change
   useEffect(() => {
     if (articles.length > 0) {
       localStorage.setItem('articles', JSON.stringify(articles));
+      console.log(`Saved ${articles.length} articles to localStorage`);
     }
   }, [articles]);
 
