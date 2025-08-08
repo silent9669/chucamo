@@ -3,7 +3,7 @@ import 'katex/dist/katex.min.css';
 
 // Function to render passage content with KaTeX support
 export const renderPassageWithKaTeX = (passageContent) => {
-  if (!passageContent) return '';
+  if (!passageContent || typeof passageContent !== 'string') return '';
 
   let processedContent = passageContent;
 
@@ -47,7 +47,7 @@ export const renderPassageWithKaTeX = (passageContent) => {
 
 // Function to render content with KaTeX support (for questions and other content)
 export const renderContent = (content, sectionType) => {
-  if (!content) return '';
+  if (!content || typeof content !== 'string') return '';
 
   let processedContent = content;
 

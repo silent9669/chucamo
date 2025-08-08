@@ -296,11 +296,45 @@ const ArticlesManagement = () => {
   };
 
   const handleEditQuestion = (question) => {
-    setCurrentQuestion({
+    console.log('🔍 Editing question:', question);
+    
+    // Handle different options formats
+    let options = ['', '', '', ''];
+    if (question.options && Array.isArray(question.options)) {
+      if (typeof question.options[0] === 'string') {
+        // Options are already strings
+        options = [...question.options];
+      } else if (typeof question.options[0] === 'object') {
+        // Options are objects with content property
+        options = question.options.map(opt => opt.content || '');
+      }
+    }
+    
+    // Handle correct answer
+    let correctAnswer = 0;
+    if (question.answerType === 'written') {
+      correctAnswer = question.writtenAnswer || '';
+    } else {
+      // For multiple choice, find the correct option index
+      if (question.options && Array.isArray(question.options)) {
+        if (typeof question.options[0] === 'object') {
+          const correctIndex = question.options.findIndex(opt => opt.isCorrect);
+          correctAnswer = correctIndex >= 0 ? correctIndex : 0;
+        } else {
+          correctAnswer = question.correctAnswer || 0;
+        }
+      }
+    }
+    
+    const questionToEdit = {
       ...question,
-      options: question.options || ['', '', '', ''],
+      options: options,
+      correctAnswer: correctAnswer,
       acceptableAnswers: question.acceptableAnswers || []
-    });
+    };
+    
+    console.log('📝 Prepared question for editing:', questionToEdit);
+    setCurrentQuestion(questionToEdit);
     setEditingQuestion(question);
     setShowQuestionEditor(true);
   };
@@ -326,13 +360,20 @@ const ArticlesManagement = () => {
         : [],
       correctAnswer: currentQuestion.answerType === 'written' 
         ? currentQuestion.writtenAnswer || ''
-        : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer]) || '',
+        : currentQuestion.correctAnswer, // Save the index, not the content
       writtenAnswer: currentQuestion.writtenAnswer || '',
       acceptableAnswers: currentQuestion.acceptableAnswers || [],
       images: currentQuestion.images || []
     };
 
     console.log('💾 Saving question:', questionToSave.question, 'with ID:', questionToSave.id);
+    console.log('📊 Question data:', {
+      answerType: questionToSave.answerType,
+      correctAnswer: questionToSave.correctAnswer,
+      optionsCount: questionToSave.options.length,
+      hasWrittenAnswer: !!questionToSave.writtenAnswer,
+      acceptableAnswersCount: questionToSave.acceptableAnswers.length
+    });
 
     if (editingQuestion) {
       setCurrentArticle(prev => {
