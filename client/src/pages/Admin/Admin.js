@@ -1,11 +1,12 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo } from 'react-icons/fi';
+import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo, FiEyeOff, FiImage } from 'react-icons/fi';
 import { testsAPI, usersAPI } from '../../services/api';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import MultipleAnswersEditor from '../../components/UI/MultipleAnswersEditor';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Basic input components
 const DirectInput = ({ value, onChange, placeholder }) => (
@@ -63,9 +64,9 @@ const AdminDashboard = () => (
       </div>
       <div className="card p-6 text-center">
         <FiTarget className="w-8 h-8 text-primary-600 mx-auto mb-3" />
-        <h3 className="text-lg font-semibold mb-2">Study Plan Management</h3>
-        <p className="text-gray-600 text-sm mb-4">Manage study plan content and materials</p>
-        <Link to="/study-plan-management" className="btn-primary btn-sm">Manage Study Plans</Link>
+                  <h3 className="text-lg font-semibold mb-2">Articles Management</h3>
+          <p className="text-gray-600 text-sm mb-4">Manage articles content and materials</p>
+                        <Link to="/articles-management" className="btn-primary btn-sm">Manage Articles</Link>
       </div>
       <div className="card p-6 text-center">
         <FiBarChart2 className="w-8 h-8 text-primary-600 mx-auto mb-3" />
@@ -153,10 +154,11 @@ const UserManagement = () => {
   const getAccountTypeBadge = (accountType) => {
     const styles = {
       free: 'bg-gray-100 text-gray-800',
-      student: 'bg-blue-100 text-blue-800'
+      student: 'bg-blue-100 text-blue-800',
+      teacher: 'bg-purple-100 text-purple-800'
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[accountType]}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[accountType] || 'bg-gray-100 text-gray-800'}`}>
         {accountType.charAt(0).toUpperCase() + accountType.slice(1)}
       </span>
     );
@@ -165,10 +167,11 @@ const UserManagement = () => {
   const getRoleBadge = (role) => {
     const styles = {
       student: 'bg-green-100 text-green-800',
-      admin: 'bg-red-100 text-red-800'
+      admin: 'bg-red-100 text-red-800',
+      teacher: 'bg-purple-100 text-purple-800'
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[role]}`}>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[role] || 'bg-gray-100 text-gray-800'}`}>
         {role.charAt(0).toUpperCase() + role.slice(1)}
       </span>
     );
@@ -218,6 +221,7 @@ const UserManagement = () => {
                 <option value="">All Roles</option>
                 <option value="student">Student</option>
                 <option value="admin">Admin</option>
+                <option value="teacher">Teacher</option>
               </select>
             </div>
             <div>
@@ -230,6 +234,7 @@ const UserManagement = () => {
                 <option value="">All Types</option>
                 <option value="free">Free Account</option>
                 <option value="student">Student Account</option>
+                <option value="teacher">Teacher Account</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -404,6 +409,7 @@ const UserManagement = () => {
                   >
                     <option value="free">Free Account</option>
                     <option value="student">Student Account</option>
+                    <option value="teacher">Teacher Account</option>
                   </select>
                 </div>
                 <div>
@@ -415,6 +421,7 @@ const UserManagement = () => {
                   >
                     <option value="student">Student</option>
                     <option value="admin">Admin</option>
+                    <option value="teacher">Teacher</option>
                   </select>
                 </div>
                 <div>
@@ -492,6 +499,27 @@ const RealTestManagement = () => {
 
   const fileInputRef = useRef(null);
 
+  // Memoized onChange handlers to prevent typing disruption
+  const handleQuestionChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, question: value }));
+  }, []);
+
+  const handlePassageChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, passage: value }));
+  }, []);
+
+  const handleExplanationChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, explanation: value }));
+  }, []);
+
+  const handleWrittenAnswerChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, writtenAnswer: value }));
+  }, []);
+
+  const handleAcceptableAnswersChange = useCallback((answers) => {
+    setCurrentQuestion(prev => ({ ...prev, acceptableAnswers: answers }));
+  }, []);
+
   useEffect(() => {
     loadTests();
   }, []);
@@ -551,10 +579,9 @@ const RealTestManagement = () => {
   };
 
   const handleOptionChange = (index, value) => {
-    setCurrentQuestion(prev => ({
-      ...prev,
-      options: prev.options.map((option, i) => i === index ? value : option)
-    }));
+    const newOptions = [...currentQuestion.options];
+    newOptions[index] = value;
+    setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
   };
 
   const removeOption = (index) => {
@@ -2288,7 +2315,7 @@ const RealTestManagement = () => {
               </label>
               <KaTeXEditor
                 value={currentQuestion.passage}
-                onChange={(value) => setCurrentQuestion(prev => ({ ...prev, passage: value }))}
+                onChange={handlePassageChange}
                 placeholder="Enter the reading passage here..."
                 rows={8}
               />
@@ -2301,7 +2328,7 @@ const RealTestManagement = () => {
             </label>
             <KaTeXEditor
               value={currentQuestion.question}
-              onChange={(value) => setCurrentQuestion(prev => ({ ...prev, question: value }))}
+              onChange={handleQuestionChange}
               placeholder="Enter your question here..."
               rows={3}
             />
@@ -2407,9 +2434,9 @@ const RealTestManagement = () => {
             <div>
               <MultipleAnswersEditor
                 primaryAnswer={currentQuestion.writtenAnswer}
-                onPrimaryAnswerChange={(value) => setCurrentQuestion(prev => ({ ...prev, writtenAnswer: value }))}
+                onPrimaryAnswerChange={handleWrittenAnswerChange}
                 acceptableAnswers={currentQuestion.acceptableAnswers || []}
-                onAcceptableAnswersChange={(answers) => setCurrentQuestion(prev => ({ ...prev, acceptableAnswers: answers }))}
+                onAcceptableAnswersChange={handleAcceptableAnswersChange}
                 placeholder="Enter the correct answer..."
                 label="Correct Answer"
               />
@@ -2422,7 +2449,7 @@ const RealTestManagement = () => {
             </label>
             <KaTeXEditor
               value={currentQuestion.explanation}
-              onChange={(value) => setCurrentQuestion(prev => ({ ...prev, explanation: value }))}
+              onChange={handleExplanationChange}
               placeholder="Explain the correct answer..."
               rows={3}
             />
@@ -2536,6 +2563,27 @@ const MockTestManagement = () => {
   });
 
   const fileInputRef = useRef(null);
+
+  // Memoized onChange handlers to prevent typing disruption
+  const handleQuestionChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, question: value }));
+  }, []);
+
+  const handlePassageChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, passage: value }));
+  }, []);
+
+  const handleExplanationChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, explanation: value }));
+  }, []);
+
+  const handleWrittenAnswerChange = useCallback((value) => {
+    setCurrentQuestion(prev => ({ ...prev, writtenAnswer: value }));
+  }, []);
+
+  const handleAcceptableAnswersChange = useCallback((answers) => {
+    setCurrentQuestion(prev => ({ ...prev, acceptableAnswers: answers }));
+  }, []);
 
   useEffect(() => {
     loadTests();
@@ -2679,10 +2727,9 @@ const MockTestManagement = () => {
   };
 
   const handleOptionChange = (index, value) => {
-    setCurrentQuestion(prev => ({
-      ...prev,
-      options: prev.options.map((option, i) => i === index ? value : option)
-    }));
+    const newOptions = [...currentQuestion.options];
+    newOptions[index] = value;
+    setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
   };
 
   const removeOption = (index) => {
@@ -3869,7 +3916,7 @@ const MockTestManagement = () => {
               </label>
               <KaTeXEditor
                 value={currentQuestion.passage}
-                onChange={(value) => setCurrentQuestion(prev => ({ ...prev, passage: value }))}
+                onChange={handlePassageChange}
                 placeholder="Enter the reading passage here..."
                 rows={8}
               />
@@ -3882,7 +3929,7 @@ const MockTestManagement = () => {
             </label>
             <KaTeXEditor
               value={currentQuestion.question}
-              onChange={(value) => setCurrentQuestion(prev => ({ ...prev, question: value }))}
+              onChange={handleQuestionChange}
               placeholder="Enter your question here..."
               rows={3}
             />
@@ -3988,9 +4035,9 @@ const MockTestManagement = () => {
             <div>
               <MultipleAnswersEditor
                 primaryAnswer={currentQuestion.writtenAnswer}
-                onPrimaryAnswerChange={(value) => setCurrentQuestion(prev => ({ ...prev, writtenAnswer: value }))}
+                onPrimaryAnswerChange={handleWrittenAnswerChange}
                 acceptableAnswers={currentQuestion.acceptableAnswers || []}
-                onAcceptableAnswersChange={(answers) => setCurrentQuestion(prev => ({ ...prev, acceptableAnswers: answers }))}
+                onAcceptableAnswersChange={handleAcceptableAnswersChange}
                 placeholder="Enter the correct answer..."
                 label="Correct Answer"
               />
@@ -4003,7 +4050,7 @@ const MockTestManagement = () => {
             </label>
             <KaTeXEditor
               value={currentQuestion.explanation}
-              onChange={(value) => setCurrentQuestion(prev => ({ ...prev, explanation: value }))}
+              onChange={handleExplanationChange}
               placeholder="Explain the correct answer..."
               rows={3}
             />

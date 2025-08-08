@@ -177,6 +177,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await authAPI.getCurrentUser();
+      dispatch({
+        type: 'AUTH_SUCCESS',
+        payload: {
+          user: response.data.user,
+          token: state.token
+        }
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      return { success: false, error: 'Failed to refresh user data' };
+    }
+  };
+
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
@@ -191,6 +208,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     changePassword,
+    refreshUser,
     clearError
   };
 

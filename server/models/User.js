@@ -43,12 +43,12 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'admin'],
+    enum: ['student', 'admin', 'teacher'],
     default: 'student'
   },
   accountType: {
     type: String,
-    enum: ['free', 'student'],
+    enum: ['free', 'student', 'teacher'],
     default: 'free'
   },
   profilePicture: {

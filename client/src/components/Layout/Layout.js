@@ -10,7 +10,7 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
-  FiTarget,
+  FiFileText,
   FiPieChart
 } from 'react-icons/fi';
 
@@ -28,10 +28,7 @@ const Layout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome },
     { name: 'Practice Tests', href: '/tests', icon: FiBookOpen },
-    // Show Study Plan for student account types and admin users
-    ...(user?.accountType === 'student' || user?.role === 'admin' ? [
-      { name: 'Study Plan', href: '/study-plan', icon: FiTarget }
-    ] : []),
+    { name: 'Articles', href: '/articles', icon: FiFileText },
     { name: 'Results & Analytics', href: '/results', icon: FiBarChart2 },
     { name: 'Profile', href: '/profile', icon: FiUser },
     { name: 'SAT Score Calculator', href: '/sat-score-calculator', icon: FiPieChart },

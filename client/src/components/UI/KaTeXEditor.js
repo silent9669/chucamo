@@ -1,14 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import 'katex/dist/katex.min.css';
 import katex from 'katex';
 
-const KaTeXEditor = ({ value, onChange, placeholder, rows = 3, label }) => {
+const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label }) => {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [previewContent, setPreviewContent] = useState('');
+  const [internalValue, setInternalValue] = useState(value || '');
   const textareaRef = useRef(null);
+  const lastValueRef = useRef(value || '');
+  const timeoutRef = useRef(null);
 
-  // Function to render KaTeX content
-  const renderKaTeX = (text) => {
+  // Update internal value when external value changes (but only if different)
+  useEffect(() => {
+    if (value !== lastValueRef.current) {
+      lastValueRef.current = value || '';
+      setInternalValue(value || '');
+    }
+  }, [value]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Function to render KaTeX content - memoized to prevent unnecessary recalculations
+  const renderKaTeX = useCallback((text) => {
     if (!text) return '';
     
     // Split text by KaTeX delimiters
@@ -44,28 +63,45 @@ const KaTeXEditor = ({ value, onChange, placeholder, rows = 3, label }) => {
         return part.replace(/\n/g, '<br>');
       }
     }).join('');
-  };
+  }, []);
 
-  // Update preview content when value changes
-  useEffect(() => {
+  // Memoize the preview content to prevent unnecessary re-renders
+  const previewContent = useMemo(() => {
     if (isPreviewMode) {
-      setPreviewContent(renderKaTeX(value || ''));
+      return renderKaTeX(internalValue);
     }
-  }, [value, isPreviewMode]);
+    return '';
+  }, [isPreviewMode, internalValue, renderKaTeX]);
 
-  const handleChange = (e) => {
-    onChange(e.target.value);
-  };
+  // Debounced onChange handler to prevent excessive updates
+  const debouncedOnChange = useCallback((newValue) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      if (onChange && newValue !== lastValueRef.current) {
+        lastValueRef.current = newValue;
+        onChange(newValue);
+      }
+    }, 150); // 150ms debounce for smoother typing
+  }, [onChange]);
 
-  const togglePreview = () => {
-    setIsPreviewMode(!isPreviewMode);
-  };
+  const handleChange = useCallback((e) => {
+    const newValue = e.target.value;
+    setInternalValue(newValue);
+    debouncedOnChange(newValue);
+  }, [debouncedOnChange]);
 
-  const focusTextarea = () => {
+  const togglePreview = useCallback(() => {
+    setIsPreviewMode(prev => !prev);
+  }, []);
+
+  const focusTextarea = useCallback(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
-  };
+  }, []);
 
   return (
     <div className="space-y-2">
@@ -92,7 +128,7 @@ const KaTeXEditor = ({ value, onChange, placeholder, rows = 3, label }) => {
         ) : (
           <textarea
             ref={textareaRef}
-            value={value || ''}
+            value={internalValue}
             onChange={handleChange}
             placeholder={placeholder}
             rows={rows}
@@ -126,6 +162,6 @@ const KaTeXEditor = ({ value, onChange, placeholder, rows = 3, label }) => {
       </div>
     </div>
   );
-};
+});
 
 export default KaTeXEditor; 

@@ -15,8 +15,9 @@ import Results from './pages/Results/Results';
 import ResultDetail from './pages/Results/ResultDetail';
 import TestDetails from './pages/TestDetails/TestDetails';
 import Profile from './pages/Profile/Profile';
-import StudyPlan from './pages/StudyPlan/StudyPlan';
-import StudyPlanManagement from './pages/StudyPlanManagement/StudyPlanManagement';
+import Articles from './pages/Articles/Articles';
+import ArticleReader from './pages/Articles/ArticleReader';
+import ArticlesManagement from './pages/Articles/ArticlesManagement';
 import Admin from './pages/Admin/Admin';
 import SATScoreCalculator from './pages/SATScoreCalculator';
 
@@ -137,22 +138,31 @@ function AppRoutes() {
       />
 
       <Route
-        path="/study-plan"
+        path="/articles"
         element={
           <ProtectedRoute>
             <Layout>
-              <StudyPlan />
+              <Articles />
             </Layout>
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/study-plan-management"
+        path="/articles/:id"
+        element={
+          <ProtectedRoute>
+            <ArticleReader />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/articles-management"
         element={
           <ProtectedRoute roles={['admin']}>
             <Layout>
-              <StudyPlanManagement />
+              <ArticlesManagement />
             </Layout>
           </ProtectedRoute>
         }

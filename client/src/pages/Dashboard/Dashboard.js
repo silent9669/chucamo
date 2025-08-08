@@ -34,16 +34,44 @@ const Dashboard = () => {
 
   const fetchUserStats = useCallback(async () => {
     try {
-      // Get user's current stats from the user object
+      // Always fetch fresh data to ensure coins and accuracy are up to date
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const currentUser = data.user;
+        
+        setUserStats({
+          loginStreak: currentUser?.loginStreak || 0,
+          totalTestsTaken: currentUser?.totalTestsTaken || 0,
+          averageAccuracy: currentUser?.averageAccuracy || 0,
+          ranking: 0, // Will be calculated from leaderboard
+          coins: currentUser?.coins || 0
+        });
+      } else {
+        // Fallback to user data from context if fetch fails
+        setUserStats({
+          loginStreak: user?.loginStreak || 0,
+          totalTestsTaken: user?.totalTestsTaken || 0,
+          averageAccuracy: user?.averageAccuracy || 0,
+          ranking: 0,
+          coins: user?.coins || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      // Fallback to user data from context if fetch fails
       setUserStats({
         loginStreak: user?.loginStreak || 0,
         totalTestsTaken: user?.totalTestsTaken || 0,
         averageAccuracy: user?.averageAccuracy || 0,
-        ranking: 0, // Will be calculated from leaderboard
+        ranking: 0,
         coins: user?.coins || 0
       });
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
     }
   }, [user]);
 
@@ -54,6 +82,7 @@ const Dashboard = () => {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
+      
       if (response.ok) {
         const data = await response.json();
         
@@ -70,9 +99,11 @@ const Dashboard = () => {
   }, [user]);
 
   useEffect(() => {
-    fetchUserStats();
-    fetchLeaderboard();
-  }, [fetchUserStats, fetchLeaderboard]);
+    if (user) {
+      fetchUserStats();
+      fetchLeaderboard();
+    }
+  }, [user?.id]); // Only re-run when user ID changes
 
   const quickActions = [
     {
@@ -184,7 +215,7 @@ const Dashboard = () => {
             <div>
               <p className="text-sm font-medium text-gray-600">Accuracy</p>
               <p className="text-2xl font-bold text-gray-900">
-                {userStats.averageAccuracy.toFixed(1)}%
+                {userStats.averageAccuracy ? userStats.averageAccuracy.toFixed(1) : '0.0'}%
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">

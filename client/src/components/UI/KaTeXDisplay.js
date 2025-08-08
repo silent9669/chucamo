@@ -2,7 +2,7 @@ import React from 'react';
 import 'katex/dist/katex.min.css';
 import katex from 'katex';
 
-const KaTeXDisplay = ({ content }) => {
+const KaTeXDisplay = ({ content, fontFamily = 'inherit' }) => {
   if (!content) return null;
 
   // Function to render KaTeX content
@@ -47,6 +47,7 @@ const KaTeXDisplay = ({ content }) => {
   return (
     <div 
       className="whitespace-pre-wrap"
+      style={{ fontFamily }}
       dangerouslySetInnerHTML={{ 
         __html: renderKaTeX(content) 
       }}

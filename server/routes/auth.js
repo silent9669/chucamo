@@ -131,7 +131,30 @@ router.post('/google', [
     });
   } catch (error) {
     console.error('Google Sign-In error:', error);
-    res.status(500).json({ message: 'Server error during Google Sign-In' });
+    
+    // Provide more specific error messages
+    if (error.message.includes('GOOGLE_CLIENT_ID')) {
+      return res.status(500).json({ 
+        message: 'Google OAuth not configured. Please set GOOGLE_CLIENT_ID environment variable.' 
+      });
+    }
+    
+    if (error.message.includes('Invalid token')) {
+      return res.status(400).json({ 
+        message: 'Invalid Google token. Please try signing in again.' 
+      });
+    }
+    
+    if (error.message.includes('audience')) {
+      return res.status(400).json({ 
+        message: 'Google Client ID mismatch. Please check your configuration.' 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error during Google Sign-In',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -318,6 +341,11 @@ router.post('/login', [
 router.get('/me', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
     res.json({
       success: true,
       user: {
@@ -333,7 +361,11 @@ router.get('/me', protect, async (req, res) => {
         studyGoals: user.studyGoals,
         profilePicture: user.profilePicture,
         lastLogin: user.lastLogin,
-        emailVerified: user.emailVerified
+        emailVerified: user.emailVerified,
+        loginStreak: user.loginStreak || 0,
+        totalTestsTaken: user.totalTestsTaken || 0,
+        averageAccuracy: user.averageAccuracy || 0,
+        coins: user.coins || 0
       }
     });
   } catch (error) {

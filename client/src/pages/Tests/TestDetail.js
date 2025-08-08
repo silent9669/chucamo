@@ -31,8 +31,48 @@ const TestDetail = () => {
     loadTestData();
   }, [loadTestData]);
 
-  const handleStartTest = () => {
-    navigate(`/tests/${testId}/take`);
+  const handleStartTest = async () => {
+    try {
+      // Check if user can start the test (check max attempts)
+      const response = await fetch('/api/results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          testId
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message === 'Upgrade to student account to re-do test') {
+            alert('⚠️ Upgrade to student account to re-do test');
+            return;
+          } else if (errorData.message === 'Maximum attempts reached for this test') {
+            alert('⚠️ Maximum attempts reached for this test');
+            return;
+          }
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        
+        alert('Failed to start test. Please try again.');
+        return;
+      }
+
+      // If successful, store the result ID and navigate to the test
+      const result = await response.json();
+      localStorage.setItem(`test_result_${testId}`, result.result._id);
+      navigate(`/tests/${testId}/take`);
+    } catch (error) {
+      console.error('Error starting test:', error);
+      alert('Failed to start test. Please try again.');
+    }
   };
 
   if (loading) {

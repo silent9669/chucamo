@@ -2,18 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#2563eb" />
     <meta
       name="description"
       content="Bluebook SAT Simulator - Comprehensive SAT preparation platform with practice tests, analytics, and study tools"
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple.png" />
+    
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" href="%PUBLIC_URL%/apple.png" />
+    <link rel="shortcut icon" href="%PUBLIC_URL%/apple.png" />
+    
     <!-- Google Identity Services -->
-    <meta name="google-signin-client_id" content="78502908355-qk6p9nj4kt5qnukscmbvh9id8000c74k.apps.googleusercontent.com">
+    <meta name="google-signin-client_id" content="%REACT_APP_GOOGLE_CLIENT_ID%">
     <meta name="google-signin-callback" content="handleCredentialResponse">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
@@ -23,7 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
     <!-- Desmos Graphing Calculator API -->
-    <script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=186c0fa4000447da8bdfed6bfa4df311"></script>
+    <script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=%REACT_APP_DESMOS_API_KEY%"></script>
     
     <title>Bunchable</title>
   </head>

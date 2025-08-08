@@ -86,14 +86,49 @@ router.post('/', protect, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Check if user has exceeded max attempts
+    // Get user to check account type
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has exceeded max attempts based on account type
     const existingAttempts = await Result.countDocuments({
       user: req.user.id,
       test: testId
     });
 
-    if (existingAttempts >= test.maxAttempts) {
-      return res.status(400).json({ message: 'Maximum attempts reached for this test' });
+    // Set max attempts based on account type
+    let maxAttempts;
+    if (user.accountType === 'free') {
+      maxAttempts = 1;
+    } else if (user.accountType === 'student') {
+      maxAttempts = 3;
+    } else if (user.accountType === 'teacher') {
+      maxAttempts = Infinity; // Unlimited attempts for teachers
+    } else {
+      maxAttempts = test.maxAttempts || 3; // fallback
+    }
+
+    // Only check limits for non-teacher accounts
+    if (user.accountType !== 'teacher' && existingAttempts >= maxAttempts) {
+      if (user.accountType === 'free') {
+        return res.status(400).json({ 
+          message: 'Upgrade to student account to re-do test',
+          accountType: 'free',
+          maxAttempts: maxAttempts,
+          currentAttempts: existingAttempts
+        });
+      } else {
+        return res.status(400).json({ 
+          message: 'Maximum attempts reached for this test',
+          accountType: user.accountType,
+          maxAttempts: maxAttempts,
+          currentAttempts: existingAttempts
+        });
+      }
     }
 
     const result = await Result.create({
@@ -184,7 +219,6 @@ router.put('/:id', protect, async (req, res) => {
         result.coinsEarned = coinsEarned;
       }
     }
-
     res.json({
       success: true,
       message: 'Test completed successfully',

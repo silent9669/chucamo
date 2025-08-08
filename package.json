@@ -12,8 +12,7 @@
     "start": "node start.js",
     "postinstall": "cd client && npm install",
     "heroku-postbuild": "npm run build",
-    "create-admin": "node server/scripts/createAdmin.js",
-    "update-admin": "node server/scripts/updateAdmin.js"
+    "create-admin": "node server/scripts/createAdmin.js"
   },
   "keywords": [
     "sat",

@@ -8,12 +8,17 @@ import {
   FiFlag,
   FiX as FiClose,
   FiEdit,
-  FiTrash2
+  FiTrash2,
+  FiZoomIn,
+  FiZoomOut
 } from 'react-icons/fi';
 import WrittenAnswerInput from '../../components/UI/WrittenAnswerInput';
 import CalculatorPopup from '../../components/UI/CalculatorPopup';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
 import { testsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
 // Utility function to safely serialize objects and prevent circular references
 const safeStringify = (obj) => {
@@ -38,6 +43,7 @@ const safeStringify = (obj) => {
 const TestTaker = () => {
   const navigate = useNavigate();
   const { id: testId } = useParams();
+  const { refreshUser } = useAuth();
   
   // Test data state
   const [test, setTest] = useState(null);
@@ -77,6 +83,9 @@ const TestTaker = () => {
   
   // Written answer state
   const [writtenAnswer, setWrittenAnswer] = useState('');
+  
+  // Font size state
+  const [fontSize, setFontSize] = useState(16); // Default font size in pixels
 
 
   
@@ -762,8 +771,8 @@ const TestTaker = () => {
       
       // Force a complete re-render of the content to ensure no highlight remnants
       if (currentQuestionData?.passage) {
-        // For reading passages, use the stripKaTeXFromPassage function
-        const cleanContent = stripKaTeXFromPassage(originalContent);
+        // For reading passages, use the renderPassageWithKaTeX function
+        const cleanContent = renderPassageWithKaTeX(originalContent);
         contentElement.innerHTML = cleanContent;
         console.log('Restored reading passage content');
       } else {
@@ -835,8 +844,8 @@ const TestTaker = () => {
     
     // Force a complete reset of the content first
     if (currentQuestionData?.passage) {
-      // For reading passages, use the stripKaTeXFromPassage function
-      currentHTML = stripKaTeXFromPassage(originalContent);
+      // For reading passages, use the renderPassageWithKaTeX function
+      currentHTML = renderPassageWithKaTeX(originalContent);
       console.log('Reset reading passage content');
     } else {
       // For questions, use the renderContent function
@@ -926,6 +935,19 @@ const TestTaker = () => {
   // Calculator functions
   const toggleCalculator = () => {
     setShowCalculator(!showCalculator);
+  };
+  
+  // Font size adjustment functions
+  const increaseFontSize = () => {
+    setFontSize(prev => Math.min(prev + 2, 24)); // Max 24px
+  };
+  
+  const decreaseFontSize = () => {
+    setFontSize(prev => Math.max(prev - 2, 12)); // Min 12px
+  };
+  
+  const resetFontSize = () => {
+    setFontSize(16); // Reset to default
   };
 
   const closeCalculator = () => {
@@ -1104,53 +1126,149 @@ const TestTaker = () => {
       // Save completion data - overwrite if same test
       localStorage.setItem(`test_completion_${testId}`, JSON.stringify(completionData));
       
-      // Clear progress data
+      // Clear progress data and result ID
       localStorage.removeItem(`test_progress_${testId}`);
+      localStorage.removeItem(`test_result_${testId}`);
       
       // Submit results to API and show coins earned
       try {
-        const questionResults = [];
-        const answers = Array.from(answeredQuestions.entries());
+        // Get the existing result ID from localStorage or create a new one
+        let resultId = localStorage.getItem(`test_result_${testId}`);
         
-        // Convert answers to question results format
-        answers.forEach(([questionKey, selectedAnswer]) => {
-          const [sectionIndex, questionIndex] = questionKey.split('-').map(Number);
-          const section = test.sections[sectionIndex];
-          const question = section.questions[questionIndex - 1];
+        if (!resultId) {
+          // If no existing result, create a new one
+          const startResponse = await fetch('/api/results', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+              testId
+            })
+          });
           
-          if (question) {
-            const isCorrect = question.correctAnswer === selectedAnswer ||
-                             question.options?.find(opt => opt.isCorrect)?.content === selectedAnswer;
+          if (!startResponse.ok) {
+            const errorText = await startResponse.text();
+            
+            try {
+              const errorData = JSON.parse(errorText);
+              if (errorData.message === 'Upgrade to student account to re-do test') {
+                alert('⚠️ Upgrade to student account to re-do test');
+                navigate('/tests');
+                return;
+              } else if (errorData.message === 'Maximum attempts reached for this test') {
+                alert('⚠️ Maximum attempts reached for this test');
+                navigate('/tests');
+                return;
+              }
+            } catch (e) {
+              console.error('Error parsing error response:', e);
+            }
+            
+            alert('Failed to start test. Please try again.');
+            return;
+          }
+          
+          const startResult = await startResponse.json();
+          resultId = startResult.result._id;
+          localStorage.setItem(`test_result_${testId}`, resultId);
+        }
+        
+        // Prepare question results
+        const questionResults = [];
+        
+        // Process ALL questions in the test, not just answered ones
+        test.sections.forEach((section, sectionIndex) => {
+          section.questions.forEach((question, questionIndex) => {
+            const questionKey = `${sectionIndex}-${questionIndex + 1}`;
+            const selectedAnswer = answeredQuestions.get(questionKey);
+            
+            // Determine if the answer is correct
+            let isCorrect = false;
+            if (selectedAnswer) {
+              if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
+                // Method 1: Check if the selected answer matches an option with isCorrect flag
+                if (question.options) {
+                  const selectedOption = question.options.find(opt => opt.content === selectedAnswer);
+                  if (selectedOption && selectedOption.isCorrect === true) {
+                    isCorrect = true;
+                  }
+                }
+
+                // Method 2: Check if the selected answer matches the correctAnswer field
+                if (!isCorrect) {
+                  if (typeof question.correctAnswer === 'string') {
+                    isCorrect = selectedAnswer === question.correctAnswer;
+                  } else if (typeof question.correctAnswer === 'number' && question.options) {
+                    const correctOption = question.options[question.correctAnswer];
+                    const correctContent = correctOption?.content || correctOption;
+                    isCorrect = selectedAnswer === correctContent;
+                  } else if (typeof question.correctAnswer === 'number') {
+                    isCorrect = selectedAnswer === question.correctAnswer.toString();
+                  }
+                }
+
+                // Method 3: Check if the selected answer matches any option marked as correct
+                if (!isCorrect && question.options) {
+                  const correctOption = question.options.find(opt => opt.isCorrect === true);
+                  if (correctOption && correctOption.content === selectedAnswer) {
+                    isCorrect = true;
+                  }
+                }
+              } else if (question.answerType === 'written' || question.type === 'grid-in') {
+                const acceptableAnswers = question.acceptableAnswers || [];
+                const writtenAnswer = question.writtenAnswer || '';
+                const allAcceptableAnswers = [...acceptableAnswers];
+                if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
+                  allAcceptableAnswers.push(writtenAnswer);
+                }
+                isCorrect = allAcceptableAnswers.some(answer => 
+                  selectedAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
+                );
+              }
+            }
             
             questionResults.push({
               question: question._id || question.id,
-              selectedAnswer,
+              selectedAnswer: selectedAnswer || null,
               isCorrect,
               timeSpent: 0 // Could be calculated if needed
             });
-          }
+          });
         });
         
-        const response = await fetch('/api/results', {
-          method: 'POST',
+        // Now complete the test by updating the result
+        const completeResponse = await fetch(`/api/results/${resultId}`, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({
-            testId,
             questionResults,
             endTime: new Date().toISOString(),
             status: 'completed'
           })
         });
         
-        if (response.ok) {
-          const result = await response.json();
+        if (completeResponse.ok) {
+          const result = await completeResponse.json();
+          
           if (result.coinsEarned > 0) {
             // Show coins earned notification
             alert(`🎉 Congratulations! You earned ${result.coinsEarned} coins! 🪙`);
           }
+          
+          // Refresh user data to update dashboard stats
+          try {
+            await refreshUser();
+          } catch (error) {
+            console.error('Error refreshing user data:', error);
+          }
+        } else {
+          const errorText = await completeResponse.text();
+          console.error('Failed to complete test:', errorText);
         }
       } catch (error) {
         console.error('Error submitting results:', error);
@@ -1208,44 +1326,65 @@ const TestTaker = () => {
     return cleaned;
   };
 
-  // Function to strip KaTeX markup from passage content for better highlighting
-  const stripKaTeXFromPassage = (passageContent) => {
+  // Function to render KaTeX content while preserving highlighting functionality
+  const renderPassageWithKaTeX = (passageContent) => {
     if (!passageContent) return '';
+    
+    // Function to render KaTeX content
+    const renderKaTeX = (text) => {
+      if (!text) return '';
+      
+      // Split text by KaTeX delimiters
+      const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/);
+      
+      return parts.map((part, index) => {
+        if (part.startsWith('$$') && part.endsWith('$$')) {
+          // Display math mode
+          try {
+            const mathContent = part.slice(2, -2);
+            return katex.renderToString(mathContent, {
+              displayMode: true,
+              throwOnError: false,
+              errorColor: '#cc0000'
+            });
+          } catch (error) {
+            return `<span style="color: #cc0000;">Error: ${part}</span>`;
+          }
+        } else if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
+          // Inline math mode
+          try {
+            const mathContent = part.slice(1, -1);
+            return katex.renderToString(mathContent, {
+              displayMode: false,
+              throwOnError: false,
+              errorColor: '#cc0000'
+            });
+          } catch (error) {
+            return `<span style="color: #cc0000;">Error: ${part}</span>`;
+          }
+        } else {
+          // Regular text - preserve line breaks for highlighting
+          return part.replace(/\n/g, '<br>');
+        }
+      }).join('');
+    };
     
     // Create a temporary div to parse the HTML safely
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = passageContent;
     
-    // Remove KaTeX elements but preserve their text content
-    const katexElements = tempDiv.querySelectorAll('.katex, [class*="katex"]');
-    katexElements.forEach(el => {
-      // Replace KaTeX elements with their text content
-      const textContent = el.textContent || el.innerText || '';
-      const textNode = document.createTextNode(textContent);
-      el.parentNode.replaceChild(textNode, el);
-    });
-    
-    // Remove math delimiters but preserve the content
-    let cleaned = tempDiv.innerHTML
-      .replace(/\$\$([^$]*?)\$\$/g, '$1') // Replace display math with content
-      .replace(/\$([^$]*?)\$/g, '$1'); // Replace inline math with content
-    
-    // Clean up any remaining KaTeX spans
-    cleaned = cleaned.replace(/<span class="katex.*?<\/span>/g, '');
-    cleaned = cleaned.replace(/<span class="katex.*?>/g, '');
-    
-    // Clean up extra whitespace but preserve paragraph structure
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    // Process the content to render KaTeX
+    let processedContent = renderKaTeX(tempDiv.innerHTML);
     
     // Ensure proper paragraph structure for highlighting
-    if (!cleaned.includes('<p>')) {
-      cleaned = cleaned.split('\n').map(line => line.trim()).filter(line => line.length > 0).map(line => `<p>${line}</p>`).join('');
+    if (!processedContent.includes('<p>')) {
+      processedContent = processedContent.split('<br>').map(line => line.trim()).filter(line => line.length > 0).map(line => `<p>${line}</p>`).join('');
     }
     
-    // Add proper spacing and styling for better highlighting
-    cleaned = cleaned.replace(/<p>/g, '<p style="margin-bottom: 1rem; line-height: 1.6;">');
+    // Add proper spacing and styling for better highlighting with serif font
+    processedContent = processedContent.replace(/<p>/g, '<p style="margin-bottom: 1rem; line-height: 1.6; font-family: serif;">');
     
-    return cleaned;
+    return processedContent;
   };
 
   const renderContent = (content, sectionType) => {
@@ -1256,8 +1395,8 @@ const TestTaker = () => {
       return content; // Keep original content for math sections
     }
     
-    // For English sections, strip KaTeX to improve highlighting
-    return stripKaTeXFromPassage(content);
+    // For English sections, render KaTeX properly while preserving highlighting
+    return renderPassageWithKaTeX(content);
   };
 
 
@@ -1444,17 +1583,49 @@ const TestTaker = () => {
         {/* Right - Controls */}
         <div className="flex items-center space-x-4">
           {currentSectionData?.type !== 'math' && (
-            <button
-              onClick={toggleHighlightMode}
-              className={`flex items-center px-3 py-1 text-sm rounded-lg transition-colors ${
-                isHighlightMode 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <FiEdit className="h-4 w-4 mr-1" />
-              {isHighlightMode ? 'Highlight Mode On' : 'Highlight'}
-            </button>
+            <>
+              <button
+                onClick={toggleHighlightMode}
+                className={`flex items-center px-3 py-1 text-sm rounded-lg transition-colors ${
+                  isHighlightMode 
+                    ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <FiEdit className="h-4 w-4 mr-1" />
+                {isHighlightMode ? 'Highlight Mode On' : 'Highlight'}
+              </button>
+              
+              {/* Font Size Controls */}
+              <div className="flex items-center bg-gray-100 rounded-lg px-2 py-1">
+                <button
+                  onClick={decreaseFontSize}
+                  disabled={fontSize <= 12}
+                  className="p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Decrease font size"
+                >
+                  <FiZoomOut className="h-4 w-4" />
+                </button>
+                <span className="px-2 text-sm text-gray-700 font-medium min-w-[3rem] text-center">
+                  {fontSize}px
+                </span>
+                <button
+                  onClick={increaseFontSize}
+                  disabled={fontSize >= 24}
+                  className="p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Increase font size"
+                >
+                  <FiZoomIn className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={resetFontSize}
+                  className="ml-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                  title="Reset font size"
+                >
+                  Reset
+                </button>
+              </div>
+            </>
           )}
           
           {highlights.length > 0 && (
@@ -1468,19 +1639,51 @@ const TestTaker = () => {
           )}
           
           {currentSectionData?.type === 'math' && (
-            <button 
-              onClick={toggleCalculator}
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2 ${
-                showCalculator 
-                  ? 'bg-green-600 text-white' 
-                  : 'text-gray-600 hover:text-gray-800 border border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-              </svg>
-              Calculator
-            </button>
+            <>
+              <button 
+                onClick={toggleCalculator}
+                className={`px-4 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2 ${
+                  showCalculator 
+                    ? 'bg-green-600 text-white' 
+                    : 'text-gray-600 hover:text-gray-800 border border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                Calculator
+              </button>
+              
+              {/* Font Size Controls */}
+              <div className="flex items-center bg-gray-100 rounded-lg px-2 py-1">
+                <button
+                  onClick={decreaseFontSize}
+                  disabled={fontSize <= 12}
+                  className="p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Decrease font size"
+                >
+                  <FiZoomOut className="h-4 w-4" />
+                </button>
+                <span className="px-2 text-sm text-gray-700 font-medium min-w-[3rem] text-center">
+                  {fontSize}px
+                </span>
+                <button
+                  onClick={increaseFontSize}
+                  disabled={fontSize >= 24}
+                  className="p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Increase font size"
+                >
+                  <FiZoomIn className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={resetFontSize}
+                  className="ml-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded"
+                  title="Reset font size"
+                >
+                  Reset
+                </button>
+              </div>
+            </>
           )}
           <button 
             onClick={handleSaveAndExit}
@@ -1534,13 +1737,15 @@ const TestTaker = () => {
                 style={{ 
                   userSelect: isHighlightMode ? 'text' : 'none',
                   WebkitUserSelect: isHighlightMode ? 'text' : 'none',
-                  cursor: isHighlightMode ? 'text' : 'default'
+                  cursor: isHighlightMode ? 'text' : 'default',
+                  fontFamily: 'serif',
+                  fontSize: `${fontSize}px`
                 }}
               >
                 <div 
-                  dangerouslySetInnerHTML={{ __html: stripKaTeXFromPassage(currentQuestionData.passage) }} 
+                  dangerouslySetInnerHTML={{ __html: renderPassageWithKaTeX(currentQuestionData.passage) }} 
                   className="prose prose-sm max-w-none"
-                  style={{ fontSize: '1rem', lineHeight: '1.6' }}
+                  style={{ fontSize: `${fontSize}px`, lineHeight: '1.6', fontFamily: 'serif' }}
                   suppressContentEditableWarning={true}
                   contentEditable={false}
                 />
@@ -1605,7 +1810,7 @@ const TestTaker = () => {
                     <div 
                       dangerouslySetInnerHTML={{ __html: renderContent(currentQuestionData.question || currentQuestionData.content, currentSectionData?.type) }} 
                       className="prose prose-sm max-w-none"
-                      style={{ fontSize: '1rem', lineHeight: '1.6' }}
+                      style={{ fontSize: `${fontSize}px`, lineHeight: '1.6' }}
                     />
                   </div>
                 )}
@@ -1653,8 +1858,8 @@ const TestTaker = () => {
                         </div>
                         <span className={`text-gray-900 text-base ${
                           eliminatedAnswers.includes(option.content) ? 'line-through' : ''
-                        }`}>
-                          {option.letter} <KaTeXDisplay content={option.content} />
+                        }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
+                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" />
                         </span>
                       </button>
                       <button
@@ -1719,7 +1924,7 @@ const TestTaker = () => {
                 
                 {/* Question Text */}
                 {currentSectionData?.type === 'math' ? (
-                  <div className="text-gray-900 text-base leading-relaxed">
+                  <div className="text-gray-900 text-base leading-relaxed" style={{ fontSize: `${fontSize}px` }}>
                     <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} />
                   </div>
                 ) : (
@@ -1738,13 +1943,14 @@ const TestTaker = () => {
                     style={{ 
                       userSelect: isHighlightMode ? 'text' : 'none',
                       WebkitUserSelect: isHighlightMode ? 'text' : 'none',
-                      cursor: isHighlightMode ? 'text' : 'default'
+                      cursor: isHighlightMode ? 'text' : 'default',
+                      fontSize: `${fontSize}px`
                     }}
                   >
                     <div 
                       dangerouslySetInnerHTML={{ __html: renderContent(currentQuestionData.question || currentQuestionData.content, currentSectionData?.type) }} 
                       className="prose prose-sm max-w-none"
-                      style={{ fontSize: '1rem', lineHeight: '1.6' }}
+                      style={{ fontSize: `${fontSize}px`, lineHeight: '1.6' }}
                     />
                   </div>
                 )}
@@ -1792,8 +1998,8 @@ const TestTaker = () => {
                         </div>
                         <span className={`text-gray-900 text-base ${
                           eliminatedAnswers.includes(option.content) ? 'line-through' : ''
-                        }`}>
-                          {option.letter} <KaTeXDisplay content={option.content} />
+                        }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
+                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" />
                         </span>
                       </button>
                       <button

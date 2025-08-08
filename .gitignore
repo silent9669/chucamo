@@ -110,3 +110,14 @@ server/uploads/*
 
 # Railway specific
 .railway/
+
+# Additional security
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Local development files
+local/
+dev/

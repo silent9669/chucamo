@@ -364,16 +364,11 @@ const Profile = () => {
                           {`${user.firstName} ${user.lastName}`}
                         </p>
                         <p className="text-xs text-gray-500">
-                          🪙 {user.coins || 0} coins • {user.averageAccuracy || 0}% accuracy
+                          🪙 {user.coins || 0} coins
                         </p>
                       </div>
                       <div className="flex-shrink-0 flex items-center gap-2">
-                        {user.loginStreak > 0 && (
-                          <div className="flex items-center gap-1 text-orange-500">
-                            <span className="text-lg">🔥</span>
-                            <span className="text-xs font-medium">{user.loginStreak}</span>
-                          </div>
-                        )}
+                        {/* Removed login streak display */}
                       </div>
                     </div>
                   ))}
