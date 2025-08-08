@@ -2,7 +2,20 @@ import axios from 'axios';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://bunchable-production.up.railway.app/api' : '/api'),
+  baseURL: (() => {
+    const envUrl = process.env.REACT_APP_API_URL;
+    if (envUrl) {
+      // Ensure the URL has the correct protocol
+      if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
+        return envUrl;
+      } else {
+        return `https://${envUrl}`;
+      }
+    }
+    return process.env.NODE_ENV === 'production' 
+      ? 'https://bunchable-production.up.railway.app/api' 
+      : '/api';
+  })(),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
