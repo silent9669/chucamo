@@ -37,33 +37,81 @@ const TestDetails = () => {
   const getQuestionResult = useCallback((questionId) => {
     if (!testResults || !testResults.answers) return null;
     
+    console.log('🔍 Looking for question result with ID:', questionId);
+    console.log('📋 Available answer keys:', Object.keys(testResults.answers));
+    
     // Try multiple formats for question ID
     let result = testResults.answers[questionId];
-    if (result) return result;
+    if (result) {
+      console.log('✅ Found result with exact ID match');
+      return result;
+    }
     
     // If not found, try with the current question's actual ID
     const currentQuestionData = getCurrentQuestionData();
     if (currentQuestionData && currentQuestionData.id) {
-      result = testResults.answers[currentQuestionData.id.toString()];
-      if (result) return result;
+      const questionDbId = currentQuestionData.id.toString();
+      result = testResults.answers[questionDbId];
+      if (result) {
+        console.log('✅ Found result with question DB ID:', questionDbId);
+        return result;
+      }
     }
     
     // If still not found, try with section-question format
     const sectionIndex = currentSection;
     const questionIndex = currentQuestion - 1;
     const formattedId = `${sectionIndex}-${questionIndex + 1}`;
-    return testResults.answers[formattedId] || null;
-  }, [testResults, currentSection, currentQuestion, getCurrentQuestionData]);
+    result = testResults.answers[formattedId];
+    if (result) {
+      console.log('✅ Found result with formatted ID:', formattedId);
+      return result;
+    }
+    
+    // Try to find by parsing the questionId and looking up the actual question
+    if (questionId.includes('-')) {
+      const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
+      const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
+      if (question && question.id) {
+        const questionDbId = question.id.toString();
+        result = testResults.answers[questionDbId];
+        if (result) {
+          console.log('✅ Found result by looking up question DB ID:', questionDbId);
+          return result;
+        }
+      }
+    }
+    
+    console.log('❌ No result found for question ID:', questionId);
+    return null;
+  }, [testResults, currentSection, currentQuestion, getCurrentQuestionData, test]);
 
   const isAnswerCorrect = useCallback((questionId, selectedAnswer) => {
     // Parse the questionId to get section and question indices
     const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
+    
+    console.log('🔍 Checking answer for questionId:', questionId);
+    console.log('📊 Parsed indices - sectionIndex:', sectionIndex, 'questionIndex:', questionIndex);
+    console.log('📋 Test sections count:', test?.sections?.length || 0);
+    
     const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
     
     if (!question) {
-      console.warn('Question not found for ID:', questionId);
+      console.warn('❌ Question not found for ID:', questionId);
+      console.log('🔍 Available sections:', test?.sections?.map((section, idx) => ({
+        sectionIndex: idx,
+        sectionName: section.name,
+        questionsCount: section.questions?.length || 0
+      })));
+      
+      if (test?.sections?.[sectionIndex]) {
+        console.log('🔍 Section exists but question not found. Available questions in section', sectionIndex, ':', 
+          test.sections[sectionIndex].questions?.length || 0);
+      }
       return false;
     }
+    
+    console.log('✅ Question found:', question.question?.substring(0, 50) + '...');
     
     // For multiple choice questions
     if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
@@ -669,155 +717,4 @@ const TestDetails = () => {
                               {getQuestionResult(`${currentSection}-${currentQuestion}`).selectedAnswer || 'No answer provided'}
                             </p>
                             <div className="mt-2 flex items-center">
-                              {isAnswerCorrect(`${currentSection}-${currentQuestion}`, getQuestionResult(`${currentSection}-${currentQuestion}`).selectedAnswer) ? (
-                                <>
-                                  <FiCheck className="h-4 w-4 text-green-600 mr-2" />
-                                  <span className="text-sm text-green-700">Correct</span>
-                                </>
-                              ) : (
-                                <>
-                                  <FiX className="h-4 w-4 text-red-600 mr-2" />
-                                  <span className="text-sm text-red-700">Incorrect</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-4 rounded-lg border-2 bg-red-100 border-red-400 text-red-900">
-                            <p className="font-medium">No answer provided</p>
-                            <div className="mt-2 flex items-center">
-                              <FiX className="h-4 w-4 text-red-600 mr-2" />
-                              <span className="text-sm text-red-700">Unanswered</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Always show correct answers for written questions when test is completed */}
-                        {showAnswers && testResults && testResults.status === 'completed' && (currentQuestionData.acceptableAnswers?.length > 0 || currentQuestionData.writtenAnswer) && (
-                          <div className="mt-4">
-                            <h4 className="font-medium text-gray-900 mb-3">Correct Answer(s)</h4>
-                            <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
-                              <div className="space-y-2">
-                                {/* Show writtenAnswer first if it exists */}
-                                {currentQuestionData.writtenAnswer && (
-                                  <p className="text-green-800 font-medium">• {currentQuestionData.writtenAnswer}</p>
-                                )}
-                                {/* Show all acceptable answers */}
-                                {currentQuestionData.acceptableAnswers?.map((answer, index) => (
-                                  <p key={index} className="text-green-800 font-medium">• {answer}</p>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Explanation */}
-                    {showExplanations && currentQuestionData.explanation && (
-                      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-medium text-blue-900 mb-2">Explanation</h4>
-                        <div className="text-blue-800">
-                          <KaTeXDisplay content={currentQuestionData.explanation} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-lg shadow p-6 text-center">
-                    <p className="text-gray-500">No question data available</p>
-                  </div>
-                )}
-
-                {/* Question Navigation */}
-                {questions.length > 1 && (
-                  <div className="mt-6 flex items-center justify-between">
-                    <button
-                      onClick={() => handleQuestionChange(currentQuestion - 1)}
-                      disabled={currentQuestion <= 1}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Previous
-                    </button>
-                    
-                    <div className="text-sm text-gray-600">
-                      Question {currentQuestion} of {questions.length}
-                    </div>
-                    
-                    <button
-                      onClick={() => handleQuestionChange(currentQuestion + 1)}
-                      disabled={currentQuestion >= questions.length}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Question Navigation Box */}
-              <div className="xl:col-span-1">
-                <div className="bg-white rounded-lg shadow p-4 sticky top-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    {`Section ${currentSection + 1} Questions`}
-                  </h3>
-                  
-                  {/* Legend */}
-                  <div className="mb-4 space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <div className="w-4 h-4 bg-blue-500 text-white rounded mr-2 flex items-center justify-center text-xs font-medium">C</div>
-                      Current
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-4 h-4 bg-green-500 text-white rounded mr-2 flex items-center justify-center text-xs font-medium">✓</div>
-                      Correct
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-4 h-4 bg-red-500 text-white rounded mr-2 flex items-center justify-center text-xs font-medium">✗</div>
-                      Incorrect
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-4 h-4 border-2 border-dashed border-gray-400 rounded mr-2 flex items-center justify-center text-xs font-medium text-gray-600">?</div>
-                      Unanswered
-                    </div>
-                  </div>
-
-                  {/* Question Grid */}
-                  <div className="grid grid-cols-5 gap-2">
-                    {questions.map((_, index) => {
-                      const questionNum = index + 1;
-                      const questionId = `${currentSection}-${questionNum}`;
-                      const questionResult = getQuestionResult(questionId);
-                      const isCorrect = questionResult ? isAnswerCorrect(questionId, questionResult.selectedAnswer) : false;
-                      const hasAnswer = !!questionResult;
-                      
-                      return (
-                        <button
-                          key={index}
-                          onClick={() => handleQuestionChange(questionNum)}
-                          className={`w-8 h-8 text-xs border-2 rounded flex items-center justify-center transition-colors ${
-                            currentQuestion === questionNum
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : hasAnswer
-                                ? isCorrect
-                                  ? 'bg-green-500 text-white border-green-500'
-                                  : 'bg-red-500 text-white border-red-500'
-                                : 'bg-white text-gray-600 border-dashed border-gray-400'
-                          }`}
-                        >
-                          {currentQuestion === questionNum ? 'C' : questionNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default TestDetails;
+                              {isAnswerCorrect(`
