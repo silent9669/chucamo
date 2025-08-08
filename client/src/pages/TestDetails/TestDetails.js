@@ -17,6 +17,211 @@ const TestDetails = () => {
   const [showAnswers, setShowAnswers] = useState(true);
   const [showExplanations, setShowExplanations] = useState(false);
 
+  const getCurrentSectionData = () => {
+    if (!test || !test.sections) return null;
+    return test.sections[currentSection] || null;
+  };
+
+  const getCurrentSectionQuestions = () => {
+    const section = getCurrentSectionData();
+    if (!section || !section.questions) return [];
+    return section.questions;
+  };
+
+  const getCurrentQuestionData = () => {
+    const questions = getCurrentSectionQuestions();
+    if (questions.length === 0) return null;
+    return questions[currentQuestion - 1] || null;
+  };
+
+  const getQuestionResult = useCallback((questionId) => {
+    if (!testResults || !testResults.answers) return null;
+    
+    // Try multiple formats for question ID
+    let result = testResults.answers[questionId];
+    if (result) return result;
+    
+    // If not found, try with the current question's actual ID
+    const currentQuestionData = getCurrentQuestionData();
+    if (currentQuestionData && currentQuestionData.id) {
+      result = testResults.answers[currentQuestionData.id.toString()];
+      if (result) return result;
+    }
+    
+    // If still not found, try with section-question format
+    const sectionIndex = currentSection;
+    const questionIndex = currentQuestion - 1;
+    const formattedId = `${sectionIndex}-${questionIndex + 1}`;
+    return testResults.answers[formattedId] || null;
+  }, [testResults, currentSection, currentQuestion]);
+
+  const isAnswerCorrect = useCallback((questionId, selectedAnswer) => {
+    // Parse the questionId to get section and question indices
+    const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
+    const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
+    
+    if (!question) {
+      console.warn('Question not found for ID:', questionId);
+      return false;
+    }
+    
+    // For multiple choice questions
+    if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
+      // Method 1: Check if the selected answer matches an option with isCorrect flag
+      if (question.options) {
+        const selectedOption = question.options.find(opt => opt.content === selectedAnswer);
+        if (selectedOption && selectedOption.isCorrect === true) {
+          return true;
+        }
+      }
+      
+      // Method 2: Check if the selected answer matches the correctAnswer field
+      if (typeof question.correctAnswer === 'string') {
+        return selectedAnswer === question.correctAnswer;
+      } else if (typeof question.correctAnswer === 'number' && question.options) {
+        // If correctAnswer is an index, get the content from options
+        const correctOption = question.options[question.correctAnswer];
+        const correctContent = correctOption?.content || correctOption;
+        return selectedAnswer === correctContent;
+      } else if (typeof question.correctAnswer === 'number') {
+        // Handle case where correctAnswer is just a number (index)
+        return selectedAnswer === question.correctAnswer.toString();
+      }
+      
+      // Method 3: Check if the selected answer matches any option marked as correct
+      if (question.options) {
+        const correctOption = question.options.find(opt => opt.isCorrect === true);
+        if (correctOption && correctOption.content === selectedAnswer) {
+          return true;
+        }
+      }
+    } else if (question.answerType === 'written' || question.type === 'grid-in') {
+      const acceptableAnswers = question.acceptableAnswers || [];
+      const writtenAnswer = question.writtenAnswer || '';
+      
+      // Add writtenAnswer to acceptable answers if it's not already there
+      const allAcceptableAnswers = [...acceptableAnswers];
+      if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
+        allAcceptableAnswers.push(writtenAnswer);
+      }
+      
+      return allAcceptableAnswers.some(answer => 
+        selectedAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
+      );
+    }
+    
+    return false;
+  }, [test]);
+
+  const calculateScore = useCallback((testData, answers) => {
+    if (!testData || !answers) return 0;
+    
+    let totalQuestions = 0;
+    let correctAnswers = 0;
+    
+    // Calculate score based on test structure
+    if (testData.sections) {
+      testData.sections.forEach((section, sectionIndex) => {
+        if (section.questions) {
+          section.questions.forEach((question, questionIndex) => {
+            totalQuestions++;
+            const questionId = `${sectionIndex}-${questionIndex + 1}`;
+            const questionResult = answers[questionId];
+            
+            if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
+              correctAnswers++;
+            }
+          });
+        }
+      });
+    } else if (testData.questions) {
+      // Handle legacy test format
+      testData.questions.forEach((question, index) => {
+        totalQuestions++;
+        const questionId = `0-${index + 1}`;
+        const questionResult = answers[questionId];
+        
+        if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
+          correctAnswers++;
+        }
+      });
+    }
+    
+    return totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  }, [isAnswerCorrect]);
+
+  const getAnswerStatus = (questionId, optionContent) => {
+    const questionResult = getQuestionResult(questionId);
+    
+    // Parse the questionId to get section and question indices
+    const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
+    const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
+    
+    if (!question) return 'unanswered';
+    
+    // Determine if this option is the correct answer
+    let isCorrectAnswer = false;
+    if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
+      // Method 1: Check if this option has isCorrect flag
+      if (question.options) {
+        const option = question.options.find(opt => opt.content === optionContent);
+        if (option && option.isCorrect === true) {
+          isCorrectAnswer = true;
+        }
+      }
+      
+      // Method 2: Check if this option matches the correctAnswer field
+      if (!isCorrectAnswer) {
+        if (typeof question.correctAnswer === 'string') {
+          isCorrectAnswer = optionContent === question.correctAnswer;
+        } else if (typeof question.correctAnswer === 'number' && question.options) {
+          const correctOption = question.options[question.correctAnswer];
+          const correctContent = correctOption?.content || correctOption;
+          isCorrectAnswer = optionContent === correctContent;
+        } else if (typeof question.correctAnswer === 'number') {
+          isCorrectAnswer = optionContent === question.correctAnswer.toString();
+        }
+      }
+      
+      // Method 3: Check if this option matches any option marked as correct
+      if (!isCorrectAnswer && question.options) {
+        const correctOption = question.options.find(opt => opt.isCorrect === true);
+        if (correctOption && correctOption.content === optionContent) {
+          isCorrectAnswer = true;
+        }
+      }
+    }
+    
+    if (!questionResult) return 'unanswered';
+    
+    const userSelected = questionResult.selectedAnswer === optionContent;
+    const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
+    
+    if (userSelected && isCorrect) return 'correct';
+    if (userSelected && !isCorrect) return 'incorrect';
+    if (isCorrectAnswer && !userSelected) return 'correct-answer';
+    return 'unanswered';
+  };
+
+  const getQuestionBoxColor = (questionId) => {
+    if (!testResults) return '';
+    
+    const questionResult = getQuestionResult(questionId);
+    if (!questionResult) return 'border-l-4 border-red-500';
+    
+    const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
+    return isCorrect ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500';
+  };
+
+  const handleQuestionChange = (questionNum) => {
+    setCurrentQuestion(questionNum);
+  };
+
+  const handleSectionChange = (sectionIndex) => {
+    setCurrentSection(sectionIndex);
+    setCurrentQuestion(1);
+  };
+
   const loadTestDetails = useCallback(async () => {
     try {
       setLoading(true);
@@ -123,273 +328,61 @@ const TestDetails = () => {
                     isCorrect = true;
                   }
                 }
+                
+                if (isCorrect) {
+                  correctCount++;
+                } else {
+                  incorrectCount++;
+                }
               } else if (question.answerType === 'written' || question.type === 'grid-in') {
                 const acceptableAnswers = question.acceptableAnswers || [];
                 const writtenAnswer = question.writtenAnswer || '';
+                
+                // Add writtenAnswer to acceptable answers if it's not already there
                 const allAcceptableAnswers = [...acceptableAnswers];
                 if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
                   allAcceptableAnswers.push(writtenAnswer);
                 }
-                isCorrect = allAcceptableAnswers.some(answer => 
+                
+                if (allAcceptableAnswers.some(answer => 
                   userAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
-                );
+                )) {
+                  correctCount++;
+                } else {
+                  incorrectCount++;
+                }
               }
-              
-              if (isCorrect) {
-                correctCount++;
-              } else {
-                incorrectCount++;
-              }
+            } else {
+              // Unanswered questions count as incorrect
+              incorrectCount++;
             }
-            // Note: Unanswered questions are not counted as incorrect for display purposes
-            // but they are included in the total score calculation as incorrect
           });
         });
         
-        // Calculate total questions from test data sections
-        const totalQuestions = testData.sections ? 
-          testData.sections.reduce((total, section) => total + (section.questions?.length || 0), 0) : 
-          (parsedData.totalQuestions || 0);
-        
-        const resultsData = {
-          testId: testId,
-          userId: 'user', // Mock user ID
-          score: parsedData.status === 'completed' ? overallScore : null,
-          correctCount: correctCount,
-          incorrectCount: incorrectCount,
-          totalQuestions: totalQuestions,
+        setTestResults({
+          answers,
+          score: overallScore,
+          correctCount,
+          incorrectCount,
+          totalQuestions: correctCount + incorrectCount,
           completedAt: parsedData.completedAt || new Date().toISOString(),
-          status: parsedData.status || 'completed',
-          answers: answers,
-          answeredCount: parsedData.answeredQuestions.length
-        };
-        
-        setTestResults(resultsData);
-        
-        // Set showExplanations based on test completion status
-        setShowExplanations(parsedData.status === 'completed');
-        
+          timeSpent: parsedData.timeSpent || 0
+        });
       } else {
         setTestResults(null);
       }
-      
     } catch (error) {
       console.error('Error loading test details:', error);
       setError('Failed to load test details');
     } finally {
       setLoading(false);
     }
-  }, [testId]);
+  }, [testId, calculateScore]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadTestDetails();
   }, [loadTestDetails]);
-
-  const getCurrentSectionData = () => {
-    if (!test || !test.sections) return null;
-    return test.sections[currentSection] || null;
-  };
-
-  const getCurrentSectionQuestions = () => {
-    const section = getCurrentSectionData();
-    if (!section || !section.questions) return [];
-    return section.questions;
-  };
-
-  const getCurrentQuestionData = () => {
-    const questions = getCurrentSectionQuestions();
-    if (questions.length === 0) return null;
-    return questions[currentQuestion - 1] || null;
-  };
-
-  const getQuestionResult = (questionId) => {
-    if (!testResults || !testResults.answers) return null;
-    
-    // Try multiple formats for question ID
-    let result = testResults.answers[questionId];
-    if (result) return result;
-    
-    // If not found, try with the current question's actual ID
-    const currentQuestionData = getCurrentQuestionData();
-    if (currentQuestionData && currentQuestionData.id) {
-      result = testResults.answers[currentQuestionData.id.toString()];
-      if (result) return result;
-    }
-    
-    // If still not found, try with section-question format
-    const sectionIndex = currentSection;
-    const questionIndex = currentQuestion - 1;
-    const formattedId = `${sectionIndex}-${questionIndex + 1}`;
-    return testResults.answers[formattedId] || null;
-  };
-
-  const isAnswerCorrect = (questionId, selectedAnswer) => {
-    // Parse the questionId to get section and question indices
-    const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
-    const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
-    
-    if (!question) {
-      console.warn('Question not found for ID:', questionId);
-      return false;
-    }
-    
-    // For multiple choice questions
-    if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
-      // Method 1: Check if the selected answer matches an option with isCorrect flag
-      if (question.options) {
-        const selectedOption = question.options.find(opt => opt.content === selectedAnswer);
-        if (selectedOption && selectedOption.isCorrect === true) {
-          return true;
-        }
-      }
-      
-      // Method 2: Check if the selected answer matches the correctAnswer field
-      if (typeof question.correctAnswer === 'string') {
-        return selectedAnswer === question.correctAnswer;
-      } else if (typeof question.correctAnswer === 'number' && question.options) {
-        // If correctAnswer is an index, get the content from options
-        const correctOption = question.options[question.correctAnswer];
-        const correctContent = correctOption?.content || correctOption;
-        return selectedAnswer === correctContent;
-      } else if (typeof question.correctAnswer === 'number') {
-        // Handle case where correctAnswer is just a number (index)
-        return selectedAnswer === question.correctAnswer.toString();
-      }
-      
-      // Method 3: Check if the selected answer matches any option marked as correct
-      if (question.options) {
-        const correctOption = question.options.find(opt => opt.isCorrect === true);
-        if (correctOption && correctOption.content === selectedAnswer) {
-          return true;
-        }
-      }
-    } else if (question.answerType === 'written' || question.type === 'grid-in') {
-      const acceptableAnswers = question.acceptableAnswers || [];
-      const writtenAnswer = question.writtenAnswer || '';
-      
-      // Add writtenAnswer to acceptable answers if it's not already there
-      const allAcceptableAnswers = [...acceptableAnswers];
-      if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
-        allAcceptableAnswers.push(writtenAnswer);
-      }
-      
-      return allAcceptableAnswers.some(answer => 
-        selectedAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
-      );
-    }
-    
-    return false;
-  };
-
-  const calculateScore = (testData, answers) => {
-    if (!testData || !answers) return 0;
-    
-    let totalQuestions = 0;
-    let correctAnswers = 0;
-    
-    // Calculate score based on test structure
-    if (testData.sections) {
-      testData.sections.forEach((section, sectionIndex) => {
-        if (section.questions) {
-          section.questions.forEach((question, questionIndex) => {
-            totalQuestions++;
-            const questionId = `${sectionIndex}-${questionIndex + 1}`;
-            const questionResult = getQuestionResult(questionId);
-            
-            if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
-              correctAnswers++;
-            }
-          });
-        }
-      });
-    } else if (testData.questions) {
-      // Handle legacy test format
-      testData.questions.forEach((question, index) => {
-        totalQuestions++;
-        const questionId = `0-${index + 1}`;
-        const questionResult = getQuestionResult(questionId);
-        
-        if (questionResult && isAnswerCorrect(questionId, questionResult.selectedAnswer)) {
-          correctAnswers++;
-        }
-      });
-    }
-    
-    return totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-  };
-
-  const getAnswerStatus = (questionId, optionContent) => {
-    const questionResult = getQuestionResult(questionId);
-    
-    // Parse the questionId to get section and question indices
-    const [sectionIndex, questionIndex] = questionId.split('-').map(Number);
-    const question = test?.sections?.[sectionIndex]?.questions?.[questionIndex - 1];
-    
-    if (!question) return 'unanswered';
-    
-    // Determine if this option is the correct answer
-    let isCorrectAnswer = false;
-    if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
-      // Method 1: Check if this option has isCorrect flag
-      if (question.options) {
-        const option = question.options.find(opt => opt.content === optionContent);
-        if (option && option.isCorrect === true) {
-          isCorrectAnswer = true;
-        }
-      }
-      
-      // Method 2: Check if this option matches the correctAnswer field
-      if (!isCorrectAnswer) {
-        if (typeof question.correctAnswer === 'string') {
-          isCorrectAnswer = optionContent === question.correctAnswer;
-        } else if (typeof question.correctAnswer === 'number' && question.options) {
-          const correctOption = question.options[question.correctAnswer];
-          const correctContent = correctOption?.content || correctOption;
-          isCorrectAnswer = optionContent === correctContent;
-        } else if (typeof question.correctAnswer === 'number') {
-          isCorrectAnswer = optionContent === question.correctAnswer.toString();
-        }
-      }
-      
-      // Method 3: Check if this option matches any option marked as correct
-      if (!isCorrectAnswer && question.options) {
-        const correctOption = question.options.find(opt => opt.isCorrect === true);
-        if (correctOption && correctOption.content === optionContent) {
-          isCorrectAnswer = true;
-        }
-      }
-    }
-    
-    if (!questionResult) return 'unanswered';
-    
-    const userSelected = questionResult.selectedAnswer === optionContent;
-    const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
-    
-    if (userSelected && isCorrect) return 'correct';
-    if (userSelected && !isCorrect) return 'incorrect';
-    if (isCorrectAnswer && !userSelected) return 'correct-answer';
-    return 'unanswered';
-  };
-
-  const getQuestionBoxColor = (questionId) => {
-    if (!testResults) return '';
-    
-    const questionResult = getQuestionResult(questionId);
-    if (!questionResult) return 'border-l-4 border-red-500';
-    
-    const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
-    return isCorrect ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500';
-  };
-
-  const handleQuestionChange = (questionNum) => {
-    setCurrentQuestion(questionNum);
-  };
-
-  const handleSectionChange = (sectionIndex) => {
-    setCurrentSection(sectionIndex);
-    setCurrentQuestion(1);
-  };
 
   if (loading) {
     return (
@@ -470,7 +463,7 @@ const TestDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {calculateScore(test, testResults.answers)}%
+                  {testResults.score || 0}%
                 </div>
                 <div className="text-sm text-gray-600">Score</div>
               </div>

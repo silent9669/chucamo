@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFileText, FiClock, FiPlay, FiSearch } from 'react-icons/fi';
-import { useAuth } from '../../contexts/AuthContext';
 
 const Articles = () => {
   return (
