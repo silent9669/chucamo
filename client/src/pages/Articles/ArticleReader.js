@@ -77,7 +77,7 @@ const ArticleReader = () => {
           console.log(`📚 Found ${articles.length} articles in localStorage`);
           console.log('📋 Available article IDs:', articles.map(a => a.id));
           
-          const foundArticle = articles.find(a => a.id === id);
+          const foundArticle = articles.find(a => a.id.toString() === id.toString());
           if (foundArticle) {
             console.log('✅ Article found:', foundArticle.title);
             setArticle(foundArticle);
