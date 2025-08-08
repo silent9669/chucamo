@@ -17,7 +17,7 @@ const createNewAdmin = async () => {
       lastName: 'Admin',
       username: 'superadmin',
       email: 'superadmin@example.com',
-      password: 'admin123456', // Will be hashed automatically by the model
+      password: 'admin123', // Will be hashed automatically by the model
       role: 'admin',
       accountType: 'student',
       emailVerified: true,
@@ -31,7 +31,7 @@ const createNewAdmin = async () => {
     console.log('✅ New admin user created successfully!');
     console.log('📧 Email: superadmin@example.com');
     console.log('👤 Username: superadmin');
-    console.log('🔑 Password: admin123456');
+    console.log('🔑 Password: admin123');
     console.log('👑 Role: admin');
 
     // Also create a backup admin with different credentials
@@ -63,7 +63,7 @@ const createNewAdmin = async () => {
     const testUser1 = await User.findOne({ username: 'superadmin' }).select('+password');
     const testUser2 = await User.findOne({ username: 'backupadmin' }).select('+password');
     
-    const test1 = await testUser1.comparePassword('admin123456');
+    const test1 = await testUser1.comparePassword('admin123');
     const test2 = await testUser2.comparePassword('password123');
     
     console.log('✅ Superadmin password test:', test1);

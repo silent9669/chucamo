@@ -13,7 +13,7 @@ console.log('RAILWAY_URL:', process.env.RAILWAY_URL);
 if (!process.env.MONGODB_URI) {
   console.error('\n❌ MONGODB_URI is not set!');
   console.log('Please set it in Railway environment variables:');
-  console.log('mongodb+srv://phucchemistry69:admin123456@cluster0.kk3a14q.mongodb.net/bluebook-sat-simulator?retryWrites=true&w=majority');
+  console.log('MongoDB URI is set:', process.env.MONGODB_URI ? 'YES' : 'NO');
   process.exit(1);
 }
 

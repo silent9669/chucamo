@@ -4,7 +4,7 @@ const User = require('../models/User');
 const createProductionAdmin = async () => {
   try {
     // Connect to production database
-    const productionURI = 'mongodb+srv://phucchemistry69:admin123456@cluster0.kk3a14q.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+    const productionURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bluebook-sat-simulator';
     
     console.log('🔗 Connecting to production MongoDB...');
     console.log('📍 URI:', productionURI.substring(0, 50) + '...');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { 
@@ -6,8 +6,7 @@ import {
   FiBarChart2, 
   FiTarget,
   FiTrendingUp,
-  FiAward,
-  FiZap
+  FiAward
 } from 'react-icons/fi';
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,7 +20,7 @@ const Dashboard = () => {
     averageAccuracy: 0,
     ranking: 0
   });
-  const [leaderboard, setLeaderboard] = useState([]);
+
   
   const { isLoading, error } = useQuery(
     'analytics',
@@ -31,12 +30,7 @@ const Dashboard = () => {
     }
   );
 
-  useEffect(() => {
-    fetchUserStats();
-    fetchLeaderboard();
-  }, [user]);
-
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     try {
       // Get user's current stats from the user object
       setUserStats({
@@ -48,9 +42,9 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
-  };
+  }, [user]);
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       const response = await fetch('/api/users/leaderboard?limit=50', {
         headers: {
@@ -59,7 +53,6 @@ const Dashboard = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setLeaderboard(data.users || []);
         
         // Calculate user's ranking
         const userRanking = data.users.findIndex(u => u._id === user?.id) + 1;
@@ -71,7 +64,12 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchUserStats();
+    fetchLeaderboard();
+  }, [fetchUserStats, fetchLeaderboard]);
 
   const quickActions = [
     {

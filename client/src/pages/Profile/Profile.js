@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FiEdit, FiCamera, FiEye, FiEyeOff, FiAward, FiTrendingUp, FiBookOpen, FiTarget } from 'react-icons/fi';
-import { authAPI, resultsAPI } from '../../services/api';
+import { FiEdit, FiEye, FiEyeOff } from 'react-icons/fi';
+import { authAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Profile = () => {
@@ -25,7 +25,6 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(true);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -127,12 +126,7 @@ const Profile = () => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
-  const getAccuracyColor = (accuracy) => {
-    if (accuracy >= 90) return 'text-green-600';
-    if (accuracy >= 80) return 'text-blue-600';
-    if (accuracy >= 70) return 'text-yellow-600';
-    return 'text-red-600';
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8">
@@ -311,46 +305,7 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Test Statistics */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Test Statistics</h2>
-              {statsLoading ? (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="text-center p-4 bg-gray-100 rounded-lg animate-pulse">
-                      <div className="w-8 h-8 bg-gray-300 rounded mx-auto mb-2"></div>
-                      <div className="h-8 bg-gray-300 rounded mb-2"></div>
-                      <div className="h-4 bg-gray-300 rounded"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <FiBookOpen className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-blue-800">{testStats.totalTests}</p>
-                    <p className="text-sm text-blue-600">Tests Taken</p>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <FiTrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                    <p className={`text-2xl font-bold ${getAccuracyColor(testStats.averageAccuracy)}`}>
-                      {testStats.averageAccuracy.toFixed(1)}%
-                    </p>
-                    <p className="text-sm text-green-600">Average Accuracy</p>
-                  </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <FiTarget className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-purple-800">{testStats.averageScore}</p>
-                    <p className="text-sm text-purple-600">Average Score</p>
-                  </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <FiAward className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-yellow-800">{testStats.bestScore}</p>
-                    <p className="text-sm text-yellow-600">Best Score</p>
-                  </div>
-                </div>
-              )}
-            </div>
+
           </div>
 
           {/* Right Column - Leaderboard */}
