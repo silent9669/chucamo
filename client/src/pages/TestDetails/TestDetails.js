@@ -345,10 +345,10 @@ const TestDetails = () => {
     }
   }, [testId]);
 
-  // Load test details only once when component mounts
+  // Load test details when testId changes
   useEffect(() => {
     loadTestDetails();
-  }, []); // Empty dependency array to run only once
+  }, [testId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
