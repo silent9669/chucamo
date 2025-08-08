@@ -17,22 +17,22 @@ const TestDetails = () => {
   const [showAnswers, setShowAnswers] = useState(true);
   const [showExplanations, setShowExplanations] = useState(false);
 
-  const getCurrentSectionData = () => {
+  const getCurrentSectionData = useCallback(() => {
     if (!test || !test.sections) return null;
     return test.sections[currentSection] || null;
-  };
+  }, [test, currentSection]);
 
-  const getCurrentSectionQuestions = () => {
+  const getCurrentSectionQuestions = useCallback(() => {
     const section = getCurrentSectionData();
     if (!section || !section.questions) return [];
     return section.questions;
-  };
+  }, [getCurrentSectionData]);
 
-  const getCurrentQuestionData = () => {
+  const getCurrentQuestionData = useCallback(() => {
     const questions = getCurrentSectionQuestions();
     if (questions.length === 0) return null;
     return questions[currentQuestion - 1] || null;
-  };
+  }, [currentQuestion, getCurrentSectionQuestions]);
 
   const getQuestionResult = useCallback((questionId) => {
     if (!testResults || !testResults.answers) return null;
@@ -53,7 +53,7 @@ const TestDetails = () => {
     const questionIndex = currentQuestion - 1;
     const formattedId = `${sectionIndex}-${questionIndex + 1}`;
     return testResults.answers[formattedId] || null;
-  }, [testResults, currentSection, currentQuestion]);
+  }, [testResults, currentSection, currentQuestion, getCurrentQuestionData]);
 
   const isAnswerCorrect = useCallback((questionId, selectedAnswer) => {
     // Parse the questionId to get section and question indices
