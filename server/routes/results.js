@@ -149,22 +149,22 @@ router.put('/:id', protect, async (req, res) => {
       const user = await User.findById(req.user.id);
       
       if (user) {
-        // Calculate accuracy from question results
+        // Calculate overall test score from question results
         const correctAnswers = questionResults.filter(q => q.isCorrect).length;
         const totalQuestions = questionResults.length;
-        const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+        const overallScore = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
         
-        // Award coins based on accuracy
+        // Award coins based on overall test score
         let coinsEarned = 0;
-        if (accuracy >= 90) {
+        if (overallScore >= 90) {
           coinsEarned = 5;
-        } else if (accuracy >= 80) {
+        } else if (overallScore >= 80) {
           coinsEarned = 4;
-        } else if (accuracy >= 70) {
+        } else if (overallScore >= 70) {
           coinsEarned = 3;
-        } else if (accuracy >= 60) {
+        } else if (overallScore >= 60) {
           coinsEarned = 2;
-        } else if (accuracy >= 50) {
+        } else if (overallScore >= 50) {
           coinsEarned = 1;
         } else {
           coinsEarned = 0;
@@ -174,9 +174,9 @@ router.put('/:id', protect, async (req, res) => {
         user.totalTestsTaken += 1;
         user.coins += coinsEarned;
         
-        // Update average accuracy
+        // Update average accuracy (using overall score)
         const currentTotal = user.averageAccuracy * (user.totalTestsTaken - 1);
-        user.averageAccuracy = (currentTotal + accuracy) / user.totalTestsTaken;
+        user.averageAccuracy = (currentTotal + overallScore) / user.totalTestsTaken;
         
         await user.save();
         
