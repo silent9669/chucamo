@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
   const googleSignInRef = useRef(null);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFileText, FiClock, FiPlay, FiSearch } from 'react-icons/fi';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const Articles = () => {
   return (

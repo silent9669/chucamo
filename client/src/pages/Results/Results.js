@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 // Performance Breakdown Chart Component
 const PerformanceBreakdownChart = ({ test }) => {

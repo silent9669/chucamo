@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
 import { testsAPI } from '../../services/api';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const TestDetails = () => {
   const { id: testId } = useParams();

@@ -8,7 +8,7 @@ import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import GoogleSignIn from '../../components/UI/GoogleSignIn';
 import { authAPI } from '../../services/api';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);

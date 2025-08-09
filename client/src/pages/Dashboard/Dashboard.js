@@ -12,7 +12,7 @@ import {
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const Dashboard = () => {
   const { user } = useAuth();

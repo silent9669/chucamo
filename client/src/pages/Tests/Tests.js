@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiBookOpen, FiClock, FiPlay, FiFilter, FiSearch } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const Tests = () => {
   const [tests, setTests] = useState([]);

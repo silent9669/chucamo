@@ -7,7 +7,7 @@ import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import MultipleAnswersEditor from '../../components/UI/MultipleAnswersEditor';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 // Basic input components
 const DirectInput = ({ value, onChange, placeholder }) => (

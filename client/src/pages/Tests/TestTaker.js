@@ -19,7 +19,7 @@ import { testsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 // Utility function to safely serialize objects and prevent circular references
 const safeStringify = (obj) => {

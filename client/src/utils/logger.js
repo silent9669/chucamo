@@ -1,6 +1,4 @@
-import logger from '../utils/logger';
 // Client-side logger utility
-const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Log levels
@@ -42,31 +40,31 @@ const checkRateLimit = () => {
 const logger = {
   error: (message, ...args) => {
     if (shouldLog('ERROR') && checkRateLimit()) {
-      logger.error(`[ERROR] ${message}`, ...args);
+      console.error(`[ERROR] ${message}`, ...args);
     }
   },
   
   warn: (message, ...args) => {
     if (shouldLog('WARN') && checkRateLimit()) {
-      logger.warn(`[WARN] ${message}`, ...args);
+      console.warn(`[WARN] ${message}`, ...args);
     }
   },
   
   info: (message, ...args) => {
     if (shouldLog('INFO') && checkRateLimit()) {
-      logger.debug(`[INFO] ${message}`, ...args);
+      console.log(`[INFO] ${message}`, ...args);
     }
   },
   
   debug: (message, ...args) => {
     if (shouldLog('DEBUG') && checkRateLimit()) {
-      logger.debug(`[DEBUG] ${message}`, ...args);
+      console.log(`[DEBUG] ${message}`, ...args);
     }
   },
   
   // Special method for critical logs that should always be shown
   critical: (message, ...args) => {
-    logger.debug(`[CRITICAL] ${message}`, ...args);
+    console.log(`[CRITICAL] ${message}`, ...args);
   }
 };
 

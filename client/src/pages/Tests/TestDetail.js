@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FiFileText, FiPlay, FiClock, FiList } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testsAPI } from '../../services/api';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const TestDetail = () => {
   const navigate = useNavigate();

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiSave, FiPlus, FiEdit, FiTrash2, FiPlay } from 'react-icons/fi';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import { Link } from 'react-router-dom';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 // Multiple Answers Editor Component
 const MultipleAnswersEditor = ({ 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMoon, FiSun } from 'react-icons/fi';
 import { renderPassageWithKaTeX } from '../../utils/katexUtils';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 // Custom styles for range input
 const rangeInputStyles = `

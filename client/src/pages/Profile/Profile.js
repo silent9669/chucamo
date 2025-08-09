@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiEdit, FiEye, FiEyeOff } from 'react-icons/fi';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX, FiMinimize, FiMove, FiMaximize2, FiRefreshCw } from 'react-icons/fi';
-import logger from '../utils/logger';
+import logger from '../../utils/logger';
 
 /* global Desmos */
 
