@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FiX, FiMinimize, FiMove, FiMaximize2, FiRefreshCw } from 'react-icons/fi';
+import logger from '../utils/logger';
 
 /* global Desmos */
 
@@ -32,7 +33,7 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
     if (isOpen && calculatorRef.current) {
       try {
         if (typeof Desmos !== 'undefined') {
-          console.log('Initializing new Desmos calculator instance');
+          logger.debug('Initializing new Desmos calculator instance');
           
           // Clear the container first
           calculatorRef.current.innerHTML = '';
@@ -89,15 +90,15 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
             setTimeout(() => {
               if (newCalculator) {
                 newCalculator.resize();
-                console.log('Desmos calculator initialized successfully');
+                logger.debug('Desmos calculator initialized successfully');
               }
             }, 50);
           }, 100); // Delay before initialization
         } else {
-          console.error('Desmos API not loaded');
+          logger.error('Desmos API not loaded');
         }
       } catch (error) {
-        console.error('Error initializing Desmos calculator:', error);
+        logger.error('Error initializing Desmos calculator:', error);
       }
     }
   }, [isOpen, calculatorRef]);
@@ -110,9 +111,9 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
       if (calculatorInstance) {
         try {
           calculatorInstance.destroy();
-          console.log('Desmos calculator destroyed');
+          logger.debug('Desmos calculator destroyed');
         } catch (error) {
-          console.error('Error destroying calculator:', error);
+          logger.error('Error destroying calculator:', error);
         }
       }
     };
@@ -200,13 +201,13 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
 
   const handleClose = () => {
     // Just hide the popup, the calculator will be reinitialized when reopened
-    console.log('Closing calculator popup');
+    logger.debug('Closing calculator popup');
     onClose();
   };
 
   const handleRefresh = () => {
     try {
-      console.log('Manually refreshing Desmos calculator');
+      logger.debug('Manually refreshing Desmos calculator');
       
       // Destroy existing calculator instance
       if (calculatorInstance) {
@@ -272,13 +273,13 @@ const CalculatorPopup = ({ isOpen, onClose, calculatorRef }) => {
           setTimeout(() => {
             if (newCalculator) {
               newCalculator.resize();
-              console.log('Desmos calculator refreshed successfully');
+              logger.debug('Desmos calculator refreshed successfully');
             }
           }, 50);
         }
       }, 100);
     } catch (error) {
-      console.error('Error refreshing calculator:', error);
+      logger.error('Error refreshing calculator:', error);
     }
   };
 

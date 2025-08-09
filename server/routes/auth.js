@@ -5,6 +5,7 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const mongoose = require('mongoose'); // Added for database connection status
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ const generateToken = (id) => {
 // Verify Google ID Token
 const verifyGoogleToken = async (idToken) => {
   try {
-    console.log('Verifying Google ID token...');
+    logger.debug('Verifying Google ID token...');
     
     if (!process.env.GOOGLE_CLIENT_ID) {
       throw new Error('GOOGLE_CLIENT_ID environment variable not set');
@@ -33,11 +34,11 @@ const verifyGoogleToken = async (idToken) => {
     });
     
     const payload = ticket.getPayload();
-    console.log('Google token verified successfully for user:', payload.email);
+    logger.info('Google token verified successfully for user:', payload.email);
     
     return payload;
   } catch (error) {
-    console.error('Google token verification error:', error);
+    logger.error('Google token verification error:', error);
     
     if (error.message.includes('GOOGLE_CLIENT_ID')) {
       throw new Error('Google OAuth not configured. Please set GOOGLE_CLIENT_ID environment variable.');
@@ -258,8 +259,8 @@ router.post('/login', [
     const { username, password } = req.body;
 
     // Check if user exists by username or email
-    console.log('🔍 Looking for user with:', username);
-    console.log('🔍 Database connection status:', mongoose.connection.readyState === 1 ? 'Connected' : 'Not connected');
+    logger.debug('🔍 Looking for user with:', username);
+    logger.debug('🔍 Database connection status:', mongoose.connection.readyState === 1 ? 'Connected' : 'Not connected');
     
     const user = await User.findOne({
       $or: [
@@ -269,19 +270,19 @@ router.post('/login', [
     }).select('+password');
     
     if (!user) {
-      console.log('❌ User not found:', username);
+      logger.warn('❌ User not found:', username);
       // Let's also check if there are any users in the database
       const totalUsers = await User.countDocuments();
-      console.log('🔍 Total users in database:', totalUsers);
+      logger.debug('🔍 Total users in database:', totalUsers);
       
       // Check for any admin users
       const adminUsers = await User.find({ role: 'admin' });
-      console.log('🔍 Admin users in database:', adminUsers.map(u => ({ username: u.username, email: u.email })));
+      logger.debug('🔍 Admin users in database:', adminUsers.map(u => ({ username: u.username, email: u.email })));
       
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
-    console.log('✅ User found:', user.username, 'Role:', user.role);
+    logger.info('✅ User found:', user.username, 'Role:', user.role);
 
     // Check if user is active
     if (!user.isActive) {
@@ -291,11 +292,11 @@ router.post('/login', [
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      console.log('❌ Password mismatch for user:', user.username);
+      logger.warn('❌ Password mismatch for user:', user.username);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
-    console.log('✅ Password verified for user:', user.username);
+    logger.info('✅ Password verified for user:', user.username);
 
     // Update login streak and last login
     const now = new Date();
@@ -341,7 +342,7 @@ router.post('/login', [
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 });

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import logger from '../utils/logger';
 
 const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
   const googleSignInRef = useRef(null);
@@ -19,7 +20,7 @@ const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
       script.defer = true;
       script.onload = initializeGoogleSignIn;
       script.onerror = () => {
-        console.error('Failed to load Google Identity Services');
+        logger.error('Failed to load Google Identity Services');
         setInitError('Failed to load Google Identity Services');
         onError && onError('Failed to load Google Identity Services');
       };
@@ -28,7 +29,7 @@ const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
 
     const initializeGoogleSignIn = () => {
       if (!window.google) {
-        console.error('Google Identity Services not loaded');
+        logger.error('Google Identity Services not loaded');
         setInitError('Google Identity Services not loaded');
         onError && onError('Google Identity Services not loaded');
         return;
@@ -39,13 +40,13 @@ const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
                       document.querySelector('meta[name="google-signin-client_id"]')?.getAttribute('content');
 
       if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com') {
-        console.error('Google Client ID not configured');
+        logger.error('Google Client ID not configured');
         setInitError('Google Client ID not configured. Please set up your Google OAuth credentials.');
         onError && onError('Google Client ID not configured');
         return;
       }
 
-      console.log('Initializing Google Sign-In with client ID:', clientId);
+      logger.debug('Initializing Google Sign-In with client ID:', clientId);
 
       try {
         // Initialize Google Identity Services
@@ -70,10 +71,10 @@ const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
           });
         }
 
-        console.log('Google Sign-In initialized successfully');
+        logger.debug('Google Sign-In initialized successfully');
         setIsInitialized(true);
       } catch (error) {
-        console.error('Google Sign-In initialization failed:', error);
+        logger.error('Google Sign-In initialization failed:', error);
         setInitError(`Google Sign-In initialization failed: ${error.message || 'Unknown error'}`);
         onError && onError(`Google Sign-In initialization failed: ${error.message || 'Unknown error'}`);
       }
@@ -81,7 +82,7 @@ const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
 
     const onGoogleSignInSuccess = (response) => {
       try {
-        console.log('Google Sign-In successful, ID token received');
+        logger.debug('Google Sign-In successful, ID token received');
         
         const userData = {
           idToken: response.credential
@@ -89,7 +90,7 @@ const GoogleSignIn = ({ onSuccess, onError, className = '' }) => {
 
         onSuccess && onSuccess(userData);
       } catch (error) {
-        console.error('Error processing Google Sign-In:', error);
+        logger.error('Error processing Google Sign-In:', error);
         onError && onError('Failed to process Google Sign-In');
       }
     };

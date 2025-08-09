@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FiFileText, FiPlay, FiClock, FiList } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import { testsAPI } from '../../services/api';
+import logger from '../utils/logger';
 
 const TestDetail = () => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const TestDetail = () => {
       const testData = response.data.test;
       setTest(testData);
     } catch (error) {
-      console.error('Error loading test:', error);
+      logger.error('Error loading test:', error);
       setError('Failed to load test data. Please try again.');
     } finally {
       setLoading(false);
@@ -58,7 +59,7 @@ const TestDetail = () => {
             return;
           }
         } catch (e) {
-          console.error('Error parsing error response:', e);
+          logger.error('Error parsing error response:', e);
         }
         
         alert('Failed to start test. Please try again.');
@@ -70,7 +71,7 @@ const TestDetail = () => {
       localStorage.setItem(`test_result_${testId}`, result.result._id);
       navigate(`/tests/${testId}/take`);
     } catch (error) {
-      console.error('Error starting test:', error);
+      logger.error('Error starting test:', error);
       alert('Failed to start test. Please try again.');
     }
   };

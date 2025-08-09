@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Test = require('../models/Test');
 const { protect, authorize } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.get('/', protect, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get tests error:', error);
+    logger.error('Get tests error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -88,16 +89,16 @@ router.get('/:id', protect, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    console.log('=== GETTING TEST ===');
-    console.log('Test ID:', req.params.id);
-    console.log('Test sections:', JSON.stringify(test.sections, null, 2));
+    logger.debug('=== GETTING TEST ===');
+    logger.debug('Test ID:', req.params.id);
+    logger.debug('Test sections:', JSON.stringify(test.sections, null, 2));
 
     res.json({
       success: true,
       test
     });
   } catch (error) {
-    console.error('Get test error:', error);
+    logger.error('Get test error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -123,8 +124,8 @@ router.post('/', protect, authorize('admin'), [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('POST Validation errors:', errors.array());
-      console.log('POST Request body:', req.body);
+      logger.warn('POST Validation errors:', errors.array());
+      logger.debug('POST Request body:', req.body);
       return res.status(400).json({ 
         message: 'Validation failed',
         errors: errors.array() 
@@ -149,18 +150,18 @@ router.post('/', protect, authorize('admin'), [
       showExplanations
     } = req.body;
 
-    console.log('=== CREATING TEST ===');
-    console.log('Sections data:', JSON.stringify(sections, null, 2));
-    console.log('Total questions:', totalQuestions);
+    logger.debug('=== CREATING TEST ===');
+    logger.debug('Sections data:', JSON.stringify(sections, null, 2));
+    logger.debug('Total questions:', totalQuestions);
     
     // Log question types being saved
     if (sections && sections.length > 0) {
-      console.log('=== QUESTION TYPES BEING SAVED ===');
+      logger.debug('=== QUESTION TYPES BEING SAVED ===');
       sections.forEach((section, sectionIndex) => {
         if (section.questions && section.questions.length > 0) {
-          console.log(`Section ${sectionIndex + 1} (${section.name}) questions:`);
+          logger.debug(`Section ${sectionIndex + 1} (${section.name}) questions:`);
           section.questions.forEach((question, questionIndex) => {
-            console.log(`  Question ${questionIndex + 1}:`, {
+            logger.debug(`  Question ${questionIndex + 1}:`, {
               id: question.id,
               type: question.type,
               answerType: question.answerType,
@@ -190,17 +191,17 @@ router.post('/', protect, authorize('admin'), [
       createdBy: req.user.id
     });
 
-    console.log('=== TEST CREATED ===');
-    console.log('Saved test sections:', JSON.stringify(test.sections, null, 2));
+    logger.debug('=== TEST CREATED ===');
+    logger.debug('Saved test sections:', JSON.stringify(test.sections, null, 2));
     
     // Log question types after saving
     if (test.sections && test.sections.length > 0) {
-      console.log('=== QUESTION TYPES AFTER SAVING ===');
+      logger.debug('=== QUESTION TYPES AFTER SAVING ===');
       test.sections.forEach((section, sectionIndex) => {
         if (section.questions && section.questions.length > 0) {
-          console.log(`Section ${sectionIndex + 1} (${section.name}) questions:`);
+          logger.debug(`Section ${sectionIndex + 1} (${section.name}) questions:`);
           section.questions.forEach((question, questionIndex) => {
-            console.log(`  Question ${questionIndex + 1}:`, {
+            logger.debug(`  Question ${questionIndex + 1}:`, {
               id: question.id,
               type: question.type,
               answerType: question.answerType,

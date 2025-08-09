@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiX, FiSave, FiPlus, FiEdit, FiTrash2, FiPlay } from 'react-icons/fi';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import { Link } from 'react-router-dom';
+import logger from '../utils/logger';
 
 // Multiple Answers Editor Component
 const MultipleAnswersEditor = ({ 
@@ -114,13 +115,13 @@ const ArticlesManagement = () => {
       try {
         const parsedArticles = JSON.parse(savedArticles);
         setArticles(parsedArticles);
-        console.log(`📚 Loaded ${parsedArticles.length} articles from localStorage`);
+        logger.debug(`📚 Loaded ${parsedArticles.length} articles from localStorage`);
       } catch (error) {
-        console.error('Error parsing articles from localStorage:', error);
+        logger.error('Error parsing articles from localStorage:', error);
         setArticles([]);
       }
     } else {
-      console.log('No articles found in localStorage');
+      logger.debug('No articles found in localStorage');
     }
   }, []);
 
@@ -128,7 +129,7 @@ const ArticlesManagement = () => {
   useEffect(() => {
     if (articles.length > 0) {
       localStorage.setItem('articles', JSON.stringify(articles));
-      console.log(`💾 Saved ${articles.length} articles to localStorage`);
+      logger.debug(`💾 Saved ${articles.length} articles to localStorage`);
     }
   }, [articles]);
 
@@ -160,8 +161,8 @@ const ArticlesManagement = () => {
       readingPassage: currentArticle.readingPassage || ''
     };
 
-    console.log('💾 Saving article:', articleToSave.title, 'with ID:', articleToSave.id);
-    console.log('📊 Article data:', {
+    logger.debug('💾 Saving article:', articleToSave.title, 'with ID:', articleToSave.id);
+    logger.debug('📊 Article data:', {
       questions: articleToSave.questions?.length || 0,
       hasThumbnail: !!articleToSave.thumbnail,
       images: articleToSave.images?.length || 0,
@@ -173,13 +174,13 @@ const ArticlesManagement = () => {
         const updated = prev.map(article => 
           article.id === currentArticle.id ? articleToSave : article
         );
-        console.log('📝 Updated article in list. Total articles:', updated.length);
+        logger.debug('📝 Updated article in list. Total articles:', updated.length);
         return updated;
       });
     } else {
       setArticles(prev => {
         const updated = [...prev, articleToSave];
-        console.log('➕ Added new article to list. Total articles:', updated.length);
+        logger.debug('➕ Added new article to list. Total articles:', updated.length);
         return updated;
       });
     }
@@ -198,7 +199,7 @@ const ArticlesManagement = () => {
     setIsEditing(false);
     setShowEditor(false);
     
-    console.log('✅ Article saved successfully!');
+    logger.debug('✅ Article saved successfully!');
     alert('Article saved successfully!');
   };
 
@@ -296,7 +297,7 @@ const ArticlesManagement = () => {
   };
 
   const handleEditQuestion = (question) => {
-    console.log('🔍 Editing question:', question);
+    logger.debug('🔍 Editing question:', question);
     
     // Handle different options formats
     let options = ['', '', '', ''];
@@ -333,7 +334,7 @@ const ArticlesManagement = () => {
       acceptableAnswers: question.acceptableAnswers || []
     };
     
-    console.log('📝 Prepared question for editing:', questionToEdit);
+    logger.debug('📝 Prepared question for editing:', questionToEdit);
     setCurrentQuestion(questionToEdit);
     setEditingQuestion(question);
     setShowQuestionEditor(true);
@@ -366,8 +367,8 @@ const ArticlesManagement = () => {
       images: currentQuestion.images || []
     };
 
-    console.log('💾 Saving question:', questionToSave.question, 'with ID:', questionToSave.id);
-    console.log('📊 Question data:', {
+    logger.debug('💾 Saving question:', questionToSave.question, 'with ID:', questionToSave.id);
+    logger.debug('📊 Question data:', {
       answerType: questionToSave.answerType,
       correctAnswer: questionToSave.correctAnswer,
       optionsCount: questionToSave.options.length,
@@ -383,7 +384,7 @@ const ArticlesManagement = () => {
             q.id === editingQuestion.id ? questionToSave : q
           )
         };
-        console.log('📝 Updated question in article. Total questions:', updated.questions.length);
+        logger.debug('📝 Updated question in article. Total questions:', updated.questions.length);
         return updated;
       });
     } else {
@@ -392,7 +393,7 @@ const ArticlesManagement = () => {
           ...prev,
           questions: [...prev.questions, questionToSave]
         };
-        console.log('➕ Added new question to article. Total questions:', updated.questions.length);
+        logger.debug('➕ Added new question to article. Total questions:', updated.questions.length);
         return updated;
       });
     }
@@ -412,7 +413,7 @@ const ArticlesManagement = () => {
       images: []
     });
     setEditingQuestion(null);
-    console.log('✅ Question saved successfully!');
+    logger.debug('✅ Question saved successfully!');
   };
 
   const handleDeleteQuestion = (questionId) => {

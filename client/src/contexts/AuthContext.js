@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import logger from '../utils/logger';
 
 const AuthContext = createContext();
 
@@ -189,7 +190,7 @@ export const AuthProvider = ({ children }) => {
       });
       return { success: true };
     } catch (error) {
-      console.error('Error refreshing user data:', error);
+      logger.error('Error refreshing user data:', error);
       return { success: false, error: 'Failed to refresh user data' };
     }
   };

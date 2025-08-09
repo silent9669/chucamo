@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiEdit, FiEye, FiEyeOff } from 'react-icons/fi';
 import { authAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import logger from '../utils/logger';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -61,7 +62,7 @@ const Profile = () => {
         setLeaderboard([]);
       }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      logger.error('Error fetching leaderboard:', error);
       setLeaderboard([]);
     } finally {
       setLeaderboardLoading(false);

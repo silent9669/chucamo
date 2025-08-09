@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiBookOpen, FiClock, FiPlay, FiFilter, FiSearch } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
+import logger from '../utils/logger';
 
 const Tests = () => {
   const [tests, setTests] = useState([]);
@@ -57,7 +58,7 @@ const Tests = () => {
             }
           }
         } catch (error) {
-          console.error(`Error fetching questions for test ${test._id}:`, error);
+          logger.error(`Error fetching questions for test ${test._id}:`, error);
           // Keep the original difficulty if we can't fetch questions
         }
         
@@ -96,13 +97,13 @@ const Tests = () => {
 
       setTests(transformedTests);
     } catch (error) {
-      console.error('Error loading tests:', error);
+      logger.error('Error loading tests:', error);
       // Fallback to localStorage if API fails
       try {
         const localTests = JSON.parse(localStorage.getItem('satTests') || '[]');
         setTests(localTests);
       } catch (localError) {
-        console.error('Error loading from localStorage:', localError);
+        logger.error('Error loading from localStorage:', localError);
         setTests([]);
       }
     } finally {

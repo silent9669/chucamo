@@ -12,6 +12,7 @@ import {
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import logger from '../utils/logger';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -63,7 +64,7 @@ const Dashboard = () => {
         });
       }
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      logger.error('Error fetching user stats:', error);
       // Fallback to user data from context if fetch fails
       setUserStats({
         loginStreak: user?.loginStreak || 0,
@@ -94,7 +95,7 @@ const Dashboard = () => {
         }));
       }
     } catch (error) {
-      console.error('Error fetching leaderboard:', error);
+      logger.error('Error fetching leaderboard:', error);
     }
   }, [user]);
 

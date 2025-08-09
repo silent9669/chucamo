@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
+import logger from '../utils/logger';
 
 // Performance Breakdown Chart Component
 const PerformanceBreakdownChart = ({ test }) => {
@@ -14,7 +15,7 @@ const PerformanceBreakdownChart = ({ test }) => {
         const response = await testsAPI.getById(test.id);
         setTestData(response.data.test);
       } catch (error) {
-        console.error('Error loading test data:', error);
+        logger.error('Error loading test data:', error);
       } finally {
         setLoading(false);
       }
@@ -203,7 +204,7 @@ const SectionDetails = ({ test }) => {
         const response = await testsAPI.getById(test.id);
         setTestData(response.data.test);
       } catch (error) {
-        console.error('Error loading test data:', error);
+        logger.error('Error loading test data:', error);
       } finally {
         setLoading(false);
       }
@@ -380,7 +381,7 @@ const Results = () => {
           
           // Validate completion data structure
           if (!completionData || !Array.isArray(completionData.answeredQuestions)) {
-            console.warn('Invalid completion data structure for key:', key);
+            logger.warn('Invalid completion data structure for key:', key);
             continue;
           }
           
@@ -403,7 +404,7 @@ const Results = () => {
                    uniqueAnsweredQuestions.add(`${sectionIndex}-${questionNum}`);
                  }
                } catch (error) {
-                 console.warn('Error processing questionKey:', questionKey, error);
+                 logger.warn('Error processing questionKey:', questionKey, error);
                }
              });
              const answeredCount = uniqueAnsweredQuestions.size;
@@ -430,13 +431,13 @@ const Results = () => {
                   questionId = questionKey.toString();
                 } else {
                   // Fallback for unknown formats
-                  console.warn('Unknown questionKey format:', questionKey);
+                  logger.warn('Unknown questionKey format:', questionKey);
                   questionId = questionKey?.toString() || 'unknown';
                 }
                 
                 answers[questionId] = { selectedAnswer: answer };
               } catch (error) {
-                console.warn('Error processing questionKey:', questionKey, error);
+                logger.warn('Error processing questionKey:', questionKey, error);
                 const questionId = questionKey?.toString() || 'unknown';
                 answers[questionId] = { selectedAnswer: answer };
               }
@@ -528,7 +529,7 @@ const Results = () => {
               createdAt: testData.createdAt || completionData.completedAt
             });
           } catch (apiError) {
-            console.error(`Error fetching test ${testId}:`, apiError);
+            logger.error(`Error fetching test ${testId}:`, apiError);
             // Add with basic info if API fails
             testHistoryData.push({
               id: testId,
@@ -548,7 +549,7 @@ const Results = () => {
             });
           }
         } catch (parseError) {
-          console.error('Error parsing completion data:', parseError);
+          logger.error('Error parsing completion data:', parseError);
         }
       }
       
@@ -560,7 +561,7 @@ const Results = () => {
       setTestHistory(testHistoryData);
       setFilteredTestHistory(testHistoryData);
     } catch (error) {
-      console.error('Error loading test history:', error);
+      logger.error('Error loading test history:', error);
       setError('Failed to load test history');
     } finally {
       setLoading(false);

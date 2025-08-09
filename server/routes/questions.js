@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Question = require('../models/Question');
 const { protect, authorize } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -91,28 +92,28 @@ router.post('/', protect, authorize('admin'), [
   body('difficulty').optional().isIn(['easy', 'medium', 'hard']).withMessage('Invalid difficulty level')
 ], async (req, res) => {
   try {
-    console.log('=== CREATE QUESTION DEBUG ===');
-    console.log('Received question data:', req.body);
-    console.log('Images in request:', req.body.images);
-    console.log('Images array length:', req.body.images ? req.body.images.length : 0);
-    console.log('Images array type:', typeof req.body.images);
-    console.log('Images array is array:', Array.isArray(req.body.images));
-    console.log('User ID:', req.user.id);
+    logger.debug('=== CREATE QUESTION DEBUG ===');
+    logger.debug('Received question data:', req.body);
+    logger.debug('Images in request:', req.body.images);
+    logger.debug('Images array length:', req.body.images ? req.body.images.length : 0);
+    logger.debug('Images array type:', typeof req.body.images);
+    logger.debug('Images array is array:', Array.isArray(req.body.images));
+    logger.debug('User ID:', req.user.id);
     
     // Additional validation for images array structure
     if (req.body.images && Array.isArray(req.body.images)) {
-      console.log('Validating images array structure...');
+      logger.debug('Validating images array structure...');
       req.body.images.forEach((img, index) => {
-        console.log(`Image ${index}:`, img);
+        logger.debug(`Image ${index}:`, img);
         if (!img.url || !img.name) {
-          console.log(`Image ${index} missing required fields:`, img);
+          logger.debug(`Image ${index} missing required fields:`, img);
         }
       });
     }
     
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array());
+      logger.warn('Validation errors:', errors.array());
       return res.status(400).json({ 
         message: 'Validation failed',
         errors: errors.array() 
@@ -124,18 +125,18 @@ router.post('/', protect, authorize('admin'), [
       createdBy: req.user.id
     };
     
-    console.log('Creating question with data:', questionData);
-    console.log('Images being saved:', questionData.images);
-    console.log('Images array length in questionData:', questionData.images ? questionData.images.length : 0);
-    console.log('Images array structure in questionData:', questionData.images);
+    logger.debug('Creating question with data:', questionData);
+    logger.debug('Images being saved:', questionData.images);
+    logger.debug('Images array length in questionData:', questionData.images ? questionData.images.length : 0);
+    logger.debug('Images array structure in questionData:', questionData.images);
 
     const question = await Question.create(questionData);
 
-    console.log('Question created successfully:', question._id);
-    console.log('Created question with images:', question.images);
-    console.log('Created question images array length:', question.images ? question.images.length : 0);
-    console.log('Created question images structure:', question.images);
-    console.log('=== CREATE QUESTION COMPLETE ===');
+    logger.info('Question created successfully:', question._id);
+    logger.debug('Created question with images:', question.images);
+    logger.debug('Created question images array length:', question.images ? question.images.length : 0);
+    logger.debug('Created question images structure:', question.images);
+    logger.debug('=== CREATE QUESTION COMPLETE ===');
 
     res.status(201).json({
       success: true,
@@ -143,7 +144,7 @@ router.post('/', protect, authorize('admin'), [
       question
     });
   } catch (error) {
-    console.error('Create question error:', error);
+    logger.error('Create question error:', error);
     res.status(500).json({ message: 'Server error', details: error.message });
   }
 });

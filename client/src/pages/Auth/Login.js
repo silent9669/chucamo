@@ -8,6 +8,7 @@ import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import GoogleSignIn from '../../components/UI/GoogleSignIn';
 import { authAPI } from '../../services/api';
+import logger from '../utils/logger';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -25,9 +26,9 @@ const Login = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      console.log('Attempting login with:', data.username);
+      logger.debug('Attempting login with:', data.username);
       const result = await login(data.username, data.password);
-      console.log('Login result:', result);
+      logger.debug('Login result:', result);
       if (result.success) {
         toast.success('Login successful!');
         // Add a small delay before navigation
@@ -43,7 +44,7 @@ const Login = () => {
         return;
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       toast.error(error.message || 'An unexpected error occurred');
       // Add a delay to show the error
       setTimeout(() => {
@@ -72,7 +73,7 @@ const Login = () => {
         toast.error(response.data.message || 'Google Sign-In failed');
       }
     } catch (error) {
-      console.error('Google Sign-In error:', error);
+      logger.error('Google Sign-In error:', error);
       toast.error(error.response?.data?.message || 'Google Sign-In failed');
     } finally {
       setGoogleLoading(false);

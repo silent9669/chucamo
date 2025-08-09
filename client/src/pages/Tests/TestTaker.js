@@ -19,6 +19,7 @@ import { testsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import logger from '../utils/logger';
 
 // Utility function to safely serialize objects and prevent circular references
 const safeStringify = (obj) => {
@@ -134,14 +135,14 @@ const TestTaker = () => {
       if (testData.sections && testData.sections.length > 0) {
         const sectionTime = testData.sections[0].timeLimit * 60; // Convert to seconds
         setTimeLeft(sectionTime);
-        console.log('Initialized timer with', sectionTime, 'seconds for section', testData.sections[0].title);
+        logger.debug('Initialized timer with', sectionTime, 'seconds for section', testData.sections[0].title);
       }
       
-      console.log('Loaded test data:', testData);
-      console.log('Flattened questions:', allQuestions);
+      logger.debug('Loaded test data:', testData);
+      logger.debug('Flattened questions:', allQuestions);
       
     } catch (error) {
-      console.error('Error loading test data:', error);
+      logger.error('Error loading test data:', error);
       setError('Failed to load test data. Please try again.');
     } finally {
       setLoading(false);
@@ -167,7 +168,7 @@ const TestTaker = () => {
         setSelectedAnswer(previousAnswer || null);
         setIsMarkedForReview(new Set(progress.markedForReviewQuestions || []).has(questionKey));
       } catch (error) {
-        console.error('Error loading saved progress:', error);
+        logger.error('Error loading saved progress:', error);
       }
     }
   }, [testId, test]);
@@ -193,7 +194,7 @@ const TestTaker = () => {
       const testString = safeStringify(progress);
       localStorage.setItem(`test_progress_${testId}`, testString);
     } catch (error) {
-      console.error('Error saving progress:', error);
+      logger.error('Error saving progress:', error);
       // Fallback: save only essential data without any potential circular references
       const fallbackProgress = {
         currentSection,
@@ -206,7 +207,7 @@ const TestTaker = () => {
       try {
         localStorage.setItem(`test_progress_${testId}`, JSON.stringify(fallbackProgress));
       } catch (fallbackError) {
-        console.error('Error saving fallback progress:', fallbackError);
+        logger.error('Error saving fallback progress:', fallbackError);
         // Last resort: save only the most essential data
         const minimalProgress = {
           currentSection,
@@ -346,7 +347,7 @@ const TestTaker = () => {
                   displayMode: element.textContent.includes('$$')
                 });
               } catch (error) {
-                console.warn('KaTeX rendering error:', error);
+                logger.warn('KaTeX rendering error:', error);
               }
             }
           });
@@ -372,7 +373,7 @@ const TestTaker = () => {
                 const textNode = document.createTextNode(textContent);
                 questionContent.replaceChild(mathSpan, textNode);
               } catch (error) {
-                console.warn('KaTeX inline rendering error:', error);
+                logger.warn('KaTeX inline rendering error:', error);
               }
             }
           }
@@ -472,7 +473,7 @@ const TestTaker = () => {
       const selection = window.getSelection();
       const text = selection.toString().trim();
       
-      console.log('Selection detected:', text);
+      logger.debug('Selection detected:', text);
       
       if (text.length > 0 && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
@@ -482,14 +483,14 @@ const TestTaker = () => {
           
           // Check if selection is too short
           if (text.length < 2) {
-            console.log('Selection too short - rejected');
+            logger.debug('Selection too short - rejected');
             window.getSelection().removeAllRanges();
             return;
           }
           
-          console.log('Valid selection detected:', text);
-          console.log('Range:', range);
-          console.log('Common ancestor:', range.commonAncestorContainer);
+          logger.debug('Valid selection detected:', text);
+          logger.debug('Range:', range);
+          logger.debug('Common ancestor:', range.commonAncestorContainer);
           
           // Store the selected text and complete range information
           setSelectedText(text);
@@ -529,12 +530,12 @@ const TestTaker = () => {
       const { text, range } = pendingSelection;
       const highlightId = `highlight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      console.log('Applying highlight:', { text, color: color.name, highlightId });
+      logger.debug('Applying highlight:', { text, color: color.name, highlightId });
       
       // COMPLETELY ISOLATED APPROACH: Use range-based highlighting
       setTimeout(() => {
         if (!contentRef.current) {
-          console.log('Content ref not available');
+          logger.debug('Content ref not available');
           return;
         }
         
@@ -594,10 +595,10 @@ const TestTaker = () => {
           // Add visual confirmation
           highlightElement.style.animation = 'highlightPulse 0.5s ease-in-out';
           
-          console.log('Highlight applied successfully using range method');
+          logger.debug('Highlight applied successfully using range method');
           
         } catch (rangeError) {
-          console.log('Range method failed, falling back to text replacement');
+          logger.debug('Range method failed, falling back to text replacement');
           
           // Fallback: text replacement method
           const currentHTML = contentElement.innerHTML;
@@ -662,12 +663,12 @@ const TestTaker = () => {
         setShowColorPicker(false);
         setPickerPosition(null);
         
-        console.log('Highlight process completed');
+        logger.debug('Highlight process completed');
         
       }, 50);
       
     } catch (error) {
-      console.error('Error applying highlight:', error);
+      logger.error('Error applying highlight:', error);
       window.getSelection().removeAllRanges();
       setPendingSelection(null);
       setSelectedText('');
@@ -682,7 +683,7 @@ const TestTaker = () => {
       const highlightElement = document.querySelector(`[data-highlight-id="${highlightId}"]`);
       
       if (highlightElement) {
-        console.log('Removing highlight:', highlightId);
+        logger.debug('Removing highlight:', highlightId);
         
         // Get the text content
         const textContent = highlightElement.textContent;
@@ -701,12 +702,12 @@ const TestTaker = () => {
           return newMap;
         });
         
-        console.log('Highlight removed successfully');
+        logger.debug('Highlight removed successfully');
       } else {
-        console.log('Highlight element not found:', highlightId);
+        logger.debug('Highlight element not found:', highlightId);
       }
     } catch (error) {
-      console.error('Error removing highlight:', error);
+      logger.error('Error removing highlight:', error);
     }
   };
 
@@ -745,12 +746,12 @@ const TestTaker = () => {
       if (highlightsArray.length > 0) {
         setTimeout(() => {
           if (contentRef.current) {
-            console.log('Applying highlights for question:', questionKey, highlightsArray.length);
+            logger.debug('Applying highlights for question:', questionKey, highlightsArray.length);
             applySavedHighlights(highlightsArray);
           }
         }, 200); // Increased delay to ensure content is fully rendered
       } else {
-        console.log('No highlights to apply for question:', questionKey);
+        logger.debug('No highlights to apply for question:', questionKey);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -758,7 +759,7 @@ const TestTaker = () => {
 
   const clearAllHighlights = () => {
     try {
-      console.log('Clearing all highlights from DOM');
+      logger.debug('Clearing all highlights from DOM');
       
       if (!contentRef.current) return;
       
@@ -774,21 +775,21 @@ const TestTaker = () => {
         // For reading passages, use the renderPassageWithKaTeX function
         const cleanContent = renderPassageWithKaTeX(originalContent);
         contentElement.innerHTML = cleanContent;
-        console.log('Restored reading passage content');
+        logger.debug('Restored reading passage content');
       } else {
         // For questions, use the renderContent function
         const currentSectionData = getCurrentSectionData();
         const cleanContent = renderContent(originalContent, currentSectionData?.type);
         contentElement.innerHTML = cleanContent;
-        console.log('Restored question content');
+        logger.debug('Restored question content');
       }
       
       // Clear current highlights state (but keep per-question storage)
       setHighlights([]);
       
-      console.log('All highlights cleared from DOM successfully');
+      logger.debug('All highlights cleared from DOM successfully');
     } catch (error) {
-      console.error('Error clearing highlights:', error);
+      logger.error('Error clearing highlights:', error);
     }
   };
 
@@ -800,7 +801,7 @@ const TestTaker = () => {
         newMap.set(questionKey, [...highlights]);
         return newMap;
       });
-      console.log('Saved highlights for question:', questionKey, highlights.length);
+      logger.debug('Saved highlights for question:', questionKey, highlights.length);
     }
   };
 
@@ -812,7 +813,7 @@ const TestTaker = () => {
     const highlightsArray = Array.isArray(savedHighlights) ? savedHighlights : [];
     
     setHighlights(highlightsArray);
-    console.log('Loaded highlights for question:', questionKey, highlightsArray.length);
+    logger.debug('Loaded highlights for question:', questionKey, highlightsArray.length);
     
     // Apply highlights to DOM after a short delay to ensure content is rendered
     setTimeout(() => {
@@ -827,13 +828,13 @@ const TestTaker = () => {
     
     // Ensure savedHighlights is an array
     if (!Array.isArray(savedHighlights)) {
-      console.warn('savedHighlights is not an array:', savedHighlights);
+      logger.warn('savedHighlights is not an array:', savedHighlights);
       return;
     }
     
     if (savedHighlights.length === 0) return;
     
-    console.log('Starting to apply saved highlights:', savedHighlights.length);
+    logger.debug('Starting to apply saved highlights:', savedHighlights.length);
     
     // First, ensure we have clean original content
     const currentQuestionData = getCurrentQuestionData();
@@ -846,12 +847,12 @@ const TestTaker = () => {
     if (currentQuestionData?.passage) {
       // For reading passages, use the renderPassageWithKaTeX function
       currentHTML = renderPassageWithKaTeX(originalContent);
-      console.log('Reset reading passage content');
+      logger.debug('Reset reading passage content');
     } else {
       // For questions, use the renderContent function
       const currentSectionData = getCurrentSectionData();
       currentHTML = renderContent(originalContent, currentSectionData?.type);
-      console.log('Reset question content');
+      logger.debug('Reset question content');
     }
     
     // Set clean content first
@@ -860,11 +861,11 @@ const TestTaker = () => {
     // Apply highlights one by one using text replacement
     savedHighlights.forEach((highlight, index) => {
       if (!highlight || !highlight.text || !highlight.id) {
-        console.warn('Invalid highlight data:', highlight);
+        logger.warn('Invalid highlight data:', highlight);
         return;
       }
       
-      console.log(`Applying highlight ${index + 1}/${savedHighlights.length}:`, highlight.text);
+      logger.debug(`Applying highlight ${index + 1}/${savedHighlights.length}:`, highlight.text);
       
       const highlightHTML = `<span data-highlight-id="${highlight.id}" class="custom-highlight ${highlight.color}" style="background-color: ${highlight.colorValue} !important; color: inherit !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important; display: inline !important; position: relative !important; z-index: 1000 !important; transition: all 0.2s ease !important; font-weight: normal !important; border: none !important; margin: 0 !important;">${highlight.text}</span>`;
       
@@ -874,9 +875,9 @@ const TestTaker = () => {
       
       if (newHTML !== contentElement.innerHTML) {
         contentElement.innerHTML = newHTML;
-        console.log(`Successfully applied highlight ${index + 1}`);
+        logger.debug(`Successfully applied highlight ${index + 1}`);
       } else {
-        console.warn(`Could not find text for highlight ${index + 1}:`, highlight.text);
+        logger.warn(`Could not find text for highlight ${index + 1}:`, highlight.text);
       }
     });
     
@@ -902,7 +903,7 @@ const TestTaker = () => {
       }
     });
     
-    console.log('Successfully applied', savedHighlights.length, 'saved highlights');
+    logger.debug('Successfully applied', savedHighlights.length, 'saved highlights');
   };
 
 
@@ -1048,8 +1049,8 @@ const TestTaker = () => {
       }
     };
     
-    console.log('Test saved and exited (incomplete):', completionData);
-    console.log('Time calculation:', {
+    logger.debug('Test saved and exited (incomplete):', completionData);
+    logger.debug('Time calculation:', {
       totalTimeLimit,
       totalTimeLimitSeconds,
       timeLeft,
@@ -1085,7 +1086,7 @@ const TestTaker = () => {
       // Update timer for new section
       const newSectionTime = test.sections[currentSection + 1].timeLimit * 60;
       setTimeLeft(newSectionTime);
-      console.log('Moving to section', currentSection + 1, 'with', newSectionTime, 'seconds');
+      logger.debug('Moving to section', currentSection + 1, 'with', newSectionTime, 'seconds');
       
       // Load saved answers for new section
       const questionKey = `${currentSection + 1}-1`;
@@ -1115,8 +1116,8 @@ const TestTaker = () => {
         }
       };
       
-      console.log('Test completed:', completionData);
-      console.log('Time calculation:', {
+      logger.debug('Test completed:', completionData);
+      logger.debug('Time calculation:', {
         totalTimeLimit,
         totalTimeLimitSeconds,
         timeLeft,
@@ -1163,7 +1164,7 @@ const TestTaker = () => {
                 return;
               }
             } catch (e) {
-              console.error('Error parsing error response:', e);
+              logger.error('Error parsing error response:', e);
             }
             
             alert('Failed to start test. Please try again.');
@@ -1264,14 +1265,14 @@ const TestTaker = () => {
           try {
             await refreshUser();
           } catch (error) {
-            console.error('Error refreshing user data:', error);
+            logger.error('Error refreshing user data:', error);
           }
         } else {
           const errorText = await completeResponse.text();
-          console.error('Failed to complete test:', errorText);
+          logger.error('Failed to complete test:', errorText);
         }
       } catch (error) {
-        console.error('Error submitting results:', error);
+        logger.error('Error submitting results:', error);
       }
       
       // Navigate to results page
@@ -1716,7 +1717,7 @@ const TestTaker = () => {
                   alt={image.name}
                   className="max-w-lg h-auto mb-4 rounded-lg shadow-sm border border-gray-200 mx-auto"
                   onError={(e) => {
-                    console.error('Image failed to load:', image);
+                    logger.error('Image failed to load:', image);
                     e.target.style.display = 'none';
                   }}
                 />
@@ -1914,7 +1915,7 @@ const TestTaker = () => {
                         alt={image.name}
                         className="max-w-lg h-auto mb-4 rounded-lg shadow-sm border border-gray-200 mx-auto"
                         onError={(e) => {
-                          console.error('Image failed to load:', image);
+                          logger.error('Image failed to load:', image);
                           e.target.style.display = 'none';
                         }}
                       />
@@ -2040,7 +2041,7 @@ const TestTaker = () => {
                 <button
                   key={color.name}
                   onClick={() => {
-                    console.log('Color button clicked:', color.name);
+                    logger.debug('Color button clicked:', color.name);
                     applyHighlight(color);
                   }}
                   className="w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-500 hover:scale-110 transition-all duration-200 shadow-sm"

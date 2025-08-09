@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
 import { testsAPI } from '../../services/api';
+import logger from '../utils/logger';
 
 const TestDetails = () => {
   const { id: testId } = useParams();
@@ -206,7 +207,7 @@ const TestDetails = () => {
         
         // Validate completion data structure
         if (!parsedData || !Array.isArray(parsedData.answeredQuestions)) {
-          console.warn('Invalid completion data structure for test:', testId);
+          logger.warn('Invalid completion data structure for test:', testId);
           setTestResults(null);
           return;
         }
@@ -228,13 +229,13 @@ const TestDetails = () => {
               questionId = questionKey.toString();
             } else {
               // Fallback for unknown formats
-              console.warn('Unknown questionKey format:', questionKey);
+              logger.warn('Unknown questionKey format:', questionKey);
               questionId = questionKey?.toString() || 'unknown';
             }
             
             answers[questionId] = { selectedAnswer: answer };
           } catch (error) {
-            console.warn('Error processing questionKey:', questionKey, error);
+            logger.warn('Error processing questionKey:', questionKey, error);
             const questionId = questionKey?.toString() || 'unknown';
             answers[questionId] = { selectedAnswer: answer };
           }
@@ -338,7 +339,7 @@ const TestDetails = () => {
         setTestResults(null);
       }
     } catch (error) {
-      console.error('Error loading test details:', error);
+      logger.error('Error loading test details:', error);
       setError('Failed to load test details');
     } finally {
       setLoading(false);

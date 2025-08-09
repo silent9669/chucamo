@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMoon, FiSun } from 'react-icons/fi';
 import { renderPassageWithKaTeX } from '../../utils/katexUtils';
+import logger from '../utils/logger';
 
 // Custom styles for range input
 const rangeInputStyles = `
@@ -70,30 +71,30 @@ const ArticleReader = () => {
   useEffect(() => {
     const loadArticle = () => {
       try {
-        console.log('🔍 Loading article with ID:', id);
+        logger.debug('🔍 Loading article with ID:', id);
         setLoading(true);
         setArticle(null); // Reset article state
         
         const savedArticles = localStorage.getItem('articles');
         if (savedArticles) {
           const articles = JSON.parse(savedArticles);
-          console.log(`📚 Found ${articles.length} articles in localStorage`);
-          console.log('📋 Available article IDs:', articles.map(a => a.id));
+          logger.debug(`📚 Found ${articles.length} articles in localStorage`);
+          logger.debug('📋 Available article IDs:', articles.map(a => a.id));
           
           const foundArticle = articles.find(a => a.id.toString() === id.toString());
           if (foundArticle) {
-            console.log('✅ Article found:', foundArticle.title);
+            logger.debug('✅ Article found:', foundArticle.title);
             setArticle(foundArticle);
           } else {
-            console.log('❌ Article not found in localStorage');
-            console.log('🔍 Looking for ID:', id);
-            console.log('📋 Available articles:', articles.map(a => ({ id: a.id, title: a.title })));
+            logger.debug('❌ Article not found in localStorage');
+            logger.debug('🔍 Looking for ID:', id);
+            logger.debug('📋 Available articles:', articles.map(a => ({ id: a.id, title: a.title })));
           }
         } else {
-          console.log('❌ No articles found in localStorage');
+          logger.debug('❌ No articles found in localStorage');
         }
       } catch (error) {
-        console.error('❌ Error loading article:', error);
+        logger.error('❌ Error loading article:', error);
       } finally {
         setLoading(false);
       }

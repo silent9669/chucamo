@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const logger = require('./utils/logger');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -83,31 +84,31 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting - Auth routes (more restrictive)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 login attempts per 15 minutes
-  message: 'Too many login attempts, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Rate limiting removed - no limits for users
+// const authLimiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 50, // limit each IP to 50 login attempts per 15 minutes
+//   message: 'Too many login attempts, please try again later.',
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
 
 // Rate limiting - General API routes
-const generalLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limit each IP to 1000 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// const generalLimiter = rateLimit({
+//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limit each IP to 1000 requests per windowMs
+//   message: 'Too many requests from this IP, please try again later.',
+//   standardHeaders: true,
+//   legacyHeaders: false,
+// });
 
-// Apply rate limiting to specific routes
-app.use('/api/auth', authLimiter);
-app.use('/api/users', generalLimiter);
-app.use('/api/tests', generalLimiter);
-app.use('/api/questions', generalLimiter);
-app.use('/api/results', generalLimiter);
-app.use('/api/upload', generalLimiter);
+// Rate limiting removed - no limits applied
+// app.use('/api/auth', authLimiter);
+// app.use('/api/users', generalLimiter);
+// app.use('/api/tests', generalLimiter);
+// app.use('/api/questions', generalLimiter);
+// app.use('/api/results', generalLimiter);
+// app.use('/api/upload', generalLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -186,25 +187,25 @@ app.use((err, req, res, next) => {
 let MONGODB_URI = process.env.MONGODB_URI;
 
 // Debug: Log environment variables
-console.log('Environment check:');
-console.log('- NODE_ENV:', process.env.NODE_ENV);
-console.log('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
-console.log('- MONGODB_URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
+logger.debug('Environment check:');
+logger.debug('- NODE_ENV:', process.env.NODE_ENV);
+logger.debug('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
+logger.debug('- MONGODB_URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
 
 // If no MONGODB_URI is set, use a fallback for development
 if (!MONGODB_URI) {
-  console.log('No MONGODB_URI found in environment variables');
+  logger.warn('No MONGODB_URI found in environment variables');
   if (process.env.NODE_ENV === 'production') {
     console.error('MONGODB_URI is required in production!');
     process.exit(1);
   } else {
     MONGODB_URI = 'mongodb://localhost:27017/bluebook-sat-simulator';
-    console.log('Using local MongoDB for development');
+    logger.info('Using local MongoDB for development');
   }
 }
 
 // Debug: Log the MongoDB URI (without sensitive info)
-console.log('MongoDB URI starts with:', MONGODB_URI ? MONGODB_URI.substring(0, 20) + '...' : 'undefined');
+logger.debug('MongoDB URI starts with:', MONGODB_URI ? MONGODB_URI.substring(0, 20) + '...' : 'undefined');
 
 // Validate MongoDB URI format
 const isValidMongoURI = (uri) => {
@@ -216,93 +217,93 @@ const isValidMongoURI = (uri) => {
 const startServer = () => {
   try {
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`✅ Health check available at: http://localhost:${PORT}/`);
-      console.log(`✅ Server ready to accept connections`);
-    });
+  logger.critical(`✅ Server running on port ${PORT}`);
+  logger.info(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`✅ Health check available at: http://localhost:${PORT}/`);
+  logger.info(`✅ Server ready to accept connections`);
+});
 
     // Handle server errors
-    server.on('error', (error) => {
-      console.error('Server error:', error);
-      if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use`);
-        process.exit(1);
-      } else {
-        console.error('Unknown server error:', error);
-        process.exit(1);
-      }
-    });
+server.on('error', (error) => {
+  logger.error('Server error:', error);
+  if (error.code === 'EADDRINUSE') {
+    logger.error(`Port ${PORT} is already in use`);
+    process.exit(1);
+  } else {
+    logger.error('Unknown server error:', error);
+    process.exit(1);
+  }
+});
 
     // Graceful shutdown handling
-    process.on('SIGTERM', () => {
-      console.log('🛑 SIGTERM received, shutting down gracefully...');
-      server.close(() => {
-        console.log('✅ Server closed gracefully');
-        process.exit(0);
-      });
-      
-      // Force exit after 10 seconds if graceful shutdown fails
-      setTimeout(() => {
-        console.log('⚠️ Forcing exit after timeout');
-        process.exit(1);
-      }, 10000);
-    });
+process.on('SIGTERM', () => {
+  logger.critical('🛑 SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    logger.critical('✅ Server closed gracefully');
+    process.exit(0);
+  });
+  
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    logger.warn('⚠️ Forcing exit after timeout');
+    process.exit(1);
+  }, 10000);
+});
 
-    process.on('SIGINT', () => {
-      console.log('🛑 SIGINT received, shutting down gracefully...');
-      server.close(() => {
-        console.log('✅ Server closed gracefully');
-        process.exit(0);
-      });
-    });
+process.on('SIGINT', () => {
+  logger.critical('🛑 SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    logger.critical('✅ Server closed gracefully');
+    process.exit(0);
+  });
+});
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
+      logger.error('Uncaught Exception:', error);
       server.close(() => {
-        console.log('Server closed due to uncaught exception');
+        logger.error('Server closed due to uncaught exception');
         process.exit(1);
       });
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
       server.close(() => {
-        console.log('Server closed due to unhandled rejection');
+        logger.error('Server closed due to unhandled rejection');
         process.exit(1);
       });
     });
 
     return server;
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 };
 
 // Start server immediately for Railway health check
-console.log('🚀 Starting server immediately for Railway...');
+logger.critical('🚀 Starting server immediately for Railway...');
 startServer();
 
 // Connect to MongoDB in background
 if (isValidMongoURI(MONGODB_URI)) {
-  console.log('Attempting to connect to MongoDB...');
+  logger.info('Attempting to connect to MongoDB...');
   mongoose.connect(MONGODB_URI, {
     serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
     connectTimeoutMS: 10000,
   })
     .then(() => {
-      console.log('✅ Connected to MongoDB successfully');
+      logger.critical('✅ Connected to MongoDB successfully');
     })
     .catch((err) => {
-      console.error('❌ MongoDB connection error:', err);
-      console.log('⚠️ Server running without database connection...');
+      logger.error('❌ MongoDB connection error:', err);
+      logger.warn('⚠️ Server running without database connection...');
     });
 } else {
-  console.error('❌ Invalid MongoDB URI format. Please check your MONGODB_URI environment variable.');
-  console.log('⚠️ Server running without database connection...');
+  logger.error('❌ Invalid MongoDB URI format. Please check your MONGODB_URI environment variable.');
+  logger.warn('⚠️ Server running without database connection...');
 }
 
 module.exports = app; 

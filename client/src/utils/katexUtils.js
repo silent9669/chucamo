@@ -1,5 +1,6 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import logger from '../utils/logger';
 
 // Function to render passage content with KaTeX support
 export const renderPassageWithKaTeX = (passageContent) => {
@@ -17,7 +18,7 @@ export const renderPassageWithKaTeX = (passageContent) => {
         errorColor: '#cc0000'
       });
     } catch (error) {
-      console.error('KaTeX rendering error:', error);
+      logger.error('KaTeX rendering error:', error);
       return match; // Return original if rendering fails
     }
   });
@@ -30,7 +31,7 @@ export const renderPassageWithKaTeX = (passageContent) => {
         errorColor: '#cc0000'
       });
     } catch (error) {
-      console.error('KaTeX rendering error:', error);
+      logger.error('KaTeX rendering error:', error);
       return match; // Return original if rendering fails
     }
   });
@@ -60,7 +61,7 @@ export const renderContent = (content, sectionType) => {
         errorColor: '#cc0000'
       });
     } catch (error) {
-      console.error('KaTeX rendering error:', error);
+      logger.error('KaTeX rendering error:', error);
       return match;
     }
   });
@@ -73,7 +74,7 @@ export const renderContent = (content, sectionType) => {
         errorColor: '#cc0000'
       });
     } catch (error) {
-      console.error('KaTeX rendering error:', error);
+      logger.error('KaTeX rendering error:', error);
       return match;
     }
   });

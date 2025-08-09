@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFileText, FiClock, FiPlay, FiSearch } from 'react-icons/fi';
+import logger from '../utils/logger';
 
 const Articles = () => {
   return (
@@ -29,13 +30,13 @@ const ArticlesList = () => {
       try {
         const parsedArticles = JSON.parse(savedArticles);
         setArticles(parsedArticles);
-        console.log(`Loaded ${parsedArticles.length} articles from localStorage`);
+        logger.debug(`Loaded ${parsedArticles.length} articles from localStorage`);
       } catch (error) {
-        console.error('Error parsing articles from localStorage:', error);
+        logger.error('Error parsing articles from localStorage:', error);
         setArticles([]);
       }
     } else {
-      console.log('No articles found in localStorage');
+      logger.debug('No articles found in localStorage');
     }
     setLoading(false);
   }, []);
@@ -44,7 +45,7 @@ const ArticlesList = () => {
   useEffect(() => {
     if (articles.length > 0) {
       localStorage.setItem('articles', JSON.stringify(articles));
-      console.log(`Saved ${articles.length} articles to localStorage`);
+      logger.debug(`Saved ${articles.length} articles to localStorage`);
     }
   }, [articles]);
 
