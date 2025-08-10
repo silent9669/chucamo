@@ -1,6 +1,5 @@
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import logger from '../utils/logger';
 
 // Custom LaTeX commands for better compatibility
 const customCommands = {
@@ -46,12 +45,6 @@ const preprocessLaTeX = (tex) => {
   processed = processed.trim();
   
   return processed;
-};
-
-// Get font size for consistent rendering - use inherit for consistent sizing
-const getFontSize = (requestedSize) => {
-  if (!requestedSize || requestedSize === 'inherit') return 'inherit';
-  return requestedSize;
 };
 
 // Render passage content with KaTeX, focusing on minimal spacing and consistent sizing
