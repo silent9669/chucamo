@@ -51,32 +51,7 @@ const Recording = () => {
     filterRecordings();
   }, [filterRecordings]);
 
-  const handleRecordingClick = (recording) => {
-    toast.success(`Playing: ${recording.title}`);
-    // TODO: Implement video player functionality
-  };
 
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'reading-writing':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'math':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getTypeLabel = (type) => {
-    switch (type) {
-      case 'reading-writing':
-        return 'Reading & Writing';
-      case 'math':
-        return 'Math';
-      default:
-        return 'Unknown';
-    }
-  };
 
   if (loading) {
     return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Book, Target, ChevronRight } from 'lucide-react';
+import { Book } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 
