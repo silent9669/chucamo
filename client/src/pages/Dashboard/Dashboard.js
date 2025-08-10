@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery } from 'react-query';
 import { Link } from 'react-router-dom';
 import { 
-  FiBookOpen, 
   FiBarChart2, 
   FiTarget,
   FiTrendingUp,
@@ -110,7 +109,7 @@ const Dashboard = () => {
     {
       title: 'Take Practice Test',
       description: 'Start a new full-length SAT practice test',
-      icon: FiBookOpen,
+      icon: null, // Remove icon since we'll use custom image
       href: '/tests',
       color: 'bg-primary-500',
       textColor: 'text-primary-600'
@@ -243,7 +242,9 @@ const Dashboard = () => {
                 >
                   <div className="flex items-center mb-4">
                     <div className={`p-3 rounded-lg ${action.color} bg-opacity-10`}>
-                      <Icon className={`w-6 h-6 ${action.textColor}`} />
+                      {Icon ? <Icon className={`w-6 h-6 ${action.textColor}`} /> : (
+                        <img src="/apple.png" alt="Practice Test" className="w-6 h-6 rounded-full border-2 border-white" />
+                      )}
                     </div>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">

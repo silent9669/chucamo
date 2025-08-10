@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   FiHome, 
-  FiBookOpen, 
   FiBarChart2, 
   FiUser, 
   FiSettings, 
@@ -34,7 +33,7 @@ const Layout = ({ children, hideNavigation = false }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome },
     { name: 'Study Plan', href: '/study-plan', icon: FiTarget },
-    { name: 'Practice Tests', href: '/tests', icon: FiBookOpen },
+    { name: 'Practice Tests', href: '/tests', icon: null },
     { name: 'Results & Analytics', href: '/results', icon: FiBarChart2 },
     { name: 'Profile', href: '/profile', icon: FiUser },
     { name: 'SAT Score Calculator', href: '/sat-score-calculator', icon: FiPieChart },
@@ -205,7 +204,7 @@ const Layout = ({ children, hideNavigation = false }) => {
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
             <Link to="/dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <FiBookOpen className="w-5 h-5 text-white" />
+                <img src="/apple.png" alt="Logo" className="w-5 h-5 rounded-full border-2 border-white" />
               </div>
               <span className="text-xl font-bold gradient-text">chucamo</span>
             </Link>
@@ -234,10 +233,21 @@ const Layout = ({ children, hideNavigation = false }) => {
                     `}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <Icon className={`
-                      mr-3 h-5 w-5 transition-colors duration-200
-                      ${isActive(item.href) ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'}
-                    `} />
+                    {Icon ? (
+                      <Icon className={`
+                        mr-3 h-5 w-5 transition-colors duration-200
+                        ${isActive(item.href) ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'}
+                      `} />
+                    ) : (
+                      <img 
+                        src="/apple.png" 
+                        alt={item.name} 
+                        className={`
+                          mr-3 h-5 w-5 transition-all duration-200 rounded-full border-2
+                          ${isActive(item.href) ? 'border-primary-600' : 'border-gray-300 group-hover:border-gray-400'}
+                        `} 
+                      />
+                    )}
                     <span className="transition-all duration-200">
                       {item.name}
                     </span>
@@ -296,7 +306,7 @@ const Layout = ({ children, hideNavigation = false }) => {
                 {/* chucamo Logo in Header */}
                 <Link to="/dashboard" className="flex items-center space-x-2 lg:hidden">
                   <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                    <FiBookOpen className="w-5 h-5 text-white" />
+                    <img src="/apple.png" alt="Logo" className="w-5 h-5 rounded-full border-2 border-white" />
                   </div>
                   <span className="text-xl font-bold gradient-text">chucamo</span>
                 </Link>
