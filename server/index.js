@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
 const logger = require('./utils/logger');
 require('dotenv').config();
 
@@ -153,17 +154,21 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Serve React app in production
-if (process.env.NODE_ENV === 'production') {
+// Serve React app in production, Railway deployment, or when build directory exists
+const buildPath = path.join(__dirname, '../client/build');
+const buildExists = fs.existsSync(buildPath);
+const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_URL;
+
+if (process.env.NODE_ENV === 'production' || isRailway || buildExists) {
   // Serve static files from React build
-  app.use(express.static(path.join(__dirname, '../client/build')));
+  app.use(express.static(buildPath));
   
   // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+    res.sendFile(path.join(buildPath, 'index.html'));
   });
 } else {
-  // 404 handler for development
+  // 404 handler for development when no build exists
   app.use('*', (req, res) => {
     res.status(404).json({ message: 'Route not found' });
   });
