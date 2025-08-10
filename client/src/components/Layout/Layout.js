@@ -207,7 +207,7 @@ const Layout = ({ children, hideNavigation = false }) => {
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                 <FiBookOpen className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold gradient-text">Bunchable</span>
+              <span className="text-xl font-bold gradient-text">chucamo</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -293,12 +293,12 @@ const Layout = ({ children, hideNavigation = false }) => {
                   <FiMenu className="w-6 h-6" />
                 </button>
                 
-                {/* Bunchable Logo in Header */}
+                {/* chucamo Logo in Header */}
                 <Link to="/dashboard" className="flex items-center space-x-2 lg:hidden">
                   <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                     <FiBookOpen className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-xl font-bold gradient-text">Bunchable</span>
+                  <span className="text-xl font-bold gradient-text">chucamo</span>
                 </Link>
               </div>
 

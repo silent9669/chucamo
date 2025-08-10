@@ -81,9 +81,9 @@ if (isDevelopment) {
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? [
-        'https://bunchable-production.up.railway.app',
+        'https://chucamo-production.up.railway.app',
         'https://railway.com',
-        process.env.RAILWAY_URL || 'https://bunchable-production.up.railway.app'
+        process.env.RAILWAY_URL || 'https://chucamo-production.up.railway.app'
       ] 
     : ['http://localhost:3000'],
   credentials: true

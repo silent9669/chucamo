@@ -144,12 +144,45 @@ router.get('/', protect, async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    // Add test statistics for each user
+    // Add test statistics and activity status for each user
     const usersWithStats = await Promise.all(users.map(async (user) => {
       const testCount = await Result.countDocuments({ user: user._id, status: 'completed' });
+      
+      // Calculate activity status
+      let activityStatus = 'Never logged in';
+      let lastActiveHours = null;
+      let isActive = false;
+      
+      if (user.lastLogin) {
+        const now = new Date();
+        const lastLogin = new Date(user.lastLogin);
+        const diffTime = Math.abs(now - lastLogin);
+        const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+        
+        if (diffHours < 1) {
+          activityStatus = 'Active now';
+          isActive = true;
+        } else if (diffHours < 24) {
+          activityStatus = `${diffHours} hours ago`;
+          lastActiveHours = diffHours;
+          isActive = diffHours < 7; // Consider active if less than 7 hours
+        } else if (diffHours < 168) { // 7 days
+          const days = Math.floor(diffHours / 24);
+          activityStatus = `${days} days ago`;
+          isActive = days < 3; // Consider active if less than 3 days
+        } else {
+          const weeks = Math.floor(diffHours / 168);
+          activityStatus = `${weeks} weeks ago`;
+          isActive = false;
+        }
+      }
+      
       return {
         ...user,
-        testCount
+        testCount,
+        activityStatus,
+        lastActiveHours,
+        isActive
       };
     }));
 

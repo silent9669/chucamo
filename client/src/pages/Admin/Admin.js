@@ -108,6 +108,7 @@ const UserManagement = () => {
     limit: 20
   });
   const [editingUser, setEditingUser] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -126,6 +127,7 @@ const UserManagement = () => {
         pages: response.data.pagination.pages,
         total: response.data.pagination.total
       }));
+      setLastUpdated(new Date());
     } catch (error) {
       logger.error('Error fetching users:', error);
       toast.error('Failed to fetch users');
@@ -138,6 +140,13 @@ const UserManagement = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchUsers();
+    
+    // Set up real-time refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
   }, [fetchUsers]);
 
   const handleUpdateUser = async (userId, updates) => {
@@ -187,11 +196,29 @@ const UserManagement = () => {
 
 
   return (
-  <div className="py-6">
-    <div className="mb-6">
-      <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-      <p className="text-gray-600">Manage user accounts, roles, and permissions</p>
-    </div>
+      <div className="py-6">
+      <div className="mb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+            <p className="text-gray-600">Manage user accounts, roles, and permissions</p>
+            {lastUpdated && (
+              <p className="text-xs text-gray-500 mt-1">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={fetchUsers}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
 
       {/* Search and Filters */}
       <div className="card mb-6">
@@ -283,13 +310,30 @@ const UserManagement = () => {
                     <tr key={user._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
+                          <div className="flex-shrink-0 relative">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                              {user.profilePicture ? (
+                                <img
+                                  src={user.profilePicture}
+                                  alt={`${user.firstName} ${user.lastName}`}
+                                  className="w-10 h-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase()
+                              )}
+                            </div>
+                            {/* Online indicator */}
+                            {user.isActive && user.lastActiveHours < 1 && (
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                            )}
+                          </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {user.firstName} {user.lastName}
-    </div>
+                            </div>
                             <div className="text-sm text-gray-500">
                               @{user.username}
-  </div>
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -302,19 +346,15 @@ const UserManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
                           <div className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${
-                            user.lastLogin && (new Date() - new Date(user.lastLogin)) < (7 * 24 * 60 * 60 * 1000) 
+                            user.isActive 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {user.lastLogin ? (
-                              (new Date() - new Date(user.lastLogin)) < (7 * 24 * 60 * 60 * 1000) ? 'Active' : 'Inactive'
-                            ) : 'Never logged in'}
+                            {user.isActive ? 'Active' : 'Inactive'}
                           </div>
-                          {user.lastLogin && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Last active: {user.inactivityPeriod}
-                            </div>
-                          )}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {user.activityStatus}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

@@ -10,8 +10,7 @@ const Profile = () => {
     firstName: '',
     lastName: '',
     username: '',
-    email: '',
-    school: ''
+    email: ''
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -38,8 +37,7 @@ const Profile = () => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         username: user.username || '',
-        email: user.email || '',
-        school: user.school || ''
+        email: user.email || ''
       });
     }
     fetchLeaderboard();
@@ -197,14 +195,13 @@ const Profile = () => {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">School Name</label>
-                    <input
-                      type="text"
-                      value={profileData.school}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, school: e.target.value }))}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
+                    <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600">
+                      {user?.accountType === 'student' ? 'Student Account' : 
+                       user?.accountType === 'free' ? 'Free Account' : 
+                       user?.accountType === 'teacher' ? 'Teacher Account' : 
+                       user?.accountType === 'admin' ? 'Admin Account' : 'Unknown'}
+                    </div>
                   </div>
                 </div>
 

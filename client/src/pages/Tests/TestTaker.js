@@ -1453,7 +1453,7 @@ const TestTaker = () => {
         {/* Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
           <div className="text-gray-100 text-8xl font-bold transform -rotate-45 opacity-10">
-            Bunchable
+            chucamo
           </div>
         </div>
 
@@ -1551,7 +1551,7 @@ const TestTaker = () => {
       {/* Watermark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <div className="text-gray-100 text-8xl font-bold transform -rotate-45 opacity-10">
-          Bunchable
+          chucamo
         </div>
       </div>
 

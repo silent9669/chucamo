@@ -24,7 +24,7 @@ const api = axios.create({
       }
       
       // Fallback to known Railway URL
-      return 'https://bunchable-production.up.railway.app/api';
+      return 'https://chucamo-production.up.railway.app/api';
     }
     
     // Development fallback
