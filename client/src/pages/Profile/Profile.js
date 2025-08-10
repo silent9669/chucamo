@@ -37,9 +37,13 @@ const Profile = () => {
       try {
         setFetchingUser(true);
         const response = await authAPI.getCurrentUser();
-        if (response.data) {
+        console.log('Profile: API Response:', response);
+        console.log('Profile: Response data:', response.data);
+        if (response.data && response.data.user) {
+          console.log('Profile: User data:', response.data.user);
+          console.log('Profile: Account type:', response.data.user.accountType);
           // Update the user context with fresh data
-          updateUser(response.data);
+          updateUser(response.data.user);
         }
       } catch (error) {
         logger.error('Error fetching current user:', error);
@@ -53,6 +57,8 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('Profile: User context updated:', user);
+      console.log('Profile: User account type from context:', user.accountType);
       setProfileData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
