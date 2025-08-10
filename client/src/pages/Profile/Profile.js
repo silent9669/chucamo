@@ -27,9 +27,29 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [fetchingUser, setFetchingUser] = useState(false);
 
   const [leaderboard, setLeaderboard] = useState([]);
 
+  // Fetch current user data on component mount to ensure account type is up-to-date
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        setFetchingUser(true);
+        const response = await authAPI.getCurrentUser();
+        if (response.data) {
+          // Update the user context with fresh data
+          updateUser(response.data);
+        }
+      } catch (error) {
+        logger.error('Error fetching current user:', error);
+      } finally {
+        setFetchingUser(false);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [updateUser]);
 
   useEffect(() => {
     if (user) {
@@ -197,10 +217,17 @@ const Profile = () => {
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
                     <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                      {user?.accountType === 'student' ? 'Student Account' : 
-                       user?.accountType === 'free' ? 'Free Account' : 
-                       user?.accountType === 'teacher' ? 'Teacher Account' : 
-                       user?.accountType === 'admin' ? 'Admin Account' : 'Unknown'}
+                      {fetchingUser ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          <span>Loading account type...</span>
+                        </div>
+                      ) : (
+                        user?.accountType === 'student' ? 'Student Account' : 
+                        user?.accountType === 'free' ? 'Free Account' : 
+                        user?.accountType === 'teacher' ? 'Teacher Account' : 
+                        user?.accountType === 'admin' ? 'Admin Account' : 'Unknown'
+                      )}
                     </div>
                   </div>
                 </div>
