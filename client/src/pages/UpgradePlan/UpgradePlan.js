@@ -80,7 +80,7 @@ const UpgradePlan = () => {
         
         setTimeout(() => requestAnimationFrame(updateNumber), 500);
       }
-    }, [animatedElements.socialProof, hasAnimated, target]);
+    }, [hasAnimated, target]);
 
     return (
       <div className="stat-item">

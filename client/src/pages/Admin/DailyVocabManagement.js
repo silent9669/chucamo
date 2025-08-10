@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiCalendar } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';

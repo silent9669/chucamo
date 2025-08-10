@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiBookOpen } from 'react-icons/fi';
-import { Book, Target, ChevronRight } from 'lucide-react';
+import { Book, Target } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 
 const DailyVocab = () => {
-  const [vocabEntries, setVocabEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hoveredCard, setHoveredCard] = useState(null);
 
@@ -46,31 +44,13 @@ const DailyVocab = () => {
       // const response = await vocabAPI.getAll();
       // setVocabEntries(response.data.vocabEntries);
       
-      // No mock data - empty array for now
-      setVocabEntries([]);
+      // Simulate loading delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       logger.error('Error loading vocab entries:', error);
       toast.error('Failed to load vocabulary entries');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'hard': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getDifficultyIcon = (difficulty) => {
-    switch (difficulty) {
-      case 'easy': return '⭐';
-      case 'medium': return '⭐⭐';
-      case 'hard': return '⭐⭐⭐';
-      default: return '⭐';
     }
   };
 

@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
-import { authAPI } from '../../services/api';
+
 import logger from '../../utils/logger';
 
 const Login = () => {

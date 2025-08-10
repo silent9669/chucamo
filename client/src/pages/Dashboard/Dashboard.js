@@ -7,8 +7,7 @@ import {
   FiTarget,
   FiTrendingUp,
   FiAward,
-  FiDollarSign,
-  FiFileText
+  FiDollarSign
 } from 'react-icons/fi';
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
