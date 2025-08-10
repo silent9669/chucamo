@@ -11,7 +11,8 @@ import {
   FiX,
   FiPieChart,
   FiTarget,
-  FiZap
+  FiZap,
+  FiBookOpen
 } from 'react-icons/fi';
 
 const Layout = ({ children, hideNavigation = false }) => {
@@ -33,7 +34,7 @@ const Layout = ({ children, hideNavigation = false }) => {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome },
     { name: 'Study Plan', href: '/study-plan', icon: FiTarget },
-    { name: 'Practice Tests', href: '/tests', icon: FiTarget },
+    { name: 'Practice Tests', href: '/tests', icon: FiBookOpen },
     { name: 'Results & Analytics', href: '/results', icon: FiBarChart2 },
     { name: 'Profile', href: '/profile', icon: FiUser },
     { name: 'SAT Score Calculator', href: '/sat-score-calculator', icon: FiPieChart },
