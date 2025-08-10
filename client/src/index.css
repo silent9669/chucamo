@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 /* Google Sign-In Button Container */
 .google-signin-container {
   display: flex;
@@ -18,10 +16,8 @@
   color: #333;
 }
 
-
-
 /* Ensure proper font loading */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   html {
@@ -43,23 +39,23 @@
   }
   
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
   }
   
   .btn-secondary {
-    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-primary-500;
+    @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-blue-500;
   }
   
   .btn-success {
-    @apply btn bg-success-600 text-white hover:bg-success-700 focus:ring-success-500;
+    @apply btn bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
   }
   
   .btn-warning {
-    @apply btn bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500;
+    @apply btn bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500;
   }
   
   .btn-error {
-    @apply btn bg-error-600 text-white hover:bg-error-700 focus:ring-error-500;
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
   }
   
   .btn-sm {
@@ -71,15 +67,15 @@
   }
   
   .input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm;
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
   }
   
   .input-error {
-    @apply input border-error-300 focus:ring-error-500 focus:border-error-500;
+    @apply input border-red-300 focus:ring-red-500 focus:border-red-500;
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-soft border border-gray-200;
+    @apply bg-white rounded-lg shadow-md border border-gray-200;
   }
   
   .card-header {
@@ -99,35 +95,35 @@
   }
   
   .badge-primary {
-    @apply badge bg-primary-100 text-primary-800;
+    @apply badge bg-blue-100 text-blue-800;
   }
   
   .badge-secondary {
-    @apply badge bg-secondary-100 text-secondary-800;
+    @apply badge bg-gray-100 text-gray-800;
   }
   
   .badge-success {
-    @apply badge bg-success-100 text-success-800;
+    @apply badge bg-green-100 text-green-800;
   }
   
   .badge-warning {
-    @apply badge bg-warning-100 text-warning-800;
+    @apply badge bg-yellow-100 text-yellow-800;
   }
   
   .badge-error {
-    @apply badge bg-error-100 text-error-800;
+    @apply badge bg-red-100 text-red-800;
   }
   
   .loading-spinner {
-    @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
   }
   
   .fade-in {
-    @apply animate-fade-in;
+    animation: fadeIn 0.3s ease-in-out;
   }
   
   .slide-up {
-    @apply animate-slide-up;
+    animation: slideUp 0.3s ease-out;
   }
 }
 
@@ -137,16 +133,37 @@
   }
   
   .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
   
   .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+    display: none; /* Chrome, Safari, Edge */
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent;
+  }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
@@ -183,7 +200,7 @@
 
 /* Focus styles for accessibility */
 .focus-visible:focus {
-  @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
 }
 
 /* Print styles */
@@ -195,9 +212,7 @@
   .print-break {
     page-break-before: always;
   }
-} 
-
-
+}
 
 /* Calculator popup improvements */
 .calculator-controls {
@@ -224,4 +239,132 @@
 .calculator-popup-dragging * {
   -webkit-user-select: none;
   user-select: none;
-} 
+}
+
+/* Highlight animations */
+@keyframes highlightPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Custom highlight styles */
+.custom-highlight {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 1px 2px;
+  margin: 0;
+  display: inline;
+  position: relative;
+  z-index: 1000;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.custom-highlight:hover {
+  opacity: 0.8;
+  transform: scale(1.01);
+}
+
+/* Highlight color classes */
+.custom-highlight.yellow {
+  background-color: #fef08a !important;
+}
+
+.custom-highlight.green {
+  background-color: #bbf7d0 !important;
+}
+
+.custom-highlight.blue {
+  background-color: #bfdbfe !important;
+}
+
+.custom-highlight.pink {
+  background-color: #fecaca !important;
+}
+
+/* Passage content styles */
+.passage-content {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  cursor: text;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-family: serif;
+  margin-bottom: 1rem;
+}
+
+/* Reading passage styles for better text selection */
+.reading-passage {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  cursor: text;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-family: serif;
+}
+
+/* Ensure text selection works properly */
+.reading-passage * {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Text content styles for highlighting */
+.passage-text-content,
+.question-text-content {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  cursor: text;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-family: serif;
+}
+
+.passage-text-content *,
+.question-text-content * {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* KaTeX element styles */
+.katex-display {
+  margin: 1rem 0;
+  text-align: center;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.katex-inline {
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+  display: inline-block;
+  vertical-align: middle;
+}

@@ -1,13 +1,15 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo, FiEyeOff, FiImage } from 'react-icons/fi';
+import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo, FiEyeOff, FiImage, FiBookmark } from 'react-icons/fi';
 import { testsAPI, usersAPI } from '../../services/api';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import MultipleAnswersEditor from '../../components/UI/MultipleAnswersEditor';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import logger from '../../utils/logger';
+import StudyPlanManagement from './StudyPlanManagement';
+import DailyVocabManagement from './DailyVocabManagement';
 
 // Basic input components
 const DirectInput = ({ value, onChange, placeholder }) => (
@@ -65,25 +67,31 @@ const AdminDashboard = () => (
       </div>
       <div className="card p-6 text-center">
         <FiTarget className="w-8 h-8 text-primary-600 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold mb-2">Articles Management</h3>
-          <p className="text-gray-600 text-sm mb-4">Manage articles content and materials</p>
-                        <Link to="/articles-management" className="btn-primary btn-sm">Manage Articles</Link>
+                  <h3 className="text-lg font-semibold mb-2">Library Management</h3>
+          <p className="text-gray-600 text-sm mb-4">Manage library content and materials</p>
+                        <Link to="/library-management" className="btn-primary btn-sm">Manage Library</Link>
       </div>
       <div className="card p-6 text-center">
-        <FiBarChart2 className="w-8 h-8 text-primary-600 mx-auto mb-3" />
-        <h3 className="text-lg font-semibold mb-2">Analytics</h3>
-        <p className="text-gray-600 text-sm mb-4">View system analytics and reports</p>
-        <Link to="/admin/analytics" className="btn-primary btn-sm">View Analytics</Link>
+        <FiBookOpen className="w-8 h-8 text-primary-600 mx-auto mb-3" />
+        <h3 className="text-lg font-semibold mb-2">Recording Management</h3>
+        <p className="text-sm mb-4">Create and manage recordings for students</p>
+        <Link to="/admin/analytics" className="btn-primary btn-sm">Manage Recordings</Link>
+      </div>
+      <div className="card p-6 text-center">
+        <FiBookmark className="w-8 h-8 text-primary-600 mx-auto mb-3" />
+        <h3 className="text-lg font-semibold mb-2">Vocabulary Management</h3>
+        <p className="text-gray-600 text-sm mb-4">Create and manage daily vocabulary entries</p>
+        <Link to="/admin/daily-vocab" className="btn-primary btn-sm">Manage Vocabulary</Link>
       </div>
     </div>
   </div>
 );
 
 const UserManagement = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
   const [accountTypeFilter, setAccountTypeFilter] = useState('');
   const [pagination, setPagination] = useState({
     current: 1,
@@ -100,7 +108,6 @@ const UserManagement = () => {
         page: pagination.current,
         limit: pagination.limit,
         search: searchTerm,
-        role: roleFilter,
         accountType: accountTypeFilter
       };
 
@@ -118,7 +125,7 @@ const UserManagement = () => {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.current, searchTerm, roleFilter, accountTypeFilter, pagination.limit]);
+  }, [pagination.current, searchTerm, accountTypeFilter, pagination.limit]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -156,44 +163,27 @@ const UserManagement = () => {
     const styles = {
       free: 'bg-gray-100 text-gray-800',
       student: 'bg-blue-100 text-blue-800',
-      teacher: 'bg-purple-100 text-purple-800'
+      teacher: 'bg-purple-100 text-purple-800',
+      admin: 'bg-red-100 text-red-800'
     };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[accountType] || 'bg-gray-100 text-gray-800'}`}>
-        {accountType.charAt(0).toUpperCase() + accountType.slice(1)}
+        {accountType === 'student' ? 'Student Account' : 
+         accountType === 'free' ? 'Free Account' : 
+         accountType === 'teacher' ? 'Teacher Account' : 
+         accountType === 'admin' ? 'Admin Account' : accountType}
       </span>
     );
   };
 
-  const getRoleBadge = (role) => {
-    const styles = {
-      student: 'bg-green-100 text-green-800',
-      admin: 'bg-red-100 text-red-800',
-      teacher: 'bg-purple-100 text-purple-800'
-    };
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[role] || 'bg-gray-100 text-gray-800'}`}>
-        {role.charAt(0).toUpperCase() + role.slice(1)}
-      </span>
-    );
-  };
 
-  const getStatusBadge = (isActive) => {
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-        isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-      }`}>
-        {isActive ? 'Active' : 'Inactive'}
-      </span>
-    );
-  };
 
   return (
-    <div className="py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="text-gray-600">Manage user accounts, roles, and permissions</p>
-      </div>
+  <div className="py-6">
+    <div className="mb-6">
+      <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+      <p className="text-gray-600">Manage user accounts, roles, and permissions</p>
+    </div>
 
       {/* Search and Filters */}
       <div className="card mb-6">
@@ -213,36 +203,24 @@ const UserManagement = () => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Roles</option>
-                <option value="student">Student</option>
-                <option value="admin">Admin</option>
-                <option value="teacher">Teacher</option>
-              </select>
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Account Type</label>
-              <select
-                value={accountTypeFilter}
-                onChange={(e) => setAccountTypeFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Types</option>
-                <option value="free">Free Account</option>
-                <option value="student">Student Account</option>
-                <option value="teacher">Teacher Account</option>
-              </select>
+                              <select
+                  value={accountTypeFilter}
+                  onChange={(e) => setAccountTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">All Types</option>
+                  <option value="free">Free Account</option>
+                  <option value="student">Student Account</option>
+                  <option value="teacher">Teacher Account</option>
+                  <option value="admin">Admin Account</option>
+                </select>
             </div>
+
             <div className="flex items-end">
               <button
                 onClick={() => {
                   setSearchTerm('');
-                  setRoleFilter('');
                   setAccountTypeFilter('');
                 }}
                 className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
@@ -255,15 +233,15 @@ const UserManagement = () => {
       </div>
 
       {/* Users Table */}
-      <div className="card">
-        <div className="card-header">
+    <div className="card">
+      <div className="card-header">
           <h2 className="text-lg font-semibold">All Users ({pagination.total})</h2>
-        </div>
+      </div>
         <div className="card-body p-0">
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            </div>
+      </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -279,10 +257,7 @@ const UserManagement = () => {
                       Account Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      Activity Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Tests Taken
@@ -303,31 +278,33 @@ const UserManagement = () => {
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {user.firstName} {user.lastName}
-                            </div>
+    </div>
                             <div className="text-sm text-gray-500">
                               @{user.username}
-                            </div>
+  </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{user.email}</div>
-                        {user.school && (
-                          <div className="text-sm text-gray-500">{user.school}</div>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getAccountTypeBadge(user.accountType)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {getRoleBadge(user.role)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
-                          {getStatusBadge(user.isActive)}
-                          {!user.isActive && user.lastLogin && (
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${
+                            user.lastLogin && (new Date() - new Date(user.lastLogin)) < (7 * 24 * 60 * 60 * 1000) 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.lastLogin ? (
+                              (new Date() - new Date(user.lastLogin)) < (7 * 24 * 60 * 60 * 1000) ? 'Active' : 'Inactive'
+                            ) : 'Never logged in'}
+                          </div>
+                          {user.lastLogin && (
                             <div className="text-xs text-gray-500 mt-1">
-                              Inactive for {user.inactivityPeriod}
+                              Last active: {user.inactivityPeriod}
                             </div>
                           )}
                         </div>
@@ -342,11 +319,13 @@ const UserManagement = () => {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => setEditingUser(user)}
-                            className="text-primary-600 hover:text-primary-900"
+                            disabled={user.accountType === 'admin'}
+                            className={`${user.accountType === 'admin' ? 'text-gray-400 cursor-not-allowed' : 'text-primary-600 hover:text-primary-900'}`}
+                            title={user.accountType === 'admin' ? 'Admin accounts cannot be edited' : 'Edit user'}
                           >
                             Edit
                           </button>
-                          {user.role !== 'admin' && (
+                          {user.accountType !== 'admin' && (
                             <button
                               onClick={() => handleDeleteUser(user._id)}
                               className="text-red-600 hover:text-red-900"
@@ -406,35 +385,20 @@ const UserManagement = () => {
                   <select
                     value={editingUser.accountType}
                     onChange={(e) => setEditingUser({ ...editingUser, accountType: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    disabled={editingUser.accountType === 'admin'}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${editingUser.accountType === 'admin' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   >
                     <option value="free">Free Account</option>
                     <option value="student">Student Account</option>
                     <option value="teacher">Teacher Account</option>
+                    <option value="admin">Admin Account</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                  <select
-                    value={editingUser.role}
-                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="student">Student</option>
-                    <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={editingUser.isActive ? 'active' : 'inactive'}
-                    onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.value === 'active' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                <div className="text-sm text-gray-600">
+                  <p><strong>Note:</strong> Only account type can be modified. Role and status are system-managed.</p>
+                  {editingUser.accountType === 'admin' && (
+                    <p className="text-red-600 mt-2"><strong>Admin accounts cannot be edited.</strong></p>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
@@ -446,11 +410,14 @@ const UserManagement = () => {
                 </button>
                 <button
                   onClick={() => handleUpdateUser(editingUser._id, {
-                    accountType: editingUser.accountType,
-                    role: editingUser.role,
-                    isActive: editingUser.isActive
+                    accountType: editingUser.accountType
                   })}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  disabled={editingUser.accountType === 'admin'}
+                  className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                    editingUser.accountType === 'admin' 
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                      : 'bg-primary-600 text-white hover:bg-primary-700'
+                  }`}
                 >
                   Save Changes
                 </button>
@@ -644,35 +611,35 @@ const RealTestManagement = () => {
     logger.debug('Test sections:', test.sections);
     
     // Transform sections from API format to client format
-    const transformedSections = (test.sections || []).map(section => {
+      const transformedSections = (test.sections || []).map(section => {
       logger.debug('Processing section:', section);
       logger.debug('Section questions:', section.questions);
-      
-      return {
-        id: section._id || section.id || Date.now(),
+        
+        return {
+          id: section._id || section.id || Date.now(),
         title: section.name || section.title || '',
-        description: section.instructions || section.description || '',
+          description: section.instructions || section.description || '',
         timeLimit: section.type === 'math' ? 35 : 32, // Fixed time limits
         type: section.type || 'english',
         questions: section.questions || []
-      };
-    });
-    
+        };
+      });
+      
     logger.debug('Transformed sections:', transformedSections);
     logger.debug('Total questions loaded:', transformedSections.reduce((total, section) => total + section.questions.length, 0));
     
     const currentTestData = {
-      id: test.id,
-      title: test.title,
-      description: test.description,
+        id: test.id,
+        title: test.title,
+        description: test.description,
       timeLimit: transformedSections.reduce((total, section) => total + section.timeLimit, 0), // Sum of section times
-      sections: transformedSections,
-      testType: 'practice'
+        sections: transformedSections,
+        testType: 'practice'
     };
     
     logger.debug('Setting current test data:', currentTestData);
     setCurrentTest(currentTestData);
-    setCurrentView('test-builder');
+      setCurrentView('test-builder');
   };
 
   const saveTest = async () => {
@@ -691,7 +658,7 @@ const RealTestManagement = () => {
         title: s.title,
         questionCount: s.questions?.length || 0,
         questions: s.questions?.map(q => ({
-          id: q.id,
+            id: q.id,
           question: q.question?.substring(0, 50) + '...',
           type: q.type,
           answerType: q.answerType,
@@ -701,10 +668,10 @@ const RealTestManagement = () => {
 
       // Preserve ALL sections and their questions, even if empty
       const transformedSections = (currentTest.sections || []).map(section => ({
-        name: section.title,
-        type: section.type || 'english',
+            name: section.title,
+            type: section.type || 'english',
         timeLimit: section.type === 'math' ? 35 : 32, // Fixed time limits
-        questionCount: section.questions ? section.questions.length : 0,
+            questionCount: section.questions ? section.questions.length : 0,
         instructions: section.description || 'Complete all questions in this section.',
         questions: (section.questions || []).map(question => ({
           ...question,
@@ -805,14 +772,14 @@ const RealTestManagement = () => {
       alert(editingTest ? 'Test updated successfully!' : 'Test created successfully!');
       
       if (!editingTest) {
-        setCurrentTest({
-          title: '',
-          description: '',
+      setCurrentTest({
+        title: '',
+        description: '',
           timeLimit: 0,
-          sections: [],
-          testType: 'practice'
-        });
-        setCurrentView('dashboard');
+        sections: [],
+        testType: 'practice'
+      });
+      setCurrentView('dashboard');
       }
     } catch (error) {
       logger.error('Error saving test:', error);
@@ -927,7 +894,7 @@ const RealTestManagement = () => {
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
       setEditingQuestion(null);
       setCurrentView('section-builder');
-    } catch (error) {
+        } catch (error) {
       logger.error('Error saving question:', error);
       alert('Failed to save question. Please try again.');
     }
@@ -957,7 +924,7 @@ const RealTestManagement = () => {
         ...sectionData
       };
       setCurrentTest(prev => ({
-        ...prev,
+      ...prev,
         sections: [...prev.sections, newSection]
       }));
     }
@@ -987,7 +954,7 @@ const RealTestManagement = () => {
         );
         
         return {
-          ...prev,
+      ...prev,
           sections: updatedSections
         };
       });
@@ -1000,7 +967,7 @@ const RealTestManagement = () => {
   const deleteSection = (sectionId) => {
     if (window.confirm('Are you sure you want to delete this section?')) {
       setCurrentTest(prev => ({
-        ...prev,
+      ...prev,
         sections: prev.sections.filter(s => s.id !== sectionId)
       }));
     }
@@ -1152,19 +1119,19 @@ const RealTestManagement = () => {
   // Function to create complete question data with all fields preserved
   const createCompleteQuestionData = (currentQuestion, editingQuestion) => {
     const questionData = {
-      id: editingQuestion ? editingQuestion.id : Date.now(),
+        id: editingQuestion ? editingQuestion.id : Date.now(),
       question: currentQuestion.question,
-      content: currentQuestion.question,
+        content: currentQuestion.question,
       topic: currentQuestion.topic || 'general',
       difficulty: currentQuestion.difficulty || 'medium',
-      explanation: currentQuestion.explanation || '',
-      passage: currentQuestion.passage || '',
+        explanation: currentQuestion.explanation || '',
+        passage: currentQuestion.passage || '',
       // Preserve the original question type, don't override it
       type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
       options: currentQuestion.answerType === 'multiple-choice' 
         ? currentQuestion.options.map((opt, index) => ({
             content: opt || '',
-            isCorrect: index === currentQuestion.correctAnswer
+          isCorrect: index === currentQuestion.correctAnswer
           }))
         : [],
       correctAnswer: currentQuestion.answerType === 'written' 
@@ -1174,7 +1141,7 @@ const RealTestManagement = () => {
         url: img.url,
         name: img.name
       })),
-      answerType: currentQuestion.answerType,
+        answerType: currentQuestion.answerType,
       writtenAnswer: currentQuestion.writtenAnswer || '',
       acceptableAnswers: currentQuestion.acceptableAnswers || []
     };
@@ -1221,7 +1188,7 @@ const RealTestManagement = () => {
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
-          ...prev,
+        ...prev,
           sections: prev.sections.map(section => 
             section.id === currentSection.id ? updatedSection : section
           )
@@ -1268,8 +1235,8 @@ const RealTestManagement = () => {
     try {
       if (!currentQuestion.question.trim()) {
         alert('Question text is required');
-        return;
-      }
+      return;
+    }
 
       // Create question data with proper type preservation
       const questionToSave = {
@@ -1337,7 +1304,7 @@ const RealTestManagement = () => {
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
-          ...prev,
+        ...prev,
           sections: prev.sections.map(section => 
             section.id === currentSection.id ? updatedSection : section
           )
@@ -1579,16 +1546,16 @@ const RealTestManagement = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
-            <button
-              onClick={() => {
-                setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice' });
-                setCurrentView('test-builder');
-              }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
-            >
-              <FiPlus size={20} />
-              Create Real Test
-            </button>
+          <button
+            onClick={() => {
+              setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice' });
+              setCurrentView('test-builder');
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
+          >
+            <FiPlus size={20} />
+            Create Real Test
+          </button>
           </div>
         </div>
 
@@ -1607,15 +1574,15 @@ const RealTestManagement = () => {
               {searchTerm ? 'Try adjusting your search terms.' : 'Create your first real test to get started.'}
             </p>
             {!searchTerm && (
-              <button
-                onClick={() => {
+            <button
+              onClick={() => {
                   setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice' });
-                  setCurrentView('test-builder');
-                }}
-                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-white"
-              >
-                Create Your First Real Test
-              </button>
+                setCurrentView('test-builder');
+              }}
+              className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-white"
+            >
+              Create Your First Real Test
+            </button>
             )}
           </div>
         ) : (
@@ -1641,7 +1608,7 @@ const RealTestManagement = () => {
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       test.visibleTo === 'all' 
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-green-100 text-green-800' 
                         : test.visibleTo === 'student'
                         ? 'bg-blue-100 text-blue-800'
                         : test.visibleTo === 'free'
@@ -1663,7 +1630,7 @@ const RealTestManagement = () => {
                       <FiEdit size={16} />
                     </button>
                     <div className="relative">
-                      <button 
+                    <button 
                         onClick={() => {
                           const visibility = test.visibleTo === 'all' ? 'free' : 
                                            test.visibleTo === 'free' ? 'student' : 'all';
@@ -1674,9 +1641,9 @@ const RealTestManagement = () => {
                                          test.visibleTo === 'free' ? 'text-yellow-600' : 
                                          test.visible ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-600`}
                         title="Change Visibility"
-                      >
-                        <FiEye size={16} />
-                      </button>
+                    >
+                      <FiEye size={16} />
+                    </button>
                     </div>
                     <button 
                       onClick={() => deleteTest(test.id)}
@@ -1787,7 +1754,7 @@ const RealTestManagement = () => {
             </label>
             <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
               {currentTest.sections.reduce((total, section) => total + (section.timeLimit || 0), 0)} minutes
-            </div>
+          </div>
             <p className="text-xs text-gray-500 mt-1">
               English sections: 32 min each • Math sections: 35 min each
             </p>
@@ -1841,9 +1808,9 @@ const RealTestManagement = () => {
                 </div>
                 <h4 className="font-medium text-gray-900">{section.title}</h4>
                 <p className="text-sm text-gray-600">{section.timeLimit} minutes • {section.questions?.length || 0} questions</p>
-              </div>
+                </div>
               <div className="flex items-center gap-2 ml-4">
-                <button 
+                <button
                   onClick={() => {
                     setEditingSection(section);
                     setCurrentSection({
@@ -1860,7 +1827,7 @@ const RealTestManagement = () => {
                 >
                   <FiEdit size={16} />
                 </button>
-                <button 
+                <button
                   onClick={() => deleteSection(section.id)}
                   className="p-2 text-gray-400 hover:text-red-600"
                   title="Delete Section"
@@ -1911,36 +1878,36 @@ const RealTestManagement = () => {
   }, [currentTest.sections, editingSection]);
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {editingSection ? 'Edit Section' : 'Create Section'}
-          </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setEditingSection(null);
-                setCurrentSection({
-                  type: 'english',
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {editingSection ? 'Edit Section' : 'Create Section'}
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setEditingSection(null);
+              setCurrentSection({
+                type: 'english',
                   title: '',
                   timeLimit: 32,
-                  questions: []
-                });
-                setCurrentView('test-builder');
-              }}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={saveSection}
-              disabled={!currentSection.title || !currentSection.title.trim()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {editingSection ? 'Update Section' : 'Create Section'}
-            </button>
-          </div>
+                questions: []
+              });
+              setCurrentView('test-builder');
+            }}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveSection}
+            disabled={!currentSection.title || !currentSection.title.trim()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {editingSection ? 'Update Section' : 'Create Section'}
+          </button>
         </div>
+      </div>
 
         {/* Enhanced Saved Data Display Panel for Section */}
         {editingSection && (
@@ -2048,7 +2015,7 @@ const RealTestManagement = () => {
             </label>
             <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
               {currentSection.type === 'math' ? '35' : '32'} minutes
-            </div>
+          </div>
             <p className="text-xs text-gray-500 mt-1">
               English sections: 32 minutes • Math sections: 35 minutes
             </p>
@@ -2102,7 +2069,7 @@ const RealTestManagement = () => {
                 )}
               </div>
               <div className="flex items-center gap-2 ml-4">
-                <button 
+                <button
                   onClick={() => {
                     loadQuestionForEditing(question);
                     setCurrentView('question-builder');
@@ -2112,7 +2079,7 @@ const RealTestManagement = () => {
                 >
                   <FiEdit size={16} />
                 </button>
-                <button 
+                <button
                   onClick={() => deleteQuestion(question.id)}
                   className="p-2 text-gray-400 hover:text-red-600"
                   title="Delete Question"
@@ -2315,18 +2282,18 @@ const RealTestManagement = () => {
                 Reading Passage
               </label>
               <KaTeXEditor
-                value={currentQuestion.passage}
+                  value={currentQuestion.passage}
                 onChange={handlePassageChange}
                 placeholder="Enter the reading passage here..."
                 rows={8}
-              />
-            </div>
-          )}
+                />
+              </div>
+            )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
               Question Text
-            </label>
+                </label>
             <KaTeXEditor
               value={currentQuestion.question}
               onChange={handleQuestionChange}
@@ -2395,13 +2362,13 @@ const RealTestManagement = () => {
               </div>
               
               <div className="space-y-4">
-                {currentQuestion.options.map((option, index) => (
+                  {currentQuestion.options.map((option, index) => (
                   <div key={`option-${index}`} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                    <input
-                      type="radio"
-                      name="correctAnswer"
-                      checked={currentQuestion.correctAnswer === index}
-                      onChange={() => setCurrentQuestion(prev => ({ ...prev, correctAnswer: index }))}
+                      <input
+                        type="radio"
+                        name="correctAnswer"
+                        checked={currentQuestion.correctAnswer === index}
+                        onChange={() => setCurrentQuestion(prev => ({ ...prev, correctAnswer: index }))}
                       className="w-5 h-5 text-blue-600 mt-2"
                     />
                     <div className="flex-1 flex items-start gap-3">
@@ -2425,11 +2392,11 @@ const RealTestManagement = () => {
                         </button>
                       )}
                     </div>
-                  </div>
-                ))}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {currentQuestion.answerType === 'written' && (
             <div>
@@ -2438,22 +2405,22 @@ const RealTestManagement = () => {
                 onPrimaryAnswerChange={handleWrittenAnswerChange}
                 acceptableAnswers={currentQuestion.acceptableAnswers || []}
                 onAcceptableAnswersChange={handleAcceptableAnswersChange}
-                placeholder="Enter the correct answer..."
+                  placeholder="Enter the correct answer..."
                 label="Correct Answer"
-              />
-            </div>
-          )}
+                />
+              </div>
+            )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
               Explanation
-            </label>
+              </label>
             <KaTeXEditor
-              value={currentQuestion.explanation}
+                value={currentQuestion.explanation}
               onChange={handleExplanationChange}
               placeholder="Explain the correct answer..."
-              rows={3}
-            />
+                rows={3}
+              />
           </div>
         </div>
       </div>
@@ -2674,24 +2641,24 @@ const MockTestManagement = () => {
     setEditingTest(test);
     
     // Transform sections from API format to client format
-    const transformedSections = (test.sections || []).map(section => ({
-      id: section._id || section.id || Date.now(),
-      title: section.name || section.title || '',
-      description: section.instructions || section.description || '',
+      const transformedSections = (test.sections || []).map(section => ({
+        id: section._id || section.id || Date.now(),
+        title: section.name || section.title || '',
+        description: section.instructions || section.description || '',
       timeLimit: section.type === 'math' ? 35 : 32, // Fixed time limits
       type: section.type || 'english',
       questions: section.questions || []
-    }));
-    
-    setCurrentTest({
-      id: test.id,
-      title: test.title,
-      description: test.description,
+      }));
+      
+      setCurrentTest({
+        id: test.id,
+        title: test.title,
+        description: test.description,
       timeLimit: transformedSections.reduce((total, section) => total + section.timeLimit, 0), // Sum of section times
-      sections: transformedSections,
-      testType: 'study-plan'
-    });
-    setCurrentView('test-builder');
+        sections: transformedSections,
+        testType: 'study-plan'
+      });
+      setCurrentView('test-builder');
   };
 
   const handleImageUpload = (event) => {
@@ -2752,10 +2719,10 @@ const MockTestManagement = () => {
       const transformedSections = (currentTest.sections || [])
         .filter(section => section.questions && section.questions.length > 0)
         .map(section => ({
-          name: section.title,
-          type: section.type || 'english',
-          timeLimit: section.timeLimit || 65,
-          questionCount: section.questions ? section.questions.length : 0,
+            name: section.title,
+            type: section.type || 'english',
+            timeLimit: section.timeLimit || 65,
+            questionCount: section.questions ? section.questions.length : 0,
           instructions: section.description || 'Complete all questions in this section.',
           questions: (section.questions || []).map(question => ({
             ...question,
@@ -2886,8 +2853,8 @@ const MockTestManagement = () => {
     try {
       if (!currentQuestion.question.trim()) {
         alert('Question text is required');
-        return;
-      }
+      return;
+    }
 
       // Deep clone the current question to preserve all data
       const questionToSave = JSON.parse(JSON.stringify({
@@ -2960,7 +2927,7 @@ const MockTestManagement = () => {
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
-          ...prev,
+      ...prev,
           sections: prev.sections.map(section => 
             section.id === currentSection.id ? updatedSection : section
           )
@@ -3046,7 +3013,7 @@ const MockTestManagement = () => {
         );
         
         return {
-          ...prev,
+        ...prev,
           sections: updatedSections
         };
       });
@@ -3056,7 +3023,7 @@ const MockTestManagement = () => {
     }
   };
 
-  const deleteSection = (sectionId) => {
+    const deleteSection = (sectionId) => {
     if (window.confirm('Are you sure you want to delete this section?')) {
       setCurrentTest(prev => ({
         ...prev,
@@ -3244,16 +3211,16 @@ const MockTestManagement = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
             />
-            <button
-              onClick={() => {
-                setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'study-plan' });
-                setCurrentView('test-builder');
-              }}
+          <button
+            onClick={() => {
+              setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'study-plan' });
+              setCurrentView('test-builder');
+            }}
               className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-            >
-              <FiPlus size={20} />
-              Create Mock Test
-            </button>
+          >
+            <FiPlus size={20} />
+            Create Mock Test
+          </button>
           </div>
         </div>
 
@@ -3304,7 +3271,7 @@ const MockTestManagement = () => {
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       test.visibleTo === 'all' 
-                        ? 'bg-green-100 text-green-800'
+                        ? 'bg-green-100 text-green-800' 
                         : test.visibleTo === 'student'
                         ? 'bg-blue-100 text-blue-800'
                         : test.visibleTo === 'free'
@@ -3326,7 +3293,7 @@ const MockTestManagement = () => {
                       <FiEdit size={16} />
                     </button>
                     <div className="relative">
-                      <button 
+                    <button 
                         onClick={() => {
                           const visibility = test.visibleTo === 'all' ? 'free' : 
                                            test.visibleTo === 'free' ? 'student' : 'all';
@@ -3337,9 +3304,9 @@ const MockTestManagement = () => {
                                          test.visibleTo === 'free' ? 'text-yellow-600' : 
                                          test.visible ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-600`}
                         title="Change Visibility"
-                      >
-                        <FiEye size={16} />
-                      </button>
+                    >
+                      <FiEye size={16} />
+                    </button>
                     </div>
                     <button 
                       onClick={() => deleteTest(test.id)}
@@ -3410,7 +3377,7 @@ const MockTestManagement = () => {
             </label>
             <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
               {currentTest.sections.reduce((total, section) => total + (section.timeLimit || 0), 0)} minutes
-            </div>
+          </div>
             <p className="text-xs text-gray-500 mt-1">
               English sections: 32 min each • Math sections: 35 min each
             </p>
@@ -3464,9 +3431,9 @@ const MockTestManagement = () => {
                 </div>
                 <h4 className="font-medium text-gray-900">{section.title}</h4>
                 <p className="text-sm text-gray-600">{section.timeLimit} minutes • {section.questions?.length || 0} questions</p>
-              </div>
+                </div>
               <div className="flex items-center gap-2 ml-4">
-                <button 
+                <button
                   onClick={() => {
                     setEditingSection(section);
                     setCurrentSection({
@@ -3483,7 +3450,7 @@ const MockTestManagement = () => {
                 >
                   <FiEdit size={16} />
                 </button>
-                <button 
+                <button
                   onClick={() => deleteSection(section.id)}
                   className="p-2 text-gray-400 hover:text-red-600"
                   title="Delete Section"
@@ -3513,36 +3480,36 @@ const MockTestManagement = () => {
     }, [currentTest.sections, editingSection]);
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {editingSection ? 'Edit Section' : 'Create Section'}
-          </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setEditingSection(null);
-                setCurrentSection({
-                  type: 'english',
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {editingSection ? 'Edit Section' : 'Create Section'}
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setEditingSection(null);
+              setCurrentSection({
+                type: 'english',
                   title: '',
                   timeLimit: 32,
-                  questions: []
-                });
-                setCurrentView('test-builder');
-              }}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={saveSection}
-              disabled={!currentSection.title || !currentSection.title.trim()}
+                questions: []
+              });
+              setCurrentView('test-builder');
+            }}
+            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={saveSection}
+            disabled={!currentSection.title || !currentSection.title.trim()}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {editingSection ? 'Update Section' : 'Create Section'}
-            </button>
-          </div>
+          >
+            {editingSection ? 'Update Section' : 'Create Section'}
+          </button>
         </div>
+      </div>
 
         {/* Enhanced Saved Data Display Panel for Section */}
         {editingSection && (
@@ -3703,7 +3670,7 @@ const MockTestManagement = () => {
                 )}
               </div>
               <div className="flex items-center gap-2 ml-4">
-                <button 
+                <button
                   onClick={() => {
                     loadQuestionForEditing(question);
                     setCurrentView('question-builder');
@@ -3713,7 +3680,7 @@ const MockTestManagement = () => {
                 >
                   <FiEdit size={16} />
                 </button>
-                <button 
+                <button
                   onClick={() => deleteQuestion(question.id)}
                   className="p-2 text-gray-400 hover:text-red-600"
                   title="Delete Question"
@@ -3819,7 +3786,7 @@ const MockTestManagement = () => {
                       {answer}
                     </span>
                   ))}
-                </div>
+            </div>
               </div>
             )}
           </div>
@@ -3844,12 +3811,12 @@ const MockTestManagement = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Question Type
-              </label>
-              <select
+                </label>
+                <select
                 value={currentQuestion.topic || ''}
                 onChange={(e) => setCurrentQuestion(prev => ({ ...prev, topic: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
                 <option value="">Select Question Type</option>
                 {currentSection.type === 'english' ? (
                   <>
@@ -3866,19 +3833,19 @@ const MockTestManagement = () => {
                     <option value="Geometry and Trigonometry">Geometry and Trigonometry</option>
                   </>
                 )}
-              </select>
-            </div>
+                </select>
+              </div>
           </div>
 
           {currentSection.type === 'math' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                 Answer Type
-              </label>
+                </label>
               <div className="flex gap-4">
                 <label className="flex items-center">
-                  <input
-                    type="radio"
+                      <input
+                        type="radio"
                     name="answerType"
                     value="multiple-choice"
                     checked={currentQuestion.answerType === 'multiple-choice'}
@@ -3906,26 +3873,26 @@ const MockTestManagement = () => {
                   />
                   Written Answer (Grid-in)
                 </label>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {currentSection.type === 'english' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                 Reading Passage
-              </label>
+                </label>
               <KaTeXEditor
                 value={currentQuestion.passage}
                 onChange={handlePassageChange}
                 placeholder="Enter the reading passage here..."
                 rows={8}
-              />
-            </div>
-          )}
+                />
+              </div>
+            )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
               Question Text
             </label>
             <KaTeXEditor
@@ -3949,36 +3916,36 @@ const MockTestManagement = () => {
                 Upload Image
               </button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
             
-            {currentQuestion.images.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {currentQuestion.images.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {currentQuestion.images.map(image => (
                   <div key={image.id} className="relative group">
-                    <img
+                        <img
                       src={image.url}
-                      alt={image.name}
+                          alt={image.name}
                       className="w-full h-24 object-cover rounded-lg border"
-                    />
-                    <button
-                      onClick={() => removeImage(image.id)}
+                        />
+                        <button
+                          onClick={() => removeImage(image.id)}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                        >
                       <FiX size={14} />
-                    </button>
+                        </button>
                     <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
 
           {(currentSection.type === 'english' || currentQuestion.answerType === 'multiple-choice') && (
             <div>
@@ -3993,7 +3960,7 @@ const MockTestManagement = () => {
                   <FiPlus size={16} />
                   Add Option
                 </button>
-              </div>
+            </div>
               
               <div className="space-y-4">
                 {currentQuestion.options.map((option, index) => (
@@ -4046,15 +4013,15 @@ const MockTestManagement = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
               Explanation
-            </label>
+              </label>
             <KaTeXEditor
-              value={currentQuestion.explanation}
+                value={currentQuestion.explanation}
               onChange={handleExplanationChange}
               placeholder="Explain the correct answer..."
-              rows={3}
-            />
+                rows={3}
+              />
           </div>
         </div>
       </div>
@@ -4114,26 +4081,24 @@ const MockTestManagement = () => {
   );
 };
 
-const Analytics = () => (
-  <div className="py-6">
-    <div className="mb-6">
-      <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-      <p className="text-gray-600">View system analytics and reports</p>
-    </div>
-    <div className="card">
-      <div className="card-header">
-        <h2 className="text-lg font-semibold">System Analytics</h2>
-      </div>
-      <div className="card-body">
-        <p className="text-gray-600">Analytics dashboard will be implemented here.</p>
-        <p className="text-sm text-gray-500 mt-2">
-          This will include features like user activity reports, test performance metrics, 
-          system usage statistics, and other administrative insights.
+const StudyPlanManagementComponent = () => {
+  const { user } = useAuth();
+  
+  // Only show for student accounts and above (excluding free accounts)
+  if (user?.accountType === 'free') {
+    return (
+      <div className="text-center py-12">
+        <FiBookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+        <p className="text-gray-600">
+          Recording Management is only available for student accounts and above.
         </p>
-      </div>
-    </div>
   </div>
 );
+  }
+  
+  return <StudyPlanManagement />;
+};
 
 const Admin = () => {
   return (
@@ -4142,7 +4107,8 @@ const Admin = () => {
       <Route path="/users" element={<UserManagement />} />
       <Route path="/real-tests" element={<RealTestManagement />} />
       <Route path="/mock-tests" element={<MockTestManagement />} />
-      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/analytics" element={<StudyPlanManagementComponent />} />
+      <Route path="/daily-vocab" element={<DailyVocabManagement />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );

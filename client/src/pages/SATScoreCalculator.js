@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calculator, BookOpen, Brain } from 'lucide-react';
+import { Calculator, BookOpen, Brain, GraduationCap, MapPin, ExternalLink, Filter } from 'lucide-react';
 
 const SATScoreCalculator = () => {
   // State for each module
@@ -8,6 +8,10 @@ const SATScoreCalculator = () => {
   const [mathModule1, setMathModule1] = useState('');
   const [mathModule2, setMathModule2] = useState('');
   const [results, setResults] = useState(null);
+  
+  // State for university filter
+  const [universityFilter, setUniversityFilter] = useState('all'); // 'all', 'reach', 'target', 'safety'
+  const [showAllUniversities, setShowAllUniversities] = useState(false);
 
   // Digital SAT Structure:
   // Reading & Writing Module 1: 27 questions
@@ -15,287 +19,780 @@ const SATScoreCalculator = () => {
   // Math Module 1: 22 questions
   // Math Module 2: 22 questions (adaptive based on Module 1 performance)
 
-  // Realistic Digital SAT scoring curves based on actual test data
+  // Historical SAT scoring curves with adaptive module weighting
   const scoringCurves = [
-    // Curve 1 - Standard Digital SAT curve (most common)
+    // Curve 1 - Standard curve
     {
-      name: "Standard Digital SAT",
+      name: "Standard Curve",
       readingWriting: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          // Base scoring with realistic curve
-          let baseScore = 200;
-          if (total >= 54) baseScore = 800; // Perfect score
-          else if (total >= 50) baseScore = 750 + (total - 50) * 12;
-          else if (total >= 45) baseScore = 700 + (total - 45) * 10;
-          else if (total >= 40) baseScore = 650 + (total - 40) * 10;
-          else if (total >= 35) baseScore = 600 + (total - 35) * 10;
-          else if (total >= 30) baseScore = 550 + (total - 30) * 10;
-          else if (total >= 25) baseScore = 500 + (total - 25) * 10;
-          else if (total >= 20) baseScore = 450 + (total - 20) * 10;
-          else if (total >= 15) baseScore = 400 + (total - 15) * 10;
-          else if (total >= 10) baseScore = 350 + (total - 10) * 10;
-          else if (total >= 5) baseScore = 300 + (total - 5) * 10;
-          else baseScore = 200 + total * 20;
-
-          // Adaptive bonus based on Module 2 performance
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 3) adaptiveBonus = 15; // Strong improvement
-          else if (mod2 > mod1) adaptiveBonus = 8; // Moderate improvement
-          else if (mod2 < mod1 - 3) adaptiveBonus = -10; // Significant decline
-          else if (mod2 < mod1) adaptiveBonus = -5; // Slight decline
-
+          const adaptiveBonus = mod2 > 20 ? 8 : mod2 < 10 ? -8 : 0; // Reduced bonus
+          let baseScore = 200 + (total / 54) * 600;
+          if (total > 45) baseScore += (total - 45) * 4; // Reduced bonus
+          if (total > 50) baseScore += (total - 50) * 3; // Reduced bonus
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       },
       math: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          // Base scoring with realistic curve
-          let baseScore = 200;
-          if (total >= 44) baseScore = 800; // Perfect score
-          else if (total >= 40) baseScore = 750 + (total - 40) * 12;
-          else if (total >= 35) baseScore = 700 + (total - 35) * 10;
-          else if (total >= 30) baseScore = 650 + (total - 30) * 10;
-          else if (total >= 25) baseScore = 600 + (total - 25) * 10;
-          else if (total >= 20) baseScore = 550 + (total - 20) * 10;
-          else if (total >= 15) baseScore = 500 + (total - 15) * 10;
-          else if (total >= 10) baseScore = 450 + (total - 10) * 10;
-          else if (total >= 5) baseScore = 400 + (total - 5) * 10;
-          else baseScore = 200 + total * 40;
-
-          // Adaptive bonus based on Module 2 performance
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 20; // Strong improvement
-          else if (mod2 > mod1) adaptiveBonus = 10; // Moderate improvement
-          else if (mod2 < mod1 - 2) adaptiveBonus = -15; // Significant decline
-          else if (mod2 < mod1) adaptiveBonus = -8; // Slight decline
-
+          const adaptiveBonus = mod2 > 18 ? 12 : mod2 < 8 ? -12 : 0; // Reduced bonus
+          let baseScore = 200 + (total / 44) * 600;
+          if (total > 35) baseScore += (total - 35) * 4; // Reduced bonus
+          if (total > 40) baseScore += (total - 40) * 3; // Reduced bonus
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       }
     },
-    // Curve 2 - Generous curve (easier test)
+    // Curve 2 - Generous curve
     {
       name: "Generous Curve",
       readingWriting: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 54) baseScore = 800; // Perfect score
-          else if (total >= 48) baseScore = 750 + (total - 48) * 12;
-          else if (total >= 43) baseScore = 700 + (total - 43) * 10;
-          else if (total >= 38) baseScore = 650 + (total - 38) * 10;
-          else if (total >= 33) baseScore = 600 + (total - 33) * 10;
-          else if (total >= 28) baseScore = 550 + (total - 28) * 10;
-          else if (total >= 23) baseScore = 500 + (total - 23) * 10;
-          else if (total >= 18) baseScore = 450 + (total - 18) * 10;
-          else if (total >= 13) baseScore = 400 + (total - 13) * 10;
-          else if (total >= 8) baseScore = 350 + (total - 8) * 10;
-          else if (total >= 3) baseScore = 300 + (total - 3) * 10;
-          else baseScore = 200 + total * 20;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 12;
-          else if (mod2 > mod1) adaptiveBonus = 6;
-          else if (mod2 < mod1 - 2) adaptiveBonus = -8;
-          else if (mod2 < mod1) adaptiveBonus = -4;
-
+          const adaptiveBonus = mod2 > 20 ? 12 : mod2 < 10 ? -4 : 0; // Reduced bonus
+          let baseScore = 220 + (total / 54) * 580;
+          if (total > 40) baseScore += (total - 40) * 6; // Reduced bonus
+          if (total > 48) baseScore += (total - 48) * 4; // Reduced bonus
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       },
       math: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 44) baseScore = 800; // Perfect score
-          else if (total >= 38) baseScore = 750 + (total - 38) * 12;
-          else if (total >= 33) baseScore = 700 + (total - 33) * 10;
-          else if (total >= 28) baseScore = 650 + (total - 28) * 10;
-          else if (total >= 23) baseScore = 600 + (total - 23) * 10;
-          else if (total >= 18) baseScore = 550 + (total - 18) * 10;
-          else if (total >= 13) baseScore = 500 + (total - 13) * 10;
-          else if (total >= 8) baseScore = 450 + (total - 8) * 10;
-          else if (total >= 3) baseScore = 400 + (total - 3) * 10;
-          else baseScore = 200 + total * 40;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 15;
-          else if (mod2 > mod1) adaptiveBonus = 8;
-          else if (mod2 < mod1 - 2) adaptiveBonus = -12;
-          else if (mod2 < mod1) adaptiveBonus = -6;
-
+          const adaptiveBonus = mod2 > 18 ? 15 : mod2 < 8 ? -8 : 0; // Reduced bonus
+          let baseScore = 220 + (total / 44) * 580;
+          if (total > 30) baseScore += (total - 30) * 6; // Reduced bonus
+          if (total > 38) baseScore += (total - 38) * 4; // Reduced bonus
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       }
     },
-    // Curve 3 - Harsh curve (difficult test)
+    // Curve 3 - Harsh curve
     {
       name: "Harsh Curve",
       readingWriting: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 54) baseScore = 800; // Perfect score
-          else if (total >= 52) baseScore = 750 + (total - 52) * 8;
-          else if (total >= 47) baseScore = 700 + (total - 47) * 10;
-          else if (total >= 42) baseScore = 650 + (total - 42) * 10;
-          else if (total >= 37) baseScore = 600 + (total - 37) * 10;
-          else if (total >= 32) baseScore = 550 + (total - 32) * 10;
-          else if (total >= 27) baseScore = 500 + (total - 27) * 10;
-          else if (total >= 22) baseScore = 450 + (total - 22) * 10;
-          else if (total >= 17) baseScore = 400 + (total - 17) * 10;
-          else if (total >= 12) baseScore = 350 + (total - 12) * 10;
-          else if (total >= 7) baseScore = 300 + (total - 7) * 10;
-          else baseScore = 200 + total * 20;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 3) adaptiveBonus = 18;
-          else if (mod2 > mod1) adaptiveBonus = 10;
-          else if (mod2 < mod1 - 3) adaptiveBonus = -12;
-          else if (mod2 < mod1) adaptiveBonus = -6;
-
+          const adaptiveBonus = mod2 > 22 ? 5 : mod2 < 12 ? -15 : 0;
+          let baseScore = 180 + (total / 54) * 620;
+          if (total > 48) baseScore += (total - 48) * 6;
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       },
       math: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 44) baseScore = 800; // Perfect score
-          else if (total >= 42) baseScore = 750 + (total - 42) * 10;
-          else if (total >= 37) baseScore = 700 + (total - 37) * 10;
-          else if (total >= 32) baseScore = 650 + (total - 32) * 10;
-          else if (total >= 27) baseScore = 600 + (total - 27) * 10;
-          else if (total >= 22) baseScore = 550 + (total - 22) * 10;
-          else if (total >= 17) baseScore = 500 + (total - 17) * 10;
-          else if (total >= 12) baseScore = 450 + (total - 12) * 10;
-          else if (total >= 7) baseScore = 400 + (total - 7) * 10;
-          else baseScore = 200 + total * 40;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 22;
-          else if (mod2 > mod1) adaptiveBonus = 12;
-          else if (mod2 < mod1 - 2) adaptiveBonus = -18;
-          else if (mod2 < mod1) adaptiveBonus = -10;
-
+          const adaptiveBonus = mod2 > 19 ? 10 : mod2 < 9 ? -20 : 0;
+          let baseScore = 180 + (total / 44) * 620;
+          if (total > 38) baseScore += (total - 38) * 6;
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       }
     }
   ];
 
-  // Additional realistic curves
+  // Fixed additional curves (no randomization for consistency)
   const additionalCurves = [
-    // Curve 4 - Recent Digital SAT pattern
+    // Curve 4 - Slightly generous
     {
-      name: "Recent Digital SAT",
+      name: "Slightly Generous",
       readingWriting: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 54) baseScore = 800; // Perfect score
-          else if (total >= 49) baseScore = 750 + (total - 49) * 10;
-          else if (total >= 44) baseScore = 700 + (total - 44) * 10;
-          else if (total >= 39) baseScore = 650 + (total - 39) * 10;
-          else if (total >= 34) baseScore = 600 + (total - 34) * 10;
-          else if (total >= 29) baseScore = 550 + (total - 29) * 10;
-          else if (total >= 24) baseScore = 500 + (total - 24) * 10;
-          else if (total >= 19) baseScore = 450 + (total - 19) * 10;
-          else if (total >= 14) baseScore = 400 + (total - 14) * 10;
-          else if (total >= 9) baseScore = 350 + (total - 9) * 10;
-          else if (total >= 4) baseScore = 300 + (total - 4) * 10;
-          else baseScore = 200 + total * 20;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 13;
-          else if (mod2 > mod1) adaptiveBonus = 7;
-          else if (mod2 < mod1 - 2) adaptiveBonus = -9;
-          else if (mod2 < mod1) adaptiveBonus = -4;
-
+          const adaptiveBonus = mod2 > 20 ? 12 : mod2 < 10 ? -8 : 0;
+          let baseScore = 210 + (total / 54) * 590;
+          if (total > 42) baseScore += (total - 42) * 6;
+          if (total > 48) baseScore += (total - 48) * 4;
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       },
       math: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 44) baseScore = 800; // Perfect score
-          else if (total >= 39) baseScore = 750 + (total - 39) * 11;
-          else if (total >= 34) baseScore = 700 + (total - 34) * 10;
-          else if (total >= 29) baseScore = 650 + (total - 29) * 10;
-          else if (total >= 24) baseScore = 600 + (total - 24) * 10;
-          else if (total >= 19) baseScore = 550 + (total - 19) * 10;
-          else if (total >= 14) baseScore = 500 + (total - 14) * 10;
-          else if (total >= 9) baseScore = 450 + (total - 9) * 10;
-          else if (total >= 4) baseScore = 400 + (total - 4) * 10;
-          else baseScore = 200 + total * 40;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 18;
-          else if (mod2 > mod1) adaptiveBonus = 9;
-          else if (mod2 < mod1 - 2) adaptiveBonus = -14;
-          else if (mod2 < mod1) adaptiveBonus = -7;
-
+          const adaptiveBonus = mod2 > 18 ? 18 : mod2 < 8 ? -12 : 0;
+          let baseScore = 210 + (total / 44) * 590;
+          if (total > 35) baseScore += (total - 35) * 6;
+          if (total > 40) baseScore += (total - 40) * 4;
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       }
     },
-    // Curve 5 - High scorer friendly
+    // Curve 5 - Moderate
+    {
+      name: "Moderate",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 21 ? 8 : mod2 < 11 ? -12 : 0;
+          let baseScore = 195 + (total / 54) * 605;
+          if (total > 44) baseScore += (total - 44) * 7;
+          if (total > 49) baseScore += (total - 49) * 5;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 17 ? 12 : mod2 < 9 ? -18 : 0;
+          let baseScore = 195 + (total / 44) * 605;
+          if (total > 36) baseScore += (total - 36) * 7;
+          if (total > 41) baseScore += (total - 41) * 5;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 6 - Slightly harsh
+    {
+      name: "Slightly Harsh",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 22 ? 6 : mod2 < 12 ? -16 : 0;
+          let baseScore = 185 + (total / 54) * 615;
+          if (total > 46) baseScore += (total - 46) * 5;
+          if (total > 50) baseScore += (total - 50) * 3;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 19 ? 8 : mod2 < 9 ? -22 : 0;
+          let baseScore = 185 + (total / 44) * 615;
+          if (total > 37) baseScore += (total - 37) * 5;
+          if (total > 42) baseScore += (total - 42) * 3;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 7 - Average performance curve
+    {
+      name: "Average Performance",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 19 ? 10 : mod2 < 9 ? -10 : 0;
+          let baseScore = 200 + (total / 54) * 600;
+          if (total > 43) baseScore += (total - 43) * 6;
+          if (total > 48) baseScore += (total - 48) * 4;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 17 ? 15 : mod2 < 7 ? -15 : 0;
+          let baseScore = 200 + (total / 44) * 600;
+          if (total > 34) baseScore += (total - 34) * 6;
+          if (total > 39) baseScore += (total - 39) * 4;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 8 - High scorer friendly
     {
       name: "High Scorer Friendly",
       readingWriting: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 54) baseScore = 800; // Perfect score
-          else if (total >= 51) baseScore = 750 + (total - 51) * 12;
-          else if (total >= 46) baseScore = 700 + (total - 46) * 10;
-          else if (total >= 41) baseScore = 650 + (total - 41) * 10;
-          else if (total >= 36) baseScore = 600 + (total - 36) * 10;
-          else if (total >= 31) baseScore = 550 + (total - 31) * 10;
-          else if (total >= 26) baseScore = 500 + (total - 26) * 10;
-          else if (total >= 21) baseScore = 450 + (total - 21) * 10;
-          else if (total >= 16) baseScore = 400 + (total - 16) * 10;
-          else if (total >= 11) baseScore = 350 + (total - 11) * 10;
-          else if (total >= 6) baseScore = 300 + (total - 6) * 10;
-          else baseScore = 200 + total * 20;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 3) adaptiveBonus = 16;
-          else if (mod2 > mod1) adaptiveBonus = 8;
-          else if (mod2 < mod1 - 3) adaptiveBonus = -10;
-          else if (mod2 < mod1) adaptiveBonus = -5;
-
+          const adaptiveBonus = mod2 > 23 ? 12 : mod2 < 13 ? -4 : 0; // Reduced bonus
+          let baseScore = 215 + (total / 54) * 585;
+          if (total > 40) baseScore += (total - 40) * 5; // Reduced bonus
+          if (total > 47) baseScore += (total - 47) * 4; // Reduced bonus
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       },
       math: {
         getScore: (mod1, mod2) => {
           const total = mod1 + mod2;
-          let baseScore = 200;
-          if (total >= 44) baseScore = 800; // Perfect score
-          else if (total >= 41) baseScore = 750 + (total - 41) * 12;
-          else if (total >= 36) baseScore = 700 + (total - 36) * 10;
-          else if (total >= 31) baseScore = 650 + (total - 31) * 10;
-          else if (total >= 26) baseScore = 600 + (total - 26) * 10;
-          else if (total >= 21) baseScore = 550 + (total - 21) * 10;
-          else if (total >= 16) baseScore = 500 + (total - 16) * 10;
-          else if (total >= 11) baseScore = 450 + (total - 11) * 10;
-          else if (total >= 6) baseScore = 400 + (total - 6) * 10;
-          else baseScore = 200 + total * 40;
-
-          let adaptiveBonus = 0;
-          if (mod2 > mod1 + 2) adaptiveBonus = 24;
-          else if (mod2 > mod1) adaptiveBonus = 12;
-          else if (mod2 < mod1 - 2) adaptiveBonus = -16;
-          else if (mod2 < mod1) adaptiveBonus = -8;
-
+          const adaptiveBonus = mod2 > 20 ? 18 : mod2 < 10 ? -6 : 0; // Reduced bonus
+          let baseScore = 215 + (total / 44) * 585;
+          if (total > 32) baseScore += (total - 32) * 5; // Reduced bonus
+          if (total > 38) baseScore += (total - 38) * 4; // Reduced bonus
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 9 - Balanced curve
+    {
+      name: "Balanced Curve",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 20 ? 9 : mod2 < 10 ? -11 : 0;
+          let baseScore = 190 + (total / 54) * 610;
+          if (total > 45) baseScore += (total - 45) * 7;
+          if (total > 50) baseScore += (total - 50) * 5;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 18 ? 14 : mod2 < 8 ? -16 : 0;
+          let baseScore = 190 + (total / 44) * 610;
+          if (total > 36) baseScore += (total - 36) * 7;
+          if (total > 41) baseScore += (total - 41) * 5;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 10 - Strict curve
+    {
+      name: "Strict Curve",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 24 ? 4 : mod2 < 14 ? -18 : 0;
+          let baseScore = 175 + (total / 54) * 625;
+          if (total > 47) baseScore += (total - 47) * 4;
+          if (total > 52) baseScore += (total - 52) * 2;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 20 ? 6 : mod2 < 10 ? -25 : 0;
+          let baseScore = 175 + (total / 44) * 625;
+          if (total > 38) baseScore += (total - 38) * 4;
+          if (total > 43) baseScore += (total - 43) * 2;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 11 - Forgiving curve
+    {
+      name: "Forgiving Curve",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 18 ? 10 : mod2 < 8 ? -5 : 0; // Reduced bonus
+          let baseScore = 225 + (total / 54) * 575;
+          if (total > 38) baseScore += (total - 38) * 5; // Reduced bonus
+          if (total > 45) baseScore += (total - 45) * 4; // Reduced bonus
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 16 ? 18 : mod2 < 6 ? -8 : 0; // Reduced bonus
+          let baseScore = 225 + (total / 44) * 575;
+          if (total > 28) baseScore += (total - 28) * 5; // Reduced bonus
+          if (total > 36) baseScore += (total - 36) * 4; // Reduced bonus
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 12 - Mid-range focus
+    {
+      name: "Mid-range Focus",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 21 ? 7 : mod2 < 11 ? -13 : 0;
+          let baseScore = 205 + (total / 54) * 595;
+          if (total > 41) baseScore += (total - 41) * 5;
+          if (total > 49) baseScore += (total - 49) * 6;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 19 ? 11 : mod2 < 9 ? -19 : 0;
+          let baseScore = 205 + (total / 44) * 595;
+          if (total > 33) baseScore += (total - 33) * 5;
+          if (total > 40) baseScore += (total - 40) * 6;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      }
+    },
+    // Curve 13 - Recent test curve
+    {
+      name: "Recent Test Curve",
+      readingWriting: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 22 ? 11 : mod2 < 12 ? -14 : 0;
+          let baseScore = 188 + (total / 54) * 612;
+          if (total > 44) baseScore += (total - 44) * 6;
+          if (total > 51) baseScore += (total - 51) * 4;
+          return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
+        }
+      },
+      math: {
+        getScore: (mod1, mod2) => {
+          const total = mod1 + mod2;
+          const adaptiveBonus = mod2 > 18 ? 16 : mod2 < 8 ? -20 : 0;
+          let baseScore = 188 + (total / 44) * 612;
+          if (total > 35) baseScore += (total - 35) * 6;
+          if (total > 42) baseScore += (total - 42) * 4;
           return Math.max(200, Math.min(800, Math.round(baseScore + adaptiveBonus)));
         }
       }
     }
   ];
+
+  // University Database with SAT Score Requirements
+  const universities = [
+    // Ivy League Universities
+    {
+      name: "Harvard University",
+      location: "Cambridge, MA",
+      type: "Ivy League",
+      satRange: { min: 1460, max: 1580 },
+      acceptanceRate: 4.6,
+      ranking: 1,
+      category: "Reach",
+      description: "One of the most prestigious universities in the world",
+      website: "https://www.harvard.edu"
+    },
+    {
+      name: "Yale University",
+      location: "New Haven, CT",
+      type: "Ivy League",
+      satRange: { min: 1460, max: 1580 },
+      acceptanceRate: 6.2,
+      ranking: 2,
+      category: "Reach",
+      description: "Renowned for its liberal arts education",
+      website: "https://www.yale.edu"
+    },
+    {
+      name: "Princeton University",
+      location: "Princeton, NJ",
+      type: "Ivy League",
+      satRange: { min: 1450, max: 1570 },
+      acceptanceRate: 5.8,
+      ranking: 3,
+      category: "Reach",
+      description: "Known for its strong undergraduate focus",
+      website: "https://www.princeton.edu"
+    },
+    {
+      name: "Columbia University",
+      location: "New York, NY",
+      type: "Ivy League",
+      satRange: { min: 1440, max: 1570 },
+      acceptanceRate: 6.1,
+      ranking: 4,
+      category: "Reach",
+      description: "Located in the heart of Manhattan",
+      website: "https://www.columbia.edu"
+    },
+    {
+      name: "University of Pennsylvania",
+      location: "Philadelphia, PA",
+      type: "Ivy League",
+      satRange: { min: 1440, max: 1560 },
+      acceptanceRate: 8.4,
+      ranking: 5,
+      category: "Reach",
+      description: "Strong in business and pre-professional programs",
+      website: "https://www.upenn.edu"
+    },
+    {
+      name: "Dartmouth College",
+      location: "Hanover, NH",
+      type: "Ivy League",
+      satRange: { min: 1430, max: 1550 },
+      acceptanceRate: 9.2,
+      ranking: 6,
+      category: "Reach",
+      description: "Small liberal arts college with strong traditions",
+      website: "https://www.dartmouth.edu"
+    },
+    {
+      name: "Brown University",
+      location: "Providence, RI",
+      type: "Ivy League",
+      satRange: { min: 1420, max: 1550 },
+      acceptanceRate: 7.1,
+      ranking: 7,
+      category: "Reach",
+      description: "Known for its open curriculum",
+      website: "https://www.brown.edu"
+    },
+    {
+      name: "Cornell University",
+      location: "Ithaca, NY",
+      type: "Ivy League",
+      satRange: { min: 1400, max: 1540 },
+      acceptanceRate: 10.7,
+      ranking: 8,
+      category: "Reach",
+      description: "Largest Ivy League with diverse programs",
+      website: "https://www.cornell.edu"
+    },
+
+    // Top Public Universities
+    {
+      name: "University of California, Berkeley",
+      location: "Berkeley, CA",
+      type: "Public",
+      satRange: { min: 1330, max: 1530 },
+      acceptanceRate: 14.9,
+      ranking: 9,
+      category: "Reach",
+      description: "Top public university with strong research programs",
+      website: "https://www.berkeley.edu"
+    },
+    {
+      name: "University of California, Los Angeles",
+      location: "Los Angeles, CA",
+      type: "Public",
+      satRange: { min: 1310, max: 1520 },
+      acceptanceRate: 12.3,
+      ranking: 10,
+      category: "Reach",
+      description: "Located in vibrant LA with diverse opportunities",
+      website: "https://www.ucla.edu"
+    },
+    {
+      name: "University of Michigan",
+      location: "Ann Arbor, MI",
+      type: "Public",
+      satRange: { min: 1340, max: 1530 },
+      acceptanceRate: 20.2,
+      ranking: 11,
+      category: "Target",
+      description: "Excellent research university with strong athletics",
+      website: "https://www.umich.edu"
+    },
+    {
+      name: "University of Virginia",
+      location: "Charlottesville, VA",
+      type: "Public",
+      satRange: { min: 1340, max: 1520 },
+      acceptanceRate: 20.7,
+      ranking: 12,
+      category: "Target",
+      description: "Founded by Thomas Jefferson with beautiful campus",
+      website: "https://www.virginia.edu"
+    },
+    {
+      name: "University of North Carolina at Chapel Hill",
+      location: "Chapel Hill, NC",
+      type: "Public",
+      satRange: { min: 1320, max: 1500 },
+      acceptanceRate: 19.2,
+      ranking: 13,
+      category: "Target",
+      description: "First public university in the US",
+      website: "https://www.unc.edu"
+    },
+
+    // Top Private Universities
+    {
+      name: "Stanford University",
+      location: "Stanford, CA",
+      type: "Private",
+      satRange: { min: 1440, max: 1570 },
+      acceptanceRate: 4.3,
+      ranking: 14,
+      category: "Reach",
+      description: "Located in Silicon Valley with strong tech focus",
+      website: "https://www.stanford.edu"
+    },
+    {
+      name: "Massachusetts Institute of Technology",
+      location: "Cambridge, MA",
+      type: "Private",
+      satRange: { min: 1510, max: 1580 },
+      acceptanceRate: 6.7,
+      ranking: 15,
+      category: "Reach",
+      description: "World leader in science and technology",
+      website: "https://www.mit.edu"
+    },
+    {
+      name: "University of Chicago",
+      location: "Chicago, IL",
+      type: "Private",
+      satRange: { min: 1500, max: 1560 },
+      acceptanceRate: 6.2,
+      ranking: 16,
+      category: "Reach",
+      description: "Known for rigorous academics and intellectual discourse",
+      website: "https://www.uchicago.edu"
+    },
+    {
+      name: "Duke University",
+      location: "Durham, NC",
+      type: "Private",
+      satRange: { min: 1480, max: 1560 },
+      acceptanceRate: 7.7,
+      ranking: 17,
+      category: "Reach",
+      description: "Strong in both academics and athletics",
+      website: "https://www.duke.edu"
+    },
+    {
+      name: "Northwestern University",
+      location: "Evanston, IL",
+      type: "Private",
+      satRange: { min: 1440, max: 1550 },
+      acceptanceRate: 9.1,
+      ranking: 18,
+      category: "Reach",
+      description: "Located near Chicago with strong journalism program",
+      website: "https://www.northwestern.edu"
+    },
+    {
+      name: "Vanderbilt University",
+      location: "Nashville, TN",
+      type: "Private",
+      satRange: { min: 1440, max: 1550 },
+      acceptanceRate: 9.6,
+      ranking: 19,
+      category: "Reach",
+      description: "Southern Ivy with strong pre-med program",
+      website: "https://www.vanderbilt.edu"
+    },
+    {
+      name: "Rice University",
+      location: "Houston, TX",
+      type: "Private",
+      satRange: { min: 1420, max: 1540 },
+      acceptanceRate: 9.5,
+      ranking: 20,
+      category: "Reach",
+      description: "Small private university with strong STEM programs",
+      website: "https://www.rice.edu"
+    },
+
+    // Target Schools
+    {
+      name: "University of Texas at Austin",
+      location: "Austin, TX",
+      type: "Public",
+      satRange: { min: 1230, max: 1480 },
+      acceptanceRate: 31.8,
+      ranking: 21,
+      category: "Target",
+      description: "Large public university with strong business program",
+      website: "https://www.utexas.edu"
+    },
+    {
+      name: "University of Wisconsin-Madison",
+      location: "Madison, WI",
+      type: "Public",
+      satRange: { min: 1300, max: 1480 },
+      acceptanceRate: 51.7,
+      ranking: 22,
+      category: "Target",
+      description: "Excellent research university with strong school spirit",
+      website: "https://www.wisc.edu"
+    },
+    {
+      name: "University of Illinois at Urbana-Champaign",
+      location: "Urbana-Champaign, IL",
+      type: "Public",
+      satRange: { min: 1220, max: 1480 },
+      acceptanceRate: 59.0,
+      ranking: 23,
+      category: "Target",
+      description: "Strong in engineering and computer science",
+      website: "https://www.illinois.edu"
+    },
+    {
+      name: "University of Washington",
+      location: "Seattle, WA",
+      type: "Public",
+      satRange: { min: 1200, max: 1470 },
+      acceptanceRate: 53.5,
+      ranking: 24,
+      category: "Target",
+      description: "Located in tech hub with strong research programs",
+      website: "https://www.washington.edu"
+    },
+    {
+      name: "Boston University",
+      location: "Boston, MA",
+      type: "Private",
+      satRange: { min: 1340, max: 1510 },
+      acceptanceRate: 18.9,
+      ranking: 25,
+      category: "Target",
+      description: "Urban university with strong international programs",
+      website: "https://www.bu.edu"
+    },
+    {
+      name: "New York University",
+      location: "New York, NY",
+      type: "Private",
+      satRange: { min: 1350, max: 1530 },
+      acceptanceRate: 16.2,
+      ranking: 26,
+      category: "Target",
+      description: "Located in the heart of Manhattan",
+      website: "https://www.nyu.edu"
+    },
+
+    // Safety Schools
+    {
+      name: "University of Florida",
+      location: "Gainesville, FL",
+      type: "Public",
+      satRange: { min: 1330, max: 1470 },
+      acceptanceRate: 30.1,
+      ranking: 27,
+      category: "Safety",
+      description: "Large public university with strong athletics",
+      website: "https://www.ufl.edu"
+    },
+    {
+      name: "University of Georgia",
+      location: "Athens, GA",
+      type: "Public",
+      satRange: { min: 1240, max: 1420 },
+      acceptanceRate: 42.8,
+      ranking: 28,
+      category: "Safety",
+      description: "Beautiful campus with strong business program",
+      website: "https://www.uga.edu"
+    },
+    {
+      name: "University of Pittsburgh",
+      location: "Pittsburgh, PA",
+      type: "Public",
+      satRange: { min: 1250, max: 1430 },
+      acceptanceRate: 56.7,
+      ranking: 29,
+      category: "Safety",
+      description: "Urban university with strong health sciences",
+      website: "https://www.pitt.edu"
+    },
+    {
+      name: "Penn State University",
+      location: "University Park, PA",
+      type: "Public",
+      satRange: { min: 1160, max: 1370 },
+      acceptanceRate: 54.2,
+      ranking: 30,
+      category: "Safety",
+      description: "Large university with strong school spirit",
+      website: "https://www.psu.edu"
+    },
+    {
+      name: "University of Connecticut",
+      location: "Storrs, CT",
+      type: "Public",
+      satRange: { min: 1200, max: 1390 },
+      acceptanceRate: 48.8,
+      ranking: 31,
+      category: "Safety",
+      description: "Strong public university in New England",
+      website: "https://www.uconn.edu"
+    },
+    {
+      name: "University of Delaware",
+      location: "Newark, DE",
+      type: "Public",
+      satRange: { min: 1160, max: 1350 },
+      acceptanceRate: 65.5,
+      ranking: 32,
+      category: "Safety",
+      description: "Mid-sized public university with strong programs",
+      website: "https://www.udel.edu"
+    }
+  ];
+
+  // Updated University Recommendation Algorithm with new %match calculation
+  const getUniversityRecommendations = (satScore) => {
+    const recommendations = {
+      reach: [],
+      target: [],
+      safety: []
+    };
+
+    universities.forEach(university => {
+      const { satRange, category, acceptanceRate } = university;
+      const rangeSize = satRange.max - satRange.min;
+      
+      // Calculate match percentage based on range score data
+      // Using the rule: 1600 is maximum, if range is 1200-1400 then 100% match
+      let matchPercentage = 0;
+      let scoreStatus = '';
+      
+      if (satScore >= satRange.min && satScore <= satRange.max) {
+        // Score is within range - calculate percentage based on position within range
+        const positionInRange = (satScore - satRange.min) / rangeSize;
+        matchPercentage = Math.round(60 + (positionInRange * 40)); // 60-100% range
+        scoreStatus = 'Within Range';
+      } else if (satScore > satRange.max) {
+        // Score is above range - IMPROVED: Higher scores should have very high match percentage
+        // For a school with range 1200-1400, a 1600 score should be 100% match
+        // For a score of 1430 with range up to 1350, should be very high match
+        const distanceAbove = satScore - satRange.max;
+        const maxPossibleDistance = 1600 - satRange.max; // Distance to perfect score
+        const percentageAbove = Math.min(1, distanceAbove / maxPossibleDistance);
+        // Enhanced logic: the higher the score above range, the higher the match percentage
+        // This ensures that significantly higher scores get very high match percentages
+        matchPercentage = Math.round(85 + (percentageAbove * 15)); // 85-100% range for scores above range
+        scoreStatus = 'Above Range';
+      } else {
+        // Score is below range - calculate percentage based on how much below
+        const distanceBelow = satRange.min - satScore;
+        const maxPossibleDistance = satRange.min - 400; // Distance from minimum possible
+        const percentageBelow = Math.min(1, distanceBelow / maxPossibleDistance);
+        matchPercentage = Math.round(20 - (percentageBelow * 15)); // 5-20% range
+        scoreStatus = 'Below Range';
+      }
+
+      // Apply category difficulty factor to ensure proper progression
+      let categoryFactor = 1;
+      if (category === 'Reach') {
+        categoryFactor = 0.3; // Reach schools are hardest
+      } else if (category === 'Target') {
+        categoryFactor = 0.6; // Target schools are medium
+      } else {
+        categoryFactor = 1.0; // Safety schools are easiest
+      }
+
+      // Apply acceptance rate factor (lower acceptance rate = higher difficulty)
+      const acceptanceFactor = Math.max(0.4, Math.min(1.5, (100 - acceptanceRate) / 60));
+      
+      // Calculate final match percentage
+      let finalMatchPercentage = Math.round(matchPercentage * categoryFactor * acceptanceFactor);
+      
+      // Apply realistic bounds based on category
+      if (category === 'Reach') {
+        finalMatchPercentage = Math.max(5, Math.min(40, finalMatchPercentage));
+      } else if (category === 'Target') {
+        finalMatchPercentage = Math.max(20, Math.min(70, finalMatchPercentage));
+      } else {
+        finalMatchPercentage = Math.max(50, Math.min(95, finalMatchPercentage));
+      }
+
+      const universityWithMatch = {
+        ...university,
+        matchPercentage: finalMatchPercentage,
+        scoreStatus: scoreStatus,
+        rangeFitPercentage: Math.round(matchPercentage)
+      };
+
+      // Categorize based on original category
+      if (category === 'Reach') {
+        recommendations.reach.push(universityWithMatch);
+      } else if (category === 'Target') {
+        recommendations.target.push(universityWithMatch);
+      } else {
+        recommendations.safety.push(universityWithMatch);
+      }
+    });
+
+    // Sort by match percentage (ascending for reach, descending for others)
+    recommendations.reach.sort((a, b) => a.matchPercentage - b.matchPercentage);
+    recommendations.target.sort((a, b) => b.matchPercentage - a.matchPercentage);
+    recommendations.safety.sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+    return recommendations;
+  };
 
   // Core SAT Score Calculation Algorithm
   const calculateSATScore = () => {
@@ -318,7 +815,19 @@ const SATScoreCalculator = () => {
       const readingWritingScore = curve.readingWriting.getScore(rwMod1, rwMod2);
       const mathScore = curve.math.getScore(mathMod1, mathMod2);
       
-      const totalScore = readingWritingScore + mathScore;
+      let totalScore = readingWritingScore + mathScore;
+      
+      // Safeguard: Only allow perfect score (1600) if all modules are perfect
+      const totalRWCorrect = rwMod1 + rwMod2;
+      const totalMathCorrect = mathMod1 + mathMod2;
+      const isPerfectRW = totalRWCorrect === 54; // 27 + 27
+      const isPerfectMath = totalMathCorrect === 44; // 22 + 22
+      
+      if (totalScore >= 1600 && (!isPerfectRW || !isPerfectMath)) {
+        // Cap the score based on actual performance
+        const maxPossibleScore = Math.min(1590, totalScore);
+        totalScore = maxPossibleScore;
+      }
       
       return {
         curveId: index + 1,
@@ -368,6 +877,9 @@ const SATScoreCalculator = () => {
     const sortedScores = totalScores.sort((a, b) => a - b);
     const median = sortedScores[Math.floor(sortedScores.length / 2)];
 
+    // Get university recommendations based on most probable score
+    const universityRecommendations = getUniversityRecommendations(mostProbableScore);
+
     setResults({
       predictions,
       statistics: {
@@ -394,7 +906,8 @@ const SATScoreCalculator = () => {
           readingWriting: Math.round((totalRWCorrect / 54) * 100),
           math: Math.round((totalMathCorrect / 44) * 100)
         }
-      }
+      },
+      universityRecommendations
     });
   };
 
@@ -593,7 +1106,7 @@ const SATScoreCalculator = () => {
                   <h4 className="font-semibold text-gray-800 mb-2">Statistical Info</h4>
                   <p className="text-sm text-gray-600">Median: {results.statistics.median}</p>
                   <p className="text-sm text-gray-600">Std Dev: ±{results.statistics.standardDeviation}</p>
-                  <p className="text-xs text-gray-500 mt-2">Based on 5 curve analysis</p>
+                  <p className="text-xs text-gray-500 mt-2">Based on 13 curve analysis</p>
                 </div>
               </div>
             </div>
@@ -690,6 +1203,169 @@ const SATScoreCalculator = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* University Recommendations */}
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <GraduationCap className="w-6 h-6 text-purple-600" />
+                <h3 className="text-2xl font-bold text-gray-800">University Recommendations</h3>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-600">
+                  Based on your most probable SAT score of <span className="font-semibold text-blue-600">{results.statistics.mostProbable}</span>, 
+                  here are personalized university recommendations:
+                </p>
+              </div>
+
+              {/* Filter Controls */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">Filter by:</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setUniversityFilter('reach')}
+                      className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                        universityFilter === 'reach'
+                          ? 'bg-red-600 text-white'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Reach ({results.universityRecommendations.reach.length})
+                    </button>
+                    <button
+                      onClick={() => setUniversityFilter('target')}
+                      className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                        universityFilter === 'target'
+                          ? 'bg-yellow-600 text-white'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Target ({results.universityRecommendations.target.length})
+                    </button>
+                    <button
+                      onClick={() => setUniversityFilter('safety')}
+                      className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                        universityFilter === 'safety'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Safety ({results.universityRecommendations.safety.length})
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (universityFilter === 'all') {
+                        setShowAllUniversities(!showAllUniversities);
+                      } else {
+                        setUniversityFilter('all');
+                        setShowAllUniversities(true);
+                      }
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {universityFilter === 'all' 
+                      ? (showAllUniversities ? 'Show Top 10' : 'Show All Schools')
+                      : 'Show All Schools'
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {/* University List */}
+              <div className="space-y-4">
+                {(() => {
+                  let universitiesToShow = [];
+                  
+                  if (universityFilter === 'all') {
+                    universitiesToShow = [
+                      ...results.universityRecommendations.reach,
+                      ...results.universityRecommendations.target,
+                      ...results.universityRecommendations.safety
+                    ];
+                  } else if (universityFilter === 'reach') {
+                    universitiesToShow = results.universityRecommendations.reach;
+                  } else if (universityFilter === 'target') {
+                    universitiesToShow = results.universityRecommendations.target;
+                  } else if (universityFilter === 'safety') {
+                    universitiesToShow = results.universityRecommendations.safety;
+                  }
+
+                  // When filter is 'all', use showAllUniversities to control display count
+                  // When filter is specific category, always show all schools in that category
+                  const displayCount = (universityFilter === 'all' && !showAllUniversities) ? 10 : universitiesToShow.length;
+                  const universitiesToDisplay = universitiesToShow.slice(0, displayCount);
+
+                  return universitiesToDisplay.map((uni, index) => (
+                    <div key={index} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="text-lg font-semibold text-gray-800">{uni.name}</h4>
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              uni.category === 'Reach' ? 'bg-red-100 text-red-700' :
+                              uni.category === 'Target' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {uni.category}
+                            </span>
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              uni.matchPercentage >= 80 ? 'bg-green-100 text-green-700' :
+                              uni.matchPercentage >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {uni.matchPercentage}% match
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="w-4 h-4" />
+                              <span>{uni.location}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span>SAT: {uni.satRange.min}-{uni.satRange.max}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span>{uni.acceptanceRate}% acceptance</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600">{uni.description}</p>
+                        </div>
+                        <div className="flex flex-col gap-2 ml-4">
+                          <a
+                            href={uni.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Visit Website
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* Additional Information */}
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h5 className="font-semibold text-blue-800 mb-2">Application Strategy Tips:</h5>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Apply to 2-3 reach schools for ambitious goals</li>
+                  <li>• Focus on 4-6 target schools where you have a good chance</li>
+                  <li>• Include 2-3 safety schools to ensure admission</li>
+                  <li>• Consider factors beyond SAT scores: GPA, extracurriculars, essays</li>
+                  <li>• Research each school's specific requirements and deadlines</li>
+                </ul>
               </div>
             </div>
           </div>

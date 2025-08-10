@@ -20,6 +20,9 @@ import ArticleReader from './pages/Articles/ArticleReader';
 import ArticlesManagement from './pages/Articles/ArticlesManagement';
 import Admin from './pages/Admin/Admin';
 import SATScoreCalculator from './pages/SATScoreCalculator';
+import StudyPlan from './pages/StudyPlan/StudyPlan';
+import DailyVocab from './pages/DailyVocab/DailyVocab';
+import UpgradePlan from './pages/UpgradePlan/UpgradePlan';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -98,6 +101,28 @@ function AppRoutes() {
       />
 
       <Route
+        path="/study-plan"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <StudyPlan />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/daily-vocab"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <DailyVocab />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/tests"
         element={
           <ProtectedRoute>
@@ -138,7 +163,7 @@ function AppRoutes() {
       />
 
       <Route
-        path="/articles"
+        path="/library"
         element={
           <ProtectedRoute>
             <Layout>
@@ -149,16 +174,18 @@ function AppRoutes() {
       />
 
       <Route
-        path="/articles/:id"
+        path="/library/:id"
         element={
           <ProtectedRoute>
-            <ArticleReader />
+            <Layout>
+              <ArticleReader />
+            </Layout>
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/articles-management"
+        path="/library-management"
         element={
           <ProtectedRoute roles={['admin']}>
             <Layout>
@@ -219,6 +246,15 @@ function AppRoutes() {
             <Layout>
               <SATScoreCalculator />
             </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/upgrade-plan"
+        element={
+          <ProtectedRoute>
+            <UpgradePlan />
           </ProtectedRoute>
         }
       />

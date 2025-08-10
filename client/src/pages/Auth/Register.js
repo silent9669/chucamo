@@ -184,74 +184,7 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Grade */}
-            <div>
-              <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
-                Grade Level
-              </label>
-              <select
-                id="grade"
-                className="input"
-                {...register('grade', {
-                  required: 'Grade level is required',
-                })}
-              >
-                <option value="">Select your grade</option>
-                <option value="9">Grade 9</option>
-                <option value="10">Grade 10</option>
-                <option value="11">Grade 11</option>
-                <option value="12">Grade 12</option>
-              </select>
-              {errors.grade && (
-                <p className="mt-1 text-sm text-error-600">{errors.grade.message}</p>
-              )}
-            </div>
 
-            {/* School */}
-            <div>
-              <label htmlFor="school" className="block text-sm font-medium text-gray-700">
-                School or SAT centre (Optional)
-              </label>
-              <Input
-                id="school"
-                type="text"
-                autoComplete="organization"
-                className="mt-1"
-                error={errors.school?.message}
-                {...register('school', {
-                  maxLength: {
-                    value: 100,
-                    message: 'School name cannot exceed 100 characters',
-                  },
-                })}
-              />
-            </div>
-
-            {/* Target Score */}
-            <div>
-              <label htmlFor="targetScore" className="block text-sm font-medium text-gray-700">
-                Target SAT Score (Optional)
-              </label>
-              <Input
-                id="targetScore"
-                type="number"
-                min="400"
-                max="1600"
-                placeholder="e.g., 1200"
-                className="mt-1"
-                error={errors.targetScore?.message}
-                {...register('targetScore', {
-                  min: {
-                    value: 400,
-                    message: 'Target score must be at least 400',
-                  },
-                  max: {
-                    value: 1600,
-                    message: 'Target score cannot exceed 1600',
-                  },
-                })}
-              />
-            </div>
 
             {/* Password */}
             <div>

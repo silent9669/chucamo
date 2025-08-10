@@ -38,7 +38,7 @@ const createAdmin = async () => {
       email: 'admin@example.com',
       password: 'admin123', // Will be hashed automatically by the model
       role: 'admin',
-      accountType: 'student',
+      accountType: 'admin',
       emailVerified: true,
       isActive: true,
       grade: 12,

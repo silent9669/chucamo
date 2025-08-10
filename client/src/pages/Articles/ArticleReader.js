@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMoon, FiSun } from 'react-icons/fi';
 import { renderPassageWithKaTeX } from '../../utils/katexUtils';
+import { articlesAPI } from '../../services/api';
 import logger from '../../utils/logger';
 
-// Custom styles for range input
-const rangeInputStyles = `
+// Custom styles for range input and text selection
+const customStyles = `
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
@@ -48,6 +49,79 @@ const rangeInputStyles = `
   .dark input[type="range"]::-moz-range-thumb {
     background: #68d391;
   }
+
+  /* Enhanced text selection handling */
+  .article-content {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    cursor: text;
+  }
+
+  .article-content * {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  /* Ensure KaTeX elements don't interfere with text selection */
+  .article-content .katex-display-container,
+  .article-content .katex-inline-container,
+  .article-content .katex {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    pointer-events: none !important;
+  }
+
+  /* Prevent selection of non-text elements */
+  .article-content img,
+  .article-content button,
+  .article-content input,
+  .article-content select,
+  .article-content textarea {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  /* Improve text selection visual feedback */
+  .article-content::selection {
+    background: rgba(59, 130, 246, 0.3);
+    color: inherit;
+  }
+
+  .article-content::-moz-selection {
+    background: rgba(147, 197, 253, 0.3);
+    color: inherit;
+  }
+
+  /* Dark mode selection colors */
+  .dark .article-content::selection {
+    background: rgba(147, 197, 253, 0.3);
+    color: inherit;
+  }
+
+  .dark .article-content::-moz-selection {
+    background: rgba(147, 197, 253, 0.3);
+    color: inherit;
+  }
+
+  /* Prevent automatic sentence selection */
+  .article-content p {
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  /* Prevent text selection from expanding to whole sentences */
+  .article-content * {
+    word-spacing: normal;
+    letter-spacing: normal;
+  }
 `;
 
 const ArticleReader = () => {
@@ -58,6 +132,7 @@ const ArticleReader = () => {
   
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [fontSize, setFontSize] = useState(18);
   const [fontFamily, setFontFamily] = useState('Georgia, serif');
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -67,40 +142,34 @@ const ArticleReader = () => {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showAnswers, setShowAnswers] = useState(false);
 
-  // Load article from localStorage
+  // Load article from database
   useEffect(() => {
-    const loadArticle = () => {
+    const loadArticle = async () => {
       try {
         logger.debug('🔍 Loading article with ID:', id);
         setLoading(true);
+        setError(null);
         setArticle(null); // Reset article state
         
-        const savedArticles = localStorage.getItem('articles');
-        if (savedArticles) {
-          const articles = JSON.parse(savedArticles);
-          logger.debug(`📚 Found ${articles.length} articles in localStorage`);
-          logger.debug('📋 Available article IDs:', articles.map(a => a.id));
-          
-          const foundArticle = articles.find(a => a.id.toString() === id.toString());
-          if (foundArticle) {
-            logger.debug('✅ Article found:', foundArticle.title);
-            setArticle(foundArticle);
-          } else {
-            logger.debug('❌ Article not found in localStorage');
-            logger.debug('🔍 Looking for ID:', id);
-            logger.debug('📋 Available articles:', articles.map(a => ({ id: a.id, title: a.title })));
-          }
+        const response = await articlesAPI.getById(id);
+        if (response.data.success) {
+          logger.debug('✅ Article found:', response.data.article.title);
+          setArticle(response.data.article);
         } else {
-          logger.debug('❌ No articles found in localStorage');
+          logger.error('❌ Failed to load article:', response.data.message);
+          setError('Failed to load article');
         }
       } catch (error) {
         logger.error('❌ Error loading article:', error);
+        setError('Failed to load article');
       } finally {
         setLoading(false);
       }
     };
 
-    loadArticle();
+    if (id) {
+      loadArticle();
+    }
   }, [id]);
 
   // Update reading progress on scroll
@@ -118,6 +187,47 @@ const ArticleReader = () => {
     window.addEventListener('scroll', updateProgress);
     return () => window.removeEventListener('scroll', updateProgress);
   }, []);
+
+  // Enhanced text selection handling
+  useEffect(() => {
+    const handleSelection = (e) => {
+      // Prevent selection of non-text elements
+      const target = e.target;
+      if (!target) return;
+      
+      if (target.tagName === 'IMG' || 
+          target.tagName === 'BUTTON' || 
+          target.tagName === 'INPUT' || 
+          target.tagName === 'SELECT' || 
+          target.tagName === 'TEXTAREA' ||
+          (target.classList && target.classList.contains('katex')) ||
+          (target.closest && target.closest('.katex'))) {
+        e.preventDefault();
+        return false;
+      }
+    };
+
+    // Store the current ref value to avoid the warning
+    const currentContentRef = contentRef.current;
+    
+    // Add a small delay to ensure the ref is properly set
+    const timeoutId = setTimeout(() => {
+      const contentElement = contentRef.current;
+      if (contentElement && typeof contentElement.addEventListener === 'function') {
+        contentElement.addEventListener('mousedown', handleSelection);
+        contentElement.addEventListener('selectstart', handleSelection);
+      }
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      // Use the stored ref value for cleanup
+      if (currentContentRef && typeof currentContentRef.removeEventListener === 'function') {
+        currentContentRef.removeEventListener('mousedown', handleSelection);
+        currentContentRef.removeEventListener('selectstart', handleSelection);
+      }
+    };
+  }, [article]);
 
   // Handle answer selection
   const handleAnswerSelect = (questionId, answer) => {
@@ -147,9 +257,9 @@ const ArticleReader = () => {
 
   // Calculate word count and reading time
   const getReadingStats = () => {
-    if (!article?.readingPassage) return { words: 0, characters: 0, readingTime: 0 };
+    if (!article?.content && !article?.readingPassage) return { words: 0, characters: 0, readingTime: 0 };
     
-    const text = article.readingPassage.replace(/<[^>]*>/g, ''); // Remove HTML tags
+    const text = (article.content || article.readingPassage || '').replace(/<[^>]*>/g, ''); // Remove HTML tags
     const words = text.split(/\s+/).filter(word => word.length > 0);
     const characters = text.length;
     const readingTime = Math.ceil(words.length / 200); // Assuming 200 words per minute
@@ -170,17 +280,34 @@ const ArticleReader = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Library Content</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate('/library')}
+            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Back to Library
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!article) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Article Not Found</h2>
-          <p className="text-gray-600 mb-4">The article you're looking for doesn't exist.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Library Content Not Found</h2>
+          <p className="text-gray-600 mb-4">The library content you're looking for doesn't exist.</p>
           <button
-            onClick={() => navigate('/articles')}
+            onClick={() => navigate('/library')}
             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
           >
-            Back to Articles
+            Back to Library
           </button>
         </div>
       </div>
@@ -189,7 +316,7 @@ const ArticleReader = () => {
 
   return (
     <>
-      <style>{rangeInputStyles}</style>
+      <style>{customStyles}</style>
       <div className={`min-h-screen transition-colors duration-300 ${
         isDarkMode 
           ? 'bg-gradient-to-br from-gray-900 to-gray-800 dark' 
@@ -197,12 +324,12 @@ const ArticleReader = () => {
       }`}>
         {/* Reading Progress Bar */}
         <div 
-          className="fixed top-0 left-0 h-1 bg-gradient-to-r from-green-500 to-green-600 z-50 transition-all duration-300"
+          className="fixed top-16 left-0 h-1 bg-gradient-to-r from-green-500 to-green-600 z-40 transition-all duration-300"
           style={{ width: `${readingProgress}%` }}
         />
 
         {/* Header */}
-        <header className={`sticky top-0 z-40 backdrop-blur-lg border-b transition-colors duration-300 ${
+        <header className={`sticky top-16 z-30 backdrop-blur-lg border-b transition-colors duration-300 ${
           isDarkMode 
             ? 'bg-gray-900/90 border-gray-700' 
             : 'bg-white/90 border-gray-200'
@@ -210,7 +337,7 @@ const ArticleReader = () => {
           <div className="max-w-4xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <button
-                onClick={() => navigate('/articles')}
+                onClick={() => navigate('/library')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                   isDarkMode 
                     ? 'text-gray-300 hover:bg-gray-800' 
@@ -218,7 +345,7 @@ const ArticleReader = () => {
                 }`}
               >
                 <FiArrowLeft size={20} />
-                Back to Articles
+                Back to Library
               </button>
 
               <div className="flex items-center gap-4">
@@ -280,7 +407,7 @@ const ArticleReader = () => {
         </header>
 
         {/* Main Content */}
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto px-6 py-4">
           {/* Article Header */}
           <div className={`text-center mb-8 p-8 rounded-2xl backdrop-blur-lg transition-colors duration-300 ${
             isDarkMode 
@@ -319,9 +446,9 @@ const ArticleReader = () => {
             {/* Article Text */}
             <div 
               ref={contentRef}
-              className="prose prose-lg max-w-none"
+              className="article-content prose prose-lg max-w-none"
               dangerouslySetInnerHTML={{ 
-                __html: renderPassageWithKaTeX(article.readingPassage) 
+                __html: renderPassageWithKaTeX(article.content || article.readingPassage) 
               }}
               style={{
                 fontSize: `${fontSize}px`,
@@ -337,7 +464,7 @@ const ArticleReader = () => {
                 {article.images.map((image, index) => (
                   <div key={index} className="text-center">
                     <img
-                      src={image.url}
+                      src={typeof image === 'string' ? image : image.url}
                       alt={`Article ${index + 1}`}
                       className="max-w-full h-auto rounded-lg shadow-lg"
                     />

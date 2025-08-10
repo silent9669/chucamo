@@ -6,14 +6,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
-import GoogleSignIn from '../../components/UI/GoogleSignIn';
 import { authAPI } from '../../services/api';
 import logger from '../../utils/logger';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -55,35 +53,6 @@ const Login = () => {
     setLoading(false);
   };
 
-  const handleGoogleSignIn = async (googleData) => {
-    setGoogleLoading(true);
-    try {
-      const response = await authAPI.googleLogin(googleData);
-      if (response.data.success) {
-        // Set the token
-        authAPI.setAuthToken(response.data.token);
-        
-        // Update auth context
-        const { user } = response.data;
-        login(null, null, { user, token: response.data.token });
-        
-        toast.success('Google Sign-In successful!');
-        navigate('/dashboard');
-      } else {
-        toast.error(response.data.message || 'Google Sign-In failed');
-      }
-    } catch (error) {
-      logger.error('Google Sign-In error:', error);
-      toast.error(error.response?.data?.message || 'Google Sign-In failed');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleGoogleError = (error) => {
-    toast.error(error);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -102,25 +71,6 @@ const Login = () => {
               create a new account
             </Link>
           </p>
-        </div>
-
-        {/* Google Sign-In Button */}
-        <div className="google-signin-container">
-          <GoogleSignIn
-            onSuccess={handleGoogleSignIn}
-            onError={handleGoogleError}
-            className="w-full"
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
-          </div>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -210,7 +160,7 @@ const Login = () => {
               type="submit"
               className="w-full"
               loading={loading}
-              disabled={loading || googleLoading}
+              disabled={loading}
             >
               Sign in
             </Button>

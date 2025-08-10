@@ -13,6 +13,7 @@ const testRoutes = require('./routes/tests');
 const questionRoutes = require('./routes/questions');
 const resultRoutes = require('./routes/results');
 const uploadRoutes = require('./routes/upload');
+const articleRoutes = require('./routes/articles');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,16 +30,12 @@ app.use(helmet({
         "'self'",
         "'unsafe-inline'",
         "'unsafe-eval'",
-        "https://apis.google.com",
-        "https://www.gstatic.com",
-        "https://accounts.google.com",
         "https://www.desmos.com"
       ],
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
-        "https://fonts.googleapis.com",
-        "https://accounts.google.com"
+        "https://fonts.googleapis.com"
       ],
       fontSrc: [
         "'self'",
@@ -59,14 +56,11 @@ app.use(helmet({
       ],
       connectSrc: [
         "'self'",
-        "https://apis.google.com",
-        "https://accounts.google.com",
         "https://www.desmos.com",
         "https://*.railway.app"
       ],
       frameSrc: [
         "'self'",
-        "https://accounts.google.com",
         "https://www.desmos.com",
         "https://*.railway.app"
       ]
@@ -124,6 +118,7 @@ app.use('/api/tests', testRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/articles', articleRoutes);
 
 // Health check endpoints
 app.get('/health', (req, res) => {

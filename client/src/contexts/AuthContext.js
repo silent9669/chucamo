@@ -103,18 +103,11 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [state.token]);
 
-  const login = async (email, password, googleData = null) => {
+  const login = async (email, password) => {
     try {
       dispatch({ type: 'AUTH_START' });
       
-      let response;
-      if (googleData) {
-        // Google Sign-In
-        response = await authAPI.googleLogin(googleData);
-      } else {
-        // Regular login
-        response = await authAPI.login(email, password);
-      }
+      const response = await authAPI.login(email, password);
       
       dispatch({
         type: 'AUTH_SUCCESS',

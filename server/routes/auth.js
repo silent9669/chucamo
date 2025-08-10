@@ -1,16 +1,13 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 const mongoose = require('mongoose'); // Added for database connection status
 const logger = require('../utils/logger');
+// Removed updateLoginStreak and checkAndResetStreakIfNoCoins since streak is now only updated on test completion
 
 const router = express.Router();
-
-// Initialize Google OAuth2 client
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -19,146 +16,9 @@ const generateToken = (id) => {
   });
 };
 
-// Verify Google ID Token
-const verifyGoogleToken = async (idToken) => {
-  try {
-    logger.debug('Verifying Google ID token...');
-    
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      throw new Error('GOOGLE_CLIENT_ID environment variable not set');
-    }
 
-    const ticket = await googleClient.verifyIdToken({
-      idToken: idToken,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    
-    const payload = ticket.getPayload();
-    logger.info('Google token verified successfully for user:', payload.email);
-    
-    return payload;
-  } catch (error) {
-    logger.error('Google token verification error:', error);
-    
-    if (error.message.includes('GOOGLE_CLIENT_ID')) {
-      throw new Error('Google OAuth not configured. Please set GOOGLE_CLIENT_ID environment variable.');
-    }
-    
-    if (error.message.includes('Invalid token')) {
-      throw new Error('Invalid Google token provided');
-    }
-    
-    throw new Error(`Google token verification failed: ${error.message}`);
-  }
-};
 
-// @route   POST /api/auth/google
-// @desc    Google Sign-In authentication
-// @access  Public
-router.post('/google', [
-  body('idToken').notEmpty().withMessage('Google ID token is required')
-], async (req, res) => {
-  try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        message: 'Validation failed',
-        errors: errors.array() 
-      });
-    }
 
-    const { idToken } = req.body;
-
-    // Verify Google token with Google's servers
-    const payload = await verifyGoogleToken(idToken);
-    
-    const { email, given_name: firstName, family_name: lastName, picture: profilePicture, sub: googleId } = payload;
-
-    // Check if user exists by email
-    let user = await User.findOne({ email: email.toLowerCase() });
-
-    if (user) {
-      // User exists, update Google ID if not set
-      if (!user.googleId) {
-        user.googleId = googleId;
-        user.profilePicture = profilePicture || user.profilePicture;
-        await user.save();
-      }
-    } else {
-      // Create new user
-      const username = email.split('@')[0] + '_' + Math.random().toString(36).substr(2, 5);
-      
-      user = await User.create({
-        firstName: firstName || 'Google',
-        lastName: lastName || 'User',
-        email: email.toLowerCase(),
-        username,
-        googleId,
-        profilePicture,
-        password: Math.random().toString(36).substr(2, 15), // Random password for Google users
-        emailVerified: true, // Google emails are verified
-        accountType: 'free' // Default to free account
-      });
-    }
-
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-
-    // Generate JWT token
-    const token = generateToken(user._id);
-
-    res.json({
-      success: true,
-      message: 'Google Sign-In successful',
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        grade: user.grade,
-        school: user.school,
-        targetScore: user.targetScore,
-        profilePicture: user.profilePicture,
-        lastLogin: user.lastLogin,
-        loginStreak: user.loginStreak,
-        totalTestsTaken: user.totalTestsTaken,
-        averageAccuracy: user.averageAccuracy,
-        coins: user.coins
-      }
-    });
-  } catch (error) {
-    console.error('Google Sign-In error:', error);
-    
-    // Provide more specific error messages
-    if (error.message.includes('GOOGLE_CLIENT_ID')) {
-      return res.status(500).json({ 
-        message: 'Google OAuth not configured. Please set GOOGLE_CLIENT_ID environment variable.' 
-      });
-    }
-    
-    if (error.message.includes('Invalid token')) {
-      return res.status(400).json({ 
-        message: 'Invalid Google token. Please try signing in again.' 
-      });
-    }
-    
-    if (error.message.includes('audience')) {
-      return res.status(400).json({ 
-        message: 'Google Client ID mismatch. Please check your configuration.' 
-      });
-    }
-    
-    res.status(500).json({ 
-      message: 'Server error during Google Sign-In',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
@@ -298,22 +158,8 @@ router.post('/login', [
     
     logger.info('✅ Password verified for user:', user.username);
 
-    // Update login streak and last login
-    const now = new Date();
-    const lastLoginDate = user.lastLoginDate || new Date(0);
-    const daysSinceLastLogin = Math.floor((now - lastLoginDate) / (1000 * 60 * 60 * 24));
-    
-    // Update login streak
-    if (daysSinceLastLogin === 1) {
-      user.loginStreak += 1;
-    } else if (daysSinceLastLogin > 1) {
-      user.loginStreak = 1;
-    } else if (daysSinceLastLogin === 0 && user.loginStreak === 0) {
-      user.loginStreak = 1;
-    }
-    
-    user.lastLogin = now;
-    user.lastLoginDate = now;
+    // Update last login (streak is now only updated on test completion)
+    user.lastLogin = new Date();
     await user.save();
 
     // Generate token
@@ -338,7 +184,8 @@ router.post('/login', [
         loginStreak: user.loginStreak,
         totalTestsTaken: user.totalTestsTaken,
         averageAccuracy: user.averageAccuracy,
-        coins: user.coins
+        coins: user.coins,
+        lastTestCompletionDate: user.lastTestCompletionDate
       }
     });
   } catch (error) {
@@ -377,7 +224,8 @@ router.get('/me', protect, async (req, res) => {
         loginStreak: user.loginStreak || 0,
         totalTestsTaken: user.totalTestsTaken || 0,
         averageAccuracy: user.averageAccuracy || 0,
-        coins: user.coins || 0
+        coins: user.coins || 0,
+        lastTestCompletionDate: user.lastTestCompletionDate
       }
     });
   } catch (error) {

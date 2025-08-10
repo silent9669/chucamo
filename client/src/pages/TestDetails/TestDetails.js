@@ -4,10 +4,12 @@ import { FiArrowLeft, FiCheck, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
 import { testsAPI } from '../../services/api';
 import logger from '../../utils/logger';
+import { useAuth } from '../../contexts/AuthContext';
 
 const TestDetails = () => {
   const { id: testId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [test, setTest] = useState(null);
   const [testResults, setTestResults] = useState(null);
@@ -411,13 +413,15 @@ const TestDetails = () => {
                 {showAnswers ? 'Hide' : 'Show'} Answers
               </button>
               
-              <button
-                onClick={() => setShowExplanations(!showExplanations)}
-                className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                {showExplanations ? <FiEyeOff className="h-4 w-4 mr-1" /> : <FiEye className="h-4 w-4 mr-1" />}
-                {showExplanations ? 'Hide' : 'Show'} Explanations
-              </button>
+              {user?.accountType !== 'free' && (
+                <button
+                  onClick={() => setShowExplanations(!showExplanations)}
+                  className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  {showExplanations ? <FiEyeOff className="h-4 w-4 mr-1" /> : <FiEye className="h-4 w-4 mr-1" />}
+                  {showExplanations ? 'Hide' : 'Show'} Explanations
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -660,7 +664,7 @@ const TestDetails = () => {
                         )}
                         
                         {/* Always show correct answers for written questions when test is completed */}
-                        {showAnswers && testResults && testResults.status === 'completed' && (currentQuestionData.acceptableAnswers?.length > 0 || currentQuestionData.writtenAnswer) && (
+                        {showAnswers && testResults && (
                           <div className="mt-4">
                             <h4 className="font-medium text-gray-900 mb-3">Correct Answer(s)</h4>
                             <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
@@ -670,9 +674,16 @@ const TestDetails = () => {
                                   <p className="text-green-800 font-medium">• {currentQuestionData.writtenAnswer}</p>
                                 )}
                                 {/* Show all acceptable answers */}
-                                {currentQuestionData.acceptableAnswers?.map((answer, index) => (
-                                  <p key={index} className="text-green-800 font-medium">• {answer}</p>
-                                ))}
+                                {currentQuestionData.acceptableAnswers && currentQuestionData.acceptableAnswers.length > 0 && (
+                                  currentQuestionData.acceptableAnswers.map((answer, index) => (
+                                    <p key={index} className="text-green-800 font-medium">• {answer}</p>
+                                  ))
+                                )}
+                                {/* Show correctAnswer as fallback if no writtenAnswer or acceptableAnswers */}
+                                {!currentQuestionData.writtenAnswer && (!currentQuestionData.acceptableAnswers || currentQuestionData.acceptableAnswers.length === 0) && currentQuestionData.correctAnswer && (
+                                  <p className="text-green-800 font-medium">• {currentQuestionData.correctAnswer}</p>
+                                )}
+
                               </div>
                             </div>
                           </div>
@@ -681,7 +692,7 @@ const TestDetails = () => {
                     )}
 
                     {/* Explanation */}
-                    {showExplanations && currentQuestionData.explanation && (
+                    {user?.accountType !== 'free' && showExplanations && currentQuestionData.explanation && (
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h4 className="font-medium text-blue-900 mb-2">Explanation</h4>
                         <div className="text-blue-800">

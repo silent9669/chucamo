@@ -16,7 +16,7 @@ const api = axios.create({
       ? 'https://bunchable-production.up.railway.app/api' 
       : '/api';
   })(),
-  timeout: 10000,
+  timeout: 30000, // Increased timeout for test loading
   headers: {
     'Content-Type': 'application/json',
   },
@@ -29,6 +29,15 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Log request details for debugging
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL,
+      hasToken: !!token
+    });
+    
     return config;
   },
   (error) => {
@@ -40,6 +49,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log detailed error information for debugging
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      code: error.code
+    });
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
@@ -52,7 +71,7 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (username, password) => api.post('/auth/login', { username, password }),
   register: (userData) => api.post('/auth/register', userData),
-  googleLogin: (googleData) => api.post('/auth/google', googleData),
+
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (profileData) => api.put('/auth/profile', profileData),
   changePassword: (currentPassword, newPassword) => 
@@ -97,6 +116,15 @@ export const resultsAPI = {
   submitTest: (id, data) => api.put(`/results/${id}`, data),
   getAnalytics: () => api.get('/results/analytics/overview'),
   addReview: (id, reviewNotes) => api.put(`/results/${id}/review`, { reviewNotes }),
+};
+
+// Articles API
+export const articlesAPI = {
+  getAll: (params) => api.get('/articles', { params }),
+  getById: (id) => api.get(`/articles/${id}`),
+  create: (articleData) => api.post('/articles', articleData),
+  update: (id, articleData) => api.put(`/articles/${id}`, articleData),
+  delete: (id) => api.delete(`/articles/${id}`),
 };
 
 // Users API

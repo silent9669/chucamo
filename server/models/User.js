@@ -36,11 +36,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
-  googleId: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
+
   role: {
     type: String,
     enum: ['student', 'admin', 'teacher'],
@@ -48,8 +44,8 @@ const userSchema = new mongoose.Schema({
   },
   accountType: {
     type: String,
-    enum: ['free', 'student', 'teacher'],
-    default: 'free'
+    enum: ['free', 'student', 'teacher', 'admin'],
+    default: 'student'
   },
   profilePicture: {
     type: String,
@@ -94,6 +90,18 @@ const userSchema = new mongoose.Schema({
   lastLoginDate: {
     type: Date,
     default: Date.now
+  },
+  lastTestCompletionDate: {
+    type: Date,
+    default: null
+  },
+  lastCoinEarnedDate: {
+    type: Date,
+    default: null
+  },
+  streakBonusUsedToday: {
+    type: Boolean,
+    default: false
   },
   totalTestsTaken: {
     type: Number,

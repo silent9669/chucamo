@@ -50,8 +50,8 @@ router.get('/leaderboard', protect, async (req, res) => {
         $match: {
           $and: [
             { 'userInfo.accountType': accountTypeFilter },
-            { 'userInfo.accountType': { $ne: 'teacher' } }, // Exclude teacher accounts from leaderboard
-            { 'userInfo.role': { $ne: 'admin' } } // Exclude admin accounts from leaderboard
+
+                         { 'userInfo.accountType': { $ne: 'admin' } } // Exclude admin accounts from leaderboard
           ]
         }
       },
@@ -112,7 +112,7 @@ router.get('/leaderboard', protect, async (req, res) => {
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { page = 1, limit = 20, role, accountType, search, sort = 'createdAt' } = req.query;
+    const { page = 1, limit = 20, accountType, search, sort = 'createdAt' } = req.query;
     
     // If sort is testCount, return leaderboard instead
     if (sort === 'testCount') {
@@ -125,7 +125,6 @@ router.get('/', protect, async (req, res) => {
     }
     
     let query = {};
-    if (role) query.role = role;
     if (accountType) query.accountType = accountType;
     if (search) {
       query.$or = [
@@ -173,25 +172,33 @@ router.get('/', protect, async (req, res) => {
 });
 
 // @route   PUT /api/users/:id
-// @desc    Update user (admin only)
+// @desc    Update user account type (admin only)
 // @access  Private
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    const { role, accountType, isActive } = req.body;
+    const { accountType } = req.body;
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role, accountType, isActive },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!user) {
+    // Check if user exists and get their current role
+    const existingUser = await User.findById(req.params.id);
+    if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Prevent editing admin accounts
+    if (existingUser.accountType === 'admin') {
+      return res.status(400).json({ message: 'Admin accounts cannot be edited' });
+    }
+
+    // Only allow updating account type, not role or status
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { accountType },
+      { new: true, runValidators: true }
+    ).select('-password');
+
     res.json({
       success: true,
-      message: 'User updated successfully',
+      message: 'User account type updated successfully',
       user
     });
   } catch (error) {
@@ -211,7 +218,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.role === 'admin') {
+    if (user.accountType === 'admin') {
       return res.status(400).json({ message: 'Cannot delete admin user' });
     }
 

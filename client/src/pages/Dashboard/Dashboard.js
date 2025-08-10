@@ -7,7 +7,8 @@ import {
   FiTarget,
   FiTrendingUp,
   FiAward,
-  FiDollarSign
+  FiDollarSign,
+  FiFileText
 } from 'react-icons/fi';
 import { resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,7 +36,7 @@ const Dashboard = () => {
 
   const fetchUserStats = useCallback(async () => {
     try {
-      // Always fetch fresh data to ensure coins and accuracy are up to date
+      // Always fetch fresh data to ensure coins, accuracy, and login streak are up to date
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -124,12 +125,12 @@ const Dashboard = () => {
       textColor: 'text-success-600'
     },
     {
-      title: 'Study Plan',
-      description: 'Choose your personalized study plan',
-      icon: FiTarget,
-      href: '/study-plan',
-      color: 'bg-warning-500',
-      textColor: 'text-warning-600'
+      title: 'SAT Score Calculator',
+      description: 'Calculate your estimated SAT score and track your progress',
+      icon: FiBarChart2,
+      href: '/sat-score-calculator',
+      color: 'bg-purple-500',
+      textColor: 'text-purple-600'
     }
   ];
 

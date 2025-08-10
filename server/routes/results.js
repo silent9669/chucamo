@@ -2,6 +2,7 @@ const express = require('express');
 const Result = require('../models/Result');
 const Test = require('../models/Test');
 const { protect } = require('../middleware/auth');
+const { calculateStreakBonus, isSameDay, updateTestCompletionStreak } = require('../utils/streakUtils');
 
 const router = express.Router();
 
@@ -102,21 +103,19 @@ router.post('/', protect, async (req, res) => {
 
     // Set max attempts based on account type
     let maxAttempts;
-    if (user.accountType === 'free') {
-      maxAttempts = 1;
-    } else if (user.accountType === 'student') {
-      maxAttempts = 3;
-    } else if (user.accountType === 'teacher') {
-      maxAttempts = Infinity; // Unlimited attempts for teachers
+    if (user.accountType === 'admin' || user.accountType === 'teacher') {
+      maxAttempts = Infinity; // Unlimited attempts for admin and teacher
+    } else if (user.accountType === 'free') {
+      maxAttempts = 1; // Free account: 1 test attempt
     } else {
-      maxAttempts = test.maxAttempts || 3; // fallback
+      maxAttempts = 3; // Student account: 3 test attempts
     }
 
-    // Only check limits for non-teacher accounts
-    if (user.accountType !== 'teacher' && existingAttempts >= maxAttempts) {
+    // Check if user has exceeded max attempts
+    if (maxAttempts !== Infinity && existingAttempts >= maxAttempts) {
       if (user.accountType === 'free') {
         return res.status(400).json({ 
-          message: 'Upgrade to student account to re-do test',
+          message: 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.',
           accountType: 'free',
           maxAttempts: maxAttempts,
           currentAttempts: existingAttempts
@@ -205,9 +204,28 @@ router.put('/:id', protect, async (req, res) => {
           coinsEarned = 0;
         }
         
+        // Check for streak bonus (only once per day)
+        let streakBonus = 0;
+        let streakBonusMessage = '';
+        const today = new Date();
+        const lastCoinEarned = user.lastCoinEarnedDate ? new Date(user.lastCoinEarnedDate) : null;
+        
+        // Update login streak for test completion (first test of the day)
+        updateTestCompletionStreak(user);
+        
+        // If this is the first time earning coins today and user has a streak
+        if (coinsEarned > 0 && (!lastCoinEarned || !isSameDay(lastCoinEarned, today)) && !user.streakBonusUsedToday) {
+          streakBonus = calculateStreakBonus(user.loginStreak);
+          if (streakBonus > 0) {
+            user.streakBonusUsedToday = true;
+            streakBonusMessage = ` (+${streakBonus} bonus from ${user.loginStreak}-day login streak!)`;
+          }
+        }
+        
         // Update user statistics
         user.totalTestsTaken += 1;
-        user.coins += coinsEarned;
+        user.coins += coinsEarned + streakBonus;
+        user.lastCoinEarnedDate = today;
         
         // Update average accuracy (using overall score)
         const currentTotal = user.averageAccuracy * (user.totalTestsTaken - 1);
@@ -216,14 +234,18 @@ router.put('/:id', protect, async (req, res) => {
         await user.save();
         
         // Add coins earned to response
-        result.coinsEarned = coinsEarned;
+        result.coinsEarned = coinsEarned + streakBonus;
+        result.streakBonus = streakBonus;
+        result.streakBonusMessage = streakBonusMessage;
       }
     }
     res.json({
       success: true,
       message: 'Test completed successfully',
       result,
-      coinsEarned: result.coinsEarned || 0
+      coinsEarned: result.coinsEarned || 0,
+      streakBonus: result.streakBonus || 0,
+      streakBonusMessage: result.streakBonusMessage || ''
     });
   } catch (error) {
     console.error('Update result error:', error);
@@ -237,7 +259,8 @@ router.put('/:id', protect, async (req, res) => {
 router.get('/analytics/overview', protect, async (req, res) => {
   try {
     const results = await Result.find({ user: req.user.id, status: 'completed' })
-      .populate('test', 'title type difficulty');
+      .populate('test', 'title type difficulty')
+      .populate('questionResults.question', 'topic');
 
     if (results.length === 0) {
       return res.json({
@@ -256,15 +279,20 @@ router.get('/analytics/overview', protect, async (req, res) => {
 
     // Calculate analytics
     const totalTests = results.length;
-    const averageScore = Math.round(results.reduce((sum, r) => sum + r.score, 0) / totalTests);
-    const bestScore = Math.max(...results.map(r => r.score));
+    const validScores = results.filter(r => r.score && r.score > 0);
+    const averageScore = validScores.length > 0 
+      ? Math.round(validScores.reduce((sum, r) => sum + (r.score || 0), 0) / validScores.length)
+      : 0;
+    const bestScore = validScores.length > 0 
+      ? Math.max(...validScores.map(r => r.score || 0))
+      : 0;
     const totalTime = results.reduce((sum, r) => sum + (r.duration || 0), 0);
 
     // Get strength and weak areas
     const allTopics = results.flatMap(r => 
-      r.questionResults
-        .filter(q => q.question && q.question.topic)
-        .map(q => ({ topic: q.question.topic, isCorrect: q.isCorrect }))
+      (r.questionResults || [])
+        .filter(q => q && q.question && q.question.topic)
+        .map(q => ({ topic: q.question.topic, isCorrect: q.isCorrect || false }))
     );
 
     const topicStats = {};
@@ -296,13 +324,14 @@ router.get('/analytics/overview', protect, async (req, res) => {
 
     // Recent progress (last 5 tests)
     const recentProgress = results
+      .filter(r => r.test && r.endTime)
       .sort((a, b) => new Date(b.endTime) - new Date(a.endTime))
       .slice(0, 5)
       .map(r => ({
-        testTitle: r.test.title,
-        score: r.score,
+        testTitle: r.test?.title || 'Unknown Test',
+        score: r.score || 0,
         date: r.endTime,
-        type: r.test.type
+        type: r.test?.type || 'unknown'
       }));
 
     res.json({

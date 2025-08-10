@@ -12,11 +12,13 @@ export const renderPassageWithKaTeX = (passageContent) => {
   // Handle both inline and block math
   processedContent = processedContent.replace(/\$\$(.*?)\$\$/g, (match, tex) => {
     try {
-      return katex.renderToString(tex, {
+      const katexHTML = katex.renderToString(tex, {
         displayMode: true,
         throwOnError: false,
         errorColor: '#cc0000'
       });
+      // Wrap KaTeX display math in a container that prevents text selection interference
+      return `<div class="katex-display" style="margin: 1rem 0; text-align: center; user-select: none; pointer-events: none;">${katexHTML}</div>`;
     } catch (error) {
       logger.error('KaTeX rendering error:', error);
       return match; // Return original if rendering fails
@@ -25,23 +27,23 @@ export const renderPassageWithKaTeX = (passageContent) => {
 
   processedContent = processedContent.replace(/\$(.*?)\$/g, (match, tex) => {
     try {
-      return katex.renderToString(tex, {
+      const katexHTML = katex.renderToString(tex, {
         displayMode: false,
         throwOnError: false,
         errorColor: '#cc0000'
       });
+      // Wrap KaTeX inline math in a span that prevents text selection interference
+      return `<span class="katex-inline" style="user-select: none; pointer-events: none; display: inline-block; vertical-align: middle;">${katexHTML}</span>`;
     } catch (error) {
       logger.error('KaTeX rendering error:', error);
       return match; // Return original if rendering fails
     }
   });
 
-  // Convert line breaks to paragraphs
-  processedContent = processedContent
-    .split('\n\n')
-    .filter(paragraph => paragraph.trim())
-    .map(paragraph => `<p>${paragraph.trim()}</p>`)
-    .join('');
+  // For highlighting to work properly, preserve the text structure
+  // Convert line breaks to <br> tags to maintain structure
+  processedContent = processedContent.replace(/\n\n/g, '<br><br>');
+  processedContent = processedContent.replace(/\n/g, '<br>');
 
   return processedContent;
 };
@@ -55,11 +57,13 @@ export const renderContent = (content, sectionType) => {
   // Replace KaTeX delimiters with rendered math
   processedContent = processedContent.replace(/\$\$(.*?)\$\$/g, (match, tex) => {
     try {
-      return katex.renderToString(tex, {
+      const katexHTML = katex.renderToString(tex, {
         displayMode: true,
         throwOnError: false,
         errorColor: '#cc0000'
       });
+      // Wrap KaTeX display math in a container that prevents text selection interference
+      return `<div class="katex-display" style="margin: 1rem 0; text-align: center; user-select: none; pointer-events: none;">${katexHTML}</div>`;
     } catch (error) {
       logger.error('KaTeX rendering error:', error);
       return match;
@@ -68,11 +72,13 @@ export const renderContent = (content, sectionType) => {
 
   processedContent = processedContent.replace(/\$(.*?)\$/g, (match, tex) => {
     try {
-      return katex.renderToString(tex, {
+      const katexHTML = katex.renderToString(tex, {
         displayMode: false,
         throwOnError: false,
         errorColor: '#cc0000'
       });
+      // Wrap KaTeX inline math in a span that prevents text selection interference
+      return `<span class="katex-inline" style="user-select: none; pointer-events: none; display: inline-block; vertical-align: middle;">${katexHTML}</span>`;
     } catch (error) {
       logger.error('KaTeX rendering error:', error);
       return match;
@@ -83,12 +89,9 @@ export const renderContent = (content, sectionType) => {
   if (sectionType === 'math') {
     processedContent = processedContent.replace(/\n/g, '<br>');
   } else {
-    // For other sections, convert double line breaks to paragraphs
-    processedContent = processedContent
-      .split('\n\n')
-      .filter(paragraph => paragraph.trim())
-      .map(paragraph => `<p>${paragraph.trim()}</p>`)
-      .join('');
+    // For other sections, preserve text structure for highlighting
+    processedContent = processedContent.replace(/\n\n/g, '<br><br>');
+    processedContent = processedContent.replace(/\n/g, '<br>');
   }
 
   return processedContent;
