@@ -23,51 +23,61 @@ const PORT = process.env.PORT || 5000;
 app.set('trust proxy', 1);
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'", "data:"],
-      scriptSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "'unsafe-eval'",
-        "https://www.desmos.com"
-      ],
-      styleSrc: [
-        "'self'",
-        "'unsafe-inline'",
-        "https://fonts.googleapis.com"
-      ],
-      fontSrc: [
-        "'self'",
-        "https://fonts.gstatic.com",
-        "data:"
-      ],
-      imgSrc: [
-        "'self'",
-        "data:",
-        "https:",
-        "blob:"
-      ],
-      mediaSrc: [
-        "'self'",
-        "data:",
-        "https:",
-        "blob:"
-      ],
-      connectSrc: [
-        "'self'",
-        "https://www.desmos.com",
-        "https://*.railway.app"
-      ],
-      frameSrc: [
-        "'self'",
-        "https://www.desmos.com",
-        "https://*.railway.app"
-      ]
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_URL;
+
+// Disable CSP in development to avoid localhost connection issues
+if (isDevelopment) {
+  app.use(helmet({
+    contentSecurityPolicy: false
+  }));
+} else {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'", "data:"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "https://www.desmos.com"
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://fonts.googleapis.com"
+        ],
+        fontSrc: [
+          "'self'",
+          "https://fonts.gstatic.com",
+          "data:"
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https:",
+          "blob:"
+        ],
+        mediaSrc: [
+          "'self'",
+          "data:",
+          "https:",
+          "blob:"
+        ],
+        connectSrc: [
+          "'self'",
+          "https://www.desmos.com",
+          "https://*.railway.app"
+        ],
+        frameSrc: [
+          "'self'",
+          "https://www.desmos.com",
+          "https://*.railway.app"
+        ]
+      }
     }
-  }
-}));
+  }));
+}
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? [
