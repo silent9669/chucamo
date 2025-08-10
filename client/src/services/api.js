@@ -12,9 +12,10 @@ const api = axios.create({
         return `https://${envUrl}`;
       }
     }
+    // If no env URL, use production URL or fallback to /api
     return process.env.NODE_ENV === 'production' 
       ? 'https://bunchable-production.up.railway.app/api' 
-      : '/api';
+      : 'http://localhost:5000/api';  // Explicit localhost for development
   })(),
   timeout: 30000, // Increased timeout for test loading
   headers: {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, Monitor, Play, Share, Target, Home, ChevronRight } from 'lucide-react';
+import { Book, Monitor, Play, Target, Home, ChevronRight } from 'lucide-react';
 
 const StudyPlan = () => {
   const [hoveredCard, setHoveredCard] = useState(null);
@@ -12,18 +12,27 @@ const StudyPlan = () => {
       title: 'LIBRARY',
       description: 'Access comprehensive study materials and resources',
       icon: Book,
-      gradient: 'from-blue-500 to-blue-600',
-      hoverGradient: 'from-blue-400 to-blue-500',
+      gradient: 'from-indigo-500 to-indigo-600',
+      hoverGradient: 'from-indigo-400 to-indigo-500',
       href: '/library'
     },
     {
-      id: 'vocabulary',
-      title: 'VOCABULARY',
-      description: 'Build your SAT vocabulary with interactive lessons',
-      icon: Monitor,
+      id: 'daily-vocabulary',
+      title: 'DAILY VOCABULARY',
+      description: 'Access daily vocabulary sets and build your word knowledge',
+      icon: Book,
       gradient: 'from-emerald-500 to-emerald-600',
       hoverGradient: 'from-emerald-400 to-emerald-500',
-      href: '/daily-vocab'
+      href: '/vocab-sets'
+    },
+    {
+      id: 'vocabulary-quiz',
+      title: 'VOCABULARY QUIZ',
+      description: 'Test your vocabulary with interactive quizzes',
+      icon: Monitor,
+      gradient: 'from-blue-500 to-blue-600',
+      hoverGradient: 'from-blue-400 to-blue-500',
+      href: '/vocab-quizzes'
     },
     {
       id: 'recording',
@@ -31,23 +40,18 @@ const StudyPlan = () => {
       description: 'Record and review your study sessions',
       icon: Play,
       gradient: 'from-violet-500 to-violet-600',
-      hoverGradient: 'from-violet-400 to-violet-500'
+      hoverGradient: 'from-violet-400 to-violet-500',
+      href: '/recording'
     },
-    {
-      id: 'sharing',
-      title: 'SHARING IS CARING',
-      description: 'Share study tips and collaborate with peers',
-      icon: Share,
-      gradient: 'from-pink-500 to-pink-600',
-      hoverGradient: 'from-pink-400 to-pink-500'
-    },
+
     {
       id: 'planning',
       title: 'PLAN YOUR FUTURE',
       description: 'Set goals and track your academic progress',
       icon: Target,
       gradient: 'from-orange-500 to-orange-600',
-      hoverGradient: 'from-orange-400 to-orange-500'
+      hoverGradient: 'from-orange-400 to-orange-500',
+      href: '/plan-future'
     },
     {
       id: 'pethouse',
@@ -55,7 +59,8 @@ const StudyPlan = () => {
       description: 'Your personal study space and achievements',
       icon: Home,
       gradient: 'from-teal-500 to-teal-600',
-      hoverGradient: 'from-teal-400 to-teal-500'
+      hoverGradient: 'from-teal-400 to-teal-500',
+      href: '/pet-house'
     }
   ];
 

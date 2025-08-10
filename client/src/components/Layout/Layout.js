@@ -312,11 +312,26 @@ const Layout = ({ children, hideNavigation = false }) => {
                       return 'Library';
                     } else if (currentPath === '/study-plan') {
                       return 'Study Plan';
+                    } else if (currentPath === '/vocab-sets') {
+                      return 'Daily Vocabulary';
+                    } else if (currentPath === '/vocab-quizzes') {
+                      return 'Vocabulary Quiz';
                     } else if (currentPath === '/daily-vocab') {
                       return 'Daily Vocabulary';
                     } else if (currentPath === '/vocab-quiz') {
                       return 'Vocabulary Quiz';
+                    } else if (currentPath === '/recording') {
+                      return 'Recording';
+                    } else if (currentPath === '/plan-future') {
+                      return 'Plan Your Future';
+                    } else if (currentPath === '/pet-house') {
+                      return 'Pet House';
                     } else {
+                      // Don't show "Dashboard" for Study Plan related pages
+                      const studyPlanPages = ['/library', '/vocab-sets', '/vocab-quizzes', '/recording', '/plan-future', '/pet-house'];
+                      if (studyPlanPages.some(page => currentPath.startsWith(page))) {
+                        return navigation.find(item => isActive(item.href))?.name || '';
+                      }
                       return navigation.find(item => isActive(item.href))?.name || 'Dashboard';
                     }
                   })()}

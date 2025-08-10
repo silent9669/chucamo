@@ -22,6 +22,11 @@ import Admin from './pages/Admin/Admin';
 import SATScoreCalculator from './pages/SATScoreCalculator';
 import StudyPlan from './pages/StudyPlan/StudyPlan';
 import DailyVocab from './pages/DailyVocab/DailyVocab';
+import VocabSets from './pages/VocabSets/VocabSets';
+import VocabQuizzes from './pages/VocabQuizzes/VocabQuizzes';
+import PlanFuture from './pages/PlanFuture/PlanFuture';
+import PetHouse from './pages/PetHouse/PetHouse';
+import Recording from './pages/Recording/Recording';
 import UpgradePlan from './pages/UpgradePlan/UpgradePlan';
 
 // Protected Route Component
@@ -117,6 +122,61 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <DailyVocab />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/vocab-sets"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <VocabSets />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/vocab-quizzes"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <VocabQuizzes />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/plan-future"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PlanFuture />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pet-house"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <PetHouse />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/recording"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Recording />
             </Layout>
           </ProtectedRoute>
         }

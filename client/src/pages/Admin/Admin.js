@@ -10,6 +10,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import logger from '../../utils/logger';
 import StudyPlanManagement from './StudyPlanManagement';
 import DailyVocabManagement from './DailyVocabManagement';
+import VocabQuizManagement from './VocabQuizManagement';
+import RecordingManagement from './RecordingManagement';
 
 // Basic input components
 const DirectInput = ({ value, onChange, placeholder }) => (
@@ -67,21 +69,27 @@ const AdminDashboard = () => (
       </div>
       <div className="card p-6 text-center">
         <FiTarget className="w-8 h-8 text-primary-600 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold mb-2">Library Management</h3>
-          <p className="text-gray-600 text-sm mb-4">Manage library content and materials</p>
-                        <Link to="/library-management" className="btn-primary btn-sm">Manage Library</Link>
+        <h3 className="text-lg font-semibold mb-2">Library Management</h3>
+        <p className="text-gray-600 text-sm mb-4">Manage library content and materials</p>
+        <Link to="/library-management" className="btn-primary btn-sm">Manage Library</Link>
       </div>
       <div className="card p-6 text-center">
         <FiBookOpen className="w-8 h-8 text-primary-600 mx-auto mb-3" />
         <h3 className="text-lg font-semibold mb-2">Recording Management</h3>
         <p className="text-sm mb-4">Create and manage recordings for students</p>
-        <Link to="/admin/analytics" className="btn-primary btn-sm">Manage Recordings</Link>
+        <Link to="/admin/recordings" className="btn-primary btn-sm">Manage Recordings</Link>
       </div>
       <div className="card p-6 text-center">
         <FiBookmark className="w-8 h-8 text-primary-600 mx-auto mb-3" />
-        <h3 className="text-lg font-semibold mb-2">Vocabulary Management</h3>
-        <p className="text-gray-600 text-sm mb-4">Create and manage daily vocabulary entries</p>
+        <h3 className="text-lg font-semibold mb-2">Daily Vocabulary</h3>
+        <p className="text-gray-600 text-sm mb-4">Create and manage daily vocabulary sets</p>
         <Link to="/admin/daily-vocab" className="btn-primary btn-sm">Manage Vocabulary</Link>
+      </div>
+      <div className="card p-6 text-center">
+        <FiBookOpen className="w-8 h-8 text-primary-600 mx-auto mb-3" />
+        <h3 className="text-lg font-semibold mb-2">Vocabulary Quizzes</h3>
+        <p className="text-gray-600 text-sm mb-4">Create and manage vocabulary quizzes</p>
+        <Link to="/admin/vocab-quiz" className="btn-primary btn-sm">Manage Quizzes</Link>
       </div>
     </div>
   </div>
@@ -4108,7 +4116,9 @@ const Admin = () => {
       <Route path="/real-tests" element={<RealTestManagement />} />
       <Route path="/mock-tests" element={<MockTestManagement />} />
       <Route path="/analytics" element={<StudyPlanManagementComponent />} />
+      <Route path="/recordings" element={<RecordingManagement />} />
       <Route path="/daily-vocab" element={<DailyVocabManagement />} />
+      <Route path="/vocab-quiz" element={<VocabQuizManagement />} />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>
   );
