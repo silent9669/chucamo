@@ -167,7 +167,6 @@ app.get('/test', (req, res) => {
 // Serve React app in production, Railway deployment, or when build directory exists
 const buildPath = path.join(__dirname, '../client/build');
 const buildExists = fs.existsSync(buildPath);
-const isRailway = process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_URL;
 
 if (process.env.NODE_ENV === 'production' || isRailway || buildExists) {
   // Serve static files from React build
