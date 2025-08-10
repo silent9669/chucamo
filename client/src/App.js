@@ -313,8 +313,10 @@ function AppRoutes() {
       <Route
         path="/upgrade-plan"
         element={
-          <ProtectedRoute>
-            <UpgradePlan />
+          <ProtectedRoute roles={['admin']}>
+            <Layout>
+              <UpgradePlan />
+            </Layout>
           </ProtectedRoute>
         }
       />
