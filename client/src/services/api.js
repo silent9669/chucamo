@@ -3,7 +3,9 @@ import axios from 'axios';
 // Create axios instance
 const api = axios.create({
   baseURL: (() => {
+    // Check for environment-specific API URL first
     const envUrl = process.env.REACT_APP_API_URL;
+    
     if (envUrl) {
       // Ensure the URL has the correct protocol
       if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
@@ -12,10 +14,21 @@ const api = axios.create({
         return `https://${envUrl}`;
       }
     }
-    // If no env URL, use production URL or fallback to /api
-    return process.env.NODE_ENV === 'production' 
-      ? 'https://bunchable-production.up.railway.app/api' 
-      : 'http://localhost:5000/api';  // Explicit localhost for development
+    
+    // Production fallback - check multiple possible Railway URLs
+    if (process.env.NODE_ENV === 'production') {
+      // Try to get the current hostname and use it for the API
+      const currentHost = window.location.hostname;
+      if (currentHost && currentHost !== 'localhost') {
+        return `https://${currentHost}/api`;
+      }
+      
+      // Fallback to known Railway URL
+      return 'https://bunchable-production.up.railway.app/api';
+    }
+    
+    // Development fallback
+    return 'http://localhost:5000/api';
   })(),
   timeout: 30000, // Increased timeout for test loading
   headers: {
@@ -36,7 +49,9 @@ api.interceptors.request.use(
       url: config.url,
       method: config.method,
       baseURL: config.baseURL,
-      hasToken: !!token
+      hasToken: !!token,
+      environment: process.env.NODE_ENV,
+      currentHost: window.location.hostname
     });
     
     return config;
@@ -54,10 +69,13 @@ api.interceptors.response.use(
     console.error('API Error:', {
       url: error.config?.url,
       method: error.config?.method,
+      baseURL: error.config?.baseURL,
       status: error.response?.status,
       statusText: error.response?.statusText,
       message: error.message,
-      code: error.code
+      code: error.code,
+      environment: process.env.NODE_ENV,
+      currentHost: window.location.hostname
     });
     
     if (error.response?.status === 401) {
