@@ -352,19 +352,140 @@
   -ms-user-select: text;
 }
 
-/* KaTeX element styles */
+/* KaTeX element styles - consistent sizing and enabled text selection */
 .katex-display {
-  margin: 1rem 0;
-  text-align: center;
-  -webkit-user-select: none;
-  user-select: none;
-  pointer-events: none;
+  font-size: inherit !important;
+  margin: 0.25rem 0 !important;
+  text-align: center !important;
+  line-height: 1.2 !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  pointer-events: auto !important;
 }
 
 .katex-inline {
-  -webkit-user-select: none;
-  user-select: none;
-  pointer-events: none;
-  display: inline-block;
-  vertical-align: middle;
+  font-size: inherit !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  pointer-events: auto !important;
+  display: inline !important;
+  vertical-align: baseline !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Additional KaTeX styling for better integration */
+.katex {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.katex-display-container {
+  font-size: inherit !important;
+  margin: 0.25rem 0 !important;
+  text-align: center !important;
+  line-height: 1.2 !important;
+  display: block !important;
+}
+
+.katex-inline-container {
+  font-size: inherit !important;
+  display: inline !important;
+  vertical-align: baseline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
+  /* Critical: prevent automatic spacing */
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  pointer-events: auto !important;
+}
+
+/* Responsive KaTeX sizing - consistent with parent */
+@media (max-width: 768px) {
+  .katex-display,
+  .katex-inline,
+  .katex,
+  .katex-display-container,
+  .katex-inline-container {
+    font-size: inherit !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .katex-display,
+  .katex-inline,
+  .katex,
+  .katex-display-container,
+  .katex-inline-container {
+    font-size: inherit !important;
+  }
+}
+
+/* Critical: prevent automatic spacing between KaTeX elements */
+.katex-inline-container + .katex-inline-container,
+.katex-inline + .katex-inline {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Ensure text flows naturally without gaps */
+.katex-inline-container + span,
+span + .katex-inline-container,
+.katex-inline-container + div,
+div + .katex-inline-container,
+.katex-inline + span,
+span + .katex-inline,
+.katex-inline + div,
+div + .katex-inline {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Prevent any automatic spacing in reading passages */
+.katex-inline-container,
+.katex-inline {
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+}
+
+/* Additional KaTeX overrides to ensure consistent behavior */
+.katex .katex-html {
+  font-size: inherit !important;
+}
+
+.katex .katex-html .base {
+  font-size: inherit !important;
+}
+
+.katex .katex-html .strut {
+  font-size: inherit !important;
+}
+
+/* Ensure no unwanted spacing between KaTeX and regular text */
+.katex-inline-container + text,
+text + .katex-inline-container,
+.katex-inline + text,
+text + .katex-inline {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Override any KaTeX default spacing */
+.katex .katex-html .base .mord {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.katex .katex-html .base .mrel {
+  margin: 0 !important;
+  padding: 0 !important;
 }

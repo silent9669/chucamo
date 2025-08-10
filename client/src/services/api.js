@@ -27,8 +27,8 @@ const api = axios.create({
       return 'https://chucamo-production.up.railway.app/api';
     }
     
-    // Development fallback
-    return 'http://localhost:5000/api';
+    // Development fallback - use proxy
+    return '/api';
   })(),
   timeout: 30000, // Increased timeout for test loading
   headers: {
