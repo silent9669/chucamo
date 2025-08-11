@@ -17,7 +17,7 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
     if (previewMode) {
       renderPreview();
     }
-  }, [previewMode, inputValue]);
+  }, [previewMode, inputValue, renderPreview]);
 
   const handleInputChange = (e) => {
     const newValue = e.target.value;
