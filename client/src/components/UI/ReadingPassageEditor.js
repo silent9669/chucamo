@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -25,7 +25,7 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
     onChange(newValue);
   };
 
-  const renderPreview = () => {
+  const renderPreview = useCallback(() => {
     if (!inputValue) {
       setPreviewContent('');
       return;
@@ -104,7 +104,7 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
       console.error('Error rendering preview:', error);
       setPreviewContent(`<div style="color: #cc0000;">Error rendering preview: ${error.message}</div>`);
     }
-  };
+  }, [inputValue]);
 
   const togglePreview = () => {
     setPreviewMode(!previewMode);
