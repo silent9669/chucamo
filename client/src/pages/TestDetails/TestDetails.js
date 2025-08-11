@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
+import RichTextDisplay from '../../components/UI/RichTextDisplay';
 import { testsAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
@@ -537,7 +538,15 @@ const TestDetails = () => {
                       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                         <h4 className="font-medium text-gray-900 mb-2">Reading Passage</h4>
                         <div className="text-gray-700 leading-relaxed">
-                          <KaTeXDisplay content={currentQuestionData.passage} fontFamily="serif" />
+                          {getCurrentSectionData()?.type === 'english' ? (
+                            <RichTextDisplay 
+                              content={currentQuestionData.passage} 
+                              sectionType={getCurrentSectionData()?.type}
+                              fontFamily="serif"
+                            />
+                          ) : (
+                            <KaTeXDisplay content={currentQuestionData.passage} fontFamily="serif" />
+                          )}
                         </div>
                       </div>
                     )}
@@ -564,7 +573,15 @@ const TestDetails = () => {
                      <div className="mb-6">
                        <h4 className="font-medium text-gray-900 mb-3">Question</h4>
                        <div className="text-gray-700 leading-relaxed" style={{ fontFamily: 'serif' }}>
-                         <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} fontFamily="serif" />
+                         {getCurrentSectionData()?.type === 'english' ? (
+                           <RichTextDisplay 
+                             content={currentQuestionData.question || currentQuestionData.content}
+                             sectionType={getCurrentSectionData()?.type}
+                             fontFamily="serif"
+                           />
+                         ) : (
+                           <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} fontFamily="serif" />
+                         )}
                        </div>
                      </div>
 
@@ -607,7 +624,15 @@ const TestDetails = () => {
                                     </span>
                                   </div>
                                                                      <div className="flex-1" style={{ fontFamily: 'serif' }}>
-                                     <KaTeXDisplay content={option.content} fontFamily="serif" />
+                                     {getCurrentSectionData()?.type === 'english' ? (
+                                       <RichTextDisplay 
+                                         content={option.content}
+                                         sectionType={getCurrentSectionData()?.type}
+                                         fontFamily="serif"
+                                       />
+                                     ) : (
+                                       <KaTeXDisplay content={option.content} fontFamily="serif" />
+                                     )}
                                    </div>
                                   {showAnswers && status === 'correct' && (
                                     <FiCheck className="h-5 w-5 text-green-600 ml-2" />
@@ -696,7 +721,14 @@ const TestDetails = () => {
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h4 className="font-medium text-blue-900 mb-2">Explanation</h4>
                         <div className="text-blue-800">
-                          <KaTeXDisplay content={currentQuestionData.explanation} />
+                          {getCurrentSectionData()?.type === 'english' ? (
+                            <RichTextDisplay 
+                              content={currentQuestionData.explanation}
+                              sectionType={getCurrentSectionData()?.type}
+                            />
+                          ) : (
+                            <KaTeXDisplay content={currentQuestionData.explanation} />
+                          )}
                         </div>
                       </div>
                     )}

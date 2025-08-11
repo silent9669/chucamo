@@ -5,6 +5,8 @@ import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, Fi
 import { testsAPI, usersAPI } from '../../services/api';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import MultipleAnswersEditor from '../../components/UI/MultipleAnswersEditor';
+import ReadingPassageEditor from '../../components/UI/ReadingPassageEditor';
+import SimpleRichTextEditor from '../../components/UI/SimpleRichTextEditor';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import logger from '../../utils/logger';
@@ -2329,25 +2331,36 @@ const RealTestManagement = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Reading Passage
               </label>
-              <KaTeXEditor
-                  value={currentQuestion.passage}
+              <SimpleRichTextEditor
+                value={currentQuestion.passage}
                 onChange={handlePassageChange}
                 placeholder="Enter the reading passage here..."
                 rows={8}
-                />
-              </div>
-            )}
+                sectionType={currentSection.type}
+              />
+            </div>
+          )}
 
           <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
               Question Text
                 </label>
-            <KaTeXEditor
-              value={currentQuestion.question}
-              onChange={handleQuestionChange}
-              placeholder="Enter your question here..."
-              rows={3}
-            />
+            {currentSection.type === 'english' ? (
+              <SimpleRichTextEditor
+                value={currentQuestion.question}
+                onChange={handleQuestionChange}
+                placeholder="Enter your question here..."
+                rows={3}
+                sectionType={currentSection.type}
+              />
+            ) : (
+              <KaTeXEditor
+                value={currentQuestion.question}
+                onChange={handleQuestionChange}
+                placeholder="Enter your question here..."
+                rows={3}
+              />
+            )}
           </div>
 
           <div>
@@ -2424,12 +2437,22 @@ const RealTestManagement = () => {
                         {String.fromCharCode(65 + index)}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <KaTeXEditor
-                          value={option}
-                          onChange={(value) => handleOptionChange(index, value)}
-                          placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                          rows={3}
-                        />
+                        {currentSection.type === 'english' ? (
+                          <SimpleRichTextEditor
+                            value={option}
+                            onChange={(value) => handleOptionChange(index, value)}
+                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            rows={3}
+                            sectionType={currentSection.type}
+                          />
+                        ) : (
+                          <KaTeXEditor
+                            value={option}
+                            onChange={(value) => handleOptionChange(index, value)}
+                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            rows={3}
+                          />
+                        )}
                       </div>
                       {currentQuestion.options.length > 2 && (
                         <button
@@ -2463,12 +2486,22 @@ const RealTestManagement = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
               Explanation
               </label>
-            <KaTeXEditor
+            {currentSection.type === 'english' ? (
+              <SimpleRichTextEditor
                 value={currentQuestion.explanation}
-              onChange={handleExplanationChange}
-              placeholder="Explain the correct answer..."
+                onChange={handleExplanationChange}
+                placeholder="Explain the correct answer..."
+                rows={3}
+                sectionType={currentSection.type}
+              />
+            ) : (
+              <KaTeXEditor
+                value={currentQuestion.explanation}
+                onChange={handleExplanationChange}
+                placeholder="Explain the correct answer..."
                 rows={3}
               />
+            )}
           </div>
         </div>
       </div>
@@ -3930,14 +3963,15 @@ const MockTestManagement = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                 Reading Passage
                 </label>
-              <KaTeXEditor
+              <SimpleRichTextEditor
                 value={currentQuestion.passage}
                 onChange={handlePassageChange}
                 placeholder="Enter the reading passage here..."
                 rows={8}
-                />
-              </div>
-            )}
+                sectionType={currentSection.type}
+              />
+            </div>
+          )}
 
           <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -4025,12 +4059,22 @@ const MockTestManagement = () => {
                         {String.fromCharCode(65 + index)}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <KaTeXEditor
-                          value={option}
-                          onChange={(value) => handleOptionChange(index, value)}
-                          placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                          rows={3}
-                        />
+                        {currentSection.type === 'english' ? (
+                          <SimpleRichTextEditor
+                            value={option}
+                            onChange={(value) => handleOptionChange(index, value)}
+                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            rows={3}
+                            sectionType={currentSection.type}
+                          />
+                        ) : (
+                          <KaTeXEditor
+                            value={option}
+                            onChange={(value) => handleOptionChange(index, value)}
+                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            rows={3}
+                          />
+                        )}
                       </div>
                       {currentQuestion.options.length > 2 && (
                         <button
@@ -4064,12 +4108,22 @@ const MockTestManagement = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
               Explanation
               </label>
-            <KaTeXEditor
+            {currentSection.type === 'english' ? (
+              <SimpleRichTextEditor
                 value={currentQuestion.explanation}
-              onChange={handleExplanationChange}
-              placeholder="Explain the correct answer..."
+                onChange={handleExplanationChange}
+                placeholder="Explain the correct answer..."
+                rows={3}
+                sectionType={currentSection.type}
+              />
+            ) : (
+              <KaTeXEditor
+                value={currentQuestion.explanation}
+                onChange={handleExplanationChange}
+                placeholder="Explain the correct answer..."
                 rows={3}
               />
+            )}
           </div>
         </div>
       </div>

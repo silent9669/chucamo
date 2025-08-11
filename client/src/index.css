@@ -259,18 +259,14 @@
 
 /* Custom highlight styles */
 .custom-highlight {
-  transition: all 0.2s ease;
+  position: relative;
+  display: inline;
   cursor: pointer;
+  transition: all 0.2s ease;
   border-radius: 2px;
   padding: 1px 2px;
   margin: 0;
-  display: inline;
-  position: relative;
   z-index: 1000;
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
 }
 
 .custom-highlight:hover {
@@ -280,19 +276,249 @@
 
 /* Highlight color classes */
 .custom-highlight.yellow {
-  background-color: #fef08a !important;
+  background-color: #ffeb3b !important;
 }
 
 .custom-highlight.green {
-  background-color: #bbf7d0 !important;
+  background-color: #4caf50 !important;
 }
 
 .custom-highlight.blue {
-  background-color: #bfdbfe !important;
+  background-color: #2196f3 !important;
 }
 
 .custom-highlight.pink {
-  background-color: #fecaca !important;
+  background-color: #e91e63 !important;
+}
+
+/* Rich text highlighting styles */
+.rich-text-highlight {
+  background-color: var(--highlight-color, #ffeb3b) !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  text-decoration: inherit !important;
+  text-shadow: none !important;
+}
+
+.rich-text-highlight .rich-text-bold,
+.rich-text-highlight .rich-text-italic,
+.rich-text-highlight .rich-text-underline {
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* Enhanced formatting preservation for highlighted rich text */
+.rich-text-highlight strong,
+.rich-text-highlight .rich-text-bold {
+  font-weight: bold !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+}
+
+.rich-text-highlight em,
+.rich-text-highlight .rich-text-italic {
+  font-style: italic !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+}
+
+.rich-text-highlight u,
+.rich-text-highlight .rich-text-underline {
+  text-decoration: underline !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+}
+
+/* Ensure proper highlighting behavior for rich text */
+.rich-text-content {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.rich-text-content .custom-highlight {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Highlight mode cursor */
+.highlighter-cursor {
+  cursor: text !important;
+}
+
+.highlighter-cursor * {
+  cursor: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Ensure proper spacing and layout for highlighted content */
+.custom-highlight {
+  display: inline !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  word-break: keep-all !important;
+  white-space: normal !important;
+}
+
+/* Rich text display styles */
+.rich-text-display {
+  font-family: serif;
+  line-height: 1.6;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+.rich-text-bold {
+  font-weight: bold;
+}
+
+.rich-text-italic {
+  font-style: italic;
+}
+
+.rich-text-underline {
+  text-decoration: underline;
+}
+
+/* SimpleRichText specific styles for highlighting */
+.simple-rich-text {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text;
+  word-break: break-word;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  pointer-events: auto !important;
+}
+
+.simple-rich-text .rich-text-bold {
+  font-weight: bold;
+  color: inherit;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+.simple-rich-text .rich-text-italic {
+  font-style: italic;
+  color: inherit;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+.simple-rich-text .rich-text-underline {
+  text-decoration: underline;
+  color: inherit;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+}
+
+/* Ensure highlighting works properly with SimpleRichText */
+.simple-rich-text .custom-highlight {
+  background-color: var(--highlight-color, #ffeb3b) !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  text-decoration: inherit !important;
+  text-shadow: none !important;
+  display: inline !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  word-break: keep-all !important;
+  white-space: normal !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.simple-rich-text .custom-highlight .rich-text-bold {
+  font-weight: bold !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.simple-rich-text .custom-highlight .rich-text-italic {
+  font-style: italic !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.simple-rich-text .custom-highlight .rich-text-underline {
+  text-decoration: underline !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure highlighted text remains selectable */
+.custom-highlight {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.custom-highlight * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+/* Highlight animation */
+@keyframes highlightPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Enhanced text selection for highlighting */
+.simple-rich-text * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
 }
 
 /* Passage content styles */
@@ -311,11 +537,11 @@
 
 /* Reading passage styles for better text selection */
 .reading-passage {
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  cursor: text;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
   word-break: break-word;
   white-space: pre-wrap;
   line-height: 1.6;
@@ -324,10 +550,11 @@
 
 /* Ensure text selection works properly */
 .reading-passage * {
-  user-select: text;
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
 }
 
 /* Text content styles for highlighting */
@@ -488,4 +715,406 @@ text + .katex-inline {
 .katex .katex-html .base .mrel {
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* KaTeX Display and Inline Styling */
+.katex-display {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+  font-size: 1.1em;
+  line-height: 1.2;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+  position: relative;
+  z-index: 1;
+}
+
+.katex-inline {
+  display: inline;
+  font-size: 1em;
+  line-height: 1.2;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure KaTeX elements can be highlighted */
+.katex-display[data-original-text],
+.katex-inline[data-original-text] {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Highlighting styles for KaTeX content */
+.katex-display .custom-highlight,
+.katex-inline .custom-highlight {
+  background-color: inherit !important;
+  color: inherit !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  display: inline !important;
+  position: relative !important;
+  z-index: 1001 !important;
+  transition: all 0.2s ease !important;
+  font-weight: normal !important;
+  border: none !important;
+  margin: 0 !important;
+}
+
+/* Ensure highlighting works within KaTeX elements */
+.katex-display .custom-highlight,
+.katex-inline .custom-highlight {
+  background-color: var(--highlight-color, #ffeb3b) !important;
+  color: #000 !important;
+  padding: 1px 2px !important;
+  border-radius: 2px !important;
+}
+
+/* Improve text selection for KaTeX elements */
+.katex-display,
+.katex-inline {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Ensure proper spacing for highlighted KaTeX */
+.katex-display .custom-highlight + .custom-highlight,
+.katex-inline .custom-highlight + .custom-highlight {
+  margin-left: 1px;
+}
+
+/* Highlight animation for KaTeX elements */
+@keyframes katexHighlightPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.katex-display .custom-highlight,
+.katex-inline .custom-highlight {
+  animation: katexHighlightPulse 0.5s ease-in-out;
+}
+
+/* Better KaTeX spacing and integration */
+.katex-display,
+.katex-inline {
+  margin: 0.2em 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Critical KaTeX spacing fixes to prevent auto-spacing and text loss */
+.katex-inline {
+  vertical-align: baseline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  line-height: inherit !important;
+  position: relative !important;
+  top: 0 !important;
+  bottom: 0 !important;
+}
+
+.katex-display {
+  margin: 0.2em 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
+  white-space: normal !important;
+  text-align: center !important;
+}
+
+/* Prevent KaTeX from breaking text flow */
+.katex-inline + span,
+span + .katex-inline,
+.katex-inline + text,
+text + .katex-inline {
+  white-space: normal !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure KaTeX highlights don't break layout */
+.katex-display .custom-highlight,
+.katex-inline .custom-highlight {
+  vertical-align: baseline !important;
+  margin: 0 !important;
+  padding: 1px 2px !important;
+  display: inline !important;
+  white-space: nowrap !important;
+}
+
+/* Prevent any automatic spacing in reading passages */
+.katex-inline-container,
+.katex-inline {
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+}
+
+/* Ensure no unwanted spacing between KaTeX and regular text */
+.katex-inline-container + text,
+text + .katex-inline-container,
+.katex-inline + text,
+text + .katex-inline {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Override any KaTeX default spacing */
+.katex .katex-html .base .mord {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.katex .katex-html .base .mrel {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Font size responsive spacing */
+.passage-content,
+.reading-passage,
+.question-content {
+  transition: all 0.3s ease;
+}
+
+/* Better spacing for different font sizes */
+.font-size-14 {
+  line-height: 1.4 !important;
+  letter-spacing: 0.005em;
+}
+
+.font-size-16 {
+  line-height: 1.5 !important;
+  letter-spacing: 0.01em;
+}
+
+.font-size-18 {
+  line-height: 1.6 !important;
+  letter-spacing: 0.015em;
+}
+
+.font-size-20 {
+  line-height: 1.7 !important;
+  letter-spacing: 0.02em;
+}
+
+.font-size-22 {
+  line-height: 1.8 !important;
+  letter-spacing: 0.025em;
+}
+
+.font-size-24 {
+  line-height: 1.9 !important;
+  letter-spacing: 0.03em;
+}
+
+/* Ensure proper spacing for KaTeX elements at different font sizes */
+.katex-display.font-size-16,
+.katex-inline.font-size-16 {
+  margin: 0.4em 0;
+}
+
+.katex-display.font-size-18,
+.katex-inline.font-size-18 {
+  margin: 0.5em 0;
+}
+
+.katex-display.font-size-20,
+.katex-inline.font-size-20 {
+  margin: 0.6em 0;
+}
+
+.katex-display.font-size-22,
+.katex-inline.font-size-22 {
+  margin: 0.7em 0;
+}
+
+.katex-display.font-size-24,
+.katex-inline.font-size-24 {
+  margin: 0.8em 0;
+}
+
+/* Smooth transitions for font size changes */
+.passage-content,
+.reading-passage,
+.question-content,
+.katex-display,
+.katex-inline {
+  transition: all 0.3s ease;
+}
+
+/* Reading passage editor preview styles */
+.reading-passage-preview {
+  font-family: serif !important;
+  line-height: 1.6 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  word-wrap: break-word !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.reading-passage-preview p {
+  margin-bottom: 0.75em !important;
+  line-height: inherit !important;
+}
+
+.reading-passage-preview br {
+  line-height: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure KaTeX elements in editor preview have proper spacing */
+.reading-passage-preview .katex-display {
+  margin: 0.2em 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
+  white-space: normal !important;
+  text-align: center !important;
+}
+
+.reading-passage-preview .katex-inline {
+  vertical-align: baseline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: inherit !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  display: inline !important;
+  position: relative !important;
+  top: 0 !important;
+  bottom: 0 !important;
+}
+
+/* Prevent any automatic spacing in editor preview */
+.reading-passage-preview .katex-inline + span,
+.reading-passage-preview span + .katex-inline,
+.reading-passage-preview .katex-inline + text,
+.reading-passage-preview text + .katex-inline {
+  white-space: normal !important;
+  word-spacing: normal !important;
+  letter-spacing: normal !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Reading passage container - half page limitation */
+.reading-passage-container {
+  height: 50vh !important;
+  max-height: 50vh !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+/* Reading passage content - no scroll, auto-fit */
+.reading-passage {
+  height: 100% !important;
+  overflow: hidden !important;
+  padding: 1rem !important;
+  box-sizing: border-box !important;
+}
+
+/* Remove scroll bars from reading passage */
+.reading-passage::-webkit-scrollbar {
+  display: none !important;
+}
+
+.reading-passage {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Overlay-based highlighting for SimpleRichText - preserves formatting completely */
+.custom-highlight-overlay {
+  position: absolute !important;
+  background-color: var(--highlight-color, #ffeb3b) !important;
+  opacity: 0.3 !important;
+  pointer-events: none !important;
+  z-index: 1000 !important;
+  border-radius: 2px !important;
+  mix-blend-mode: multiply !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.custom-highlight-overlay:hover {
+  opacity: 0.5 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Ensure the reading passage container can handle overlays */
+.reading-passage-container {
+  position: relative;
+}
+
+.reading-passage {
+  position: relative;
+}
+
+/* Ensure SimpleRichText content maintains all formatting when highlighted */
+.simple-rich-text {
+  position: relative;
+  z-index: 1;
+}
+
+.simple-rich-text .rich-text-bold {
+  font-weight: bold !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.simple-rich-text .rich-text-italic {
+  font-style: italic !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
+}
+
+.simple-rich-text .rich-text-underline {
+  text-decoration: underline !important;
+  color: inherit !important;
+  background-color: transparent !important;
+  text-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  pointer-events: auto !important;
 }

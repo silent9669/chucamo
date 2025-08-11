@@ -28,6 +28,7 @@ import PlanFuture from './pages/PlanFuture/PlanFuture';
 import PetHouse from './pages/PetHouse/PetHouse';
 import Recording from './pages/Recording/Recording';
 import UpgradePlan from './pages/UpgradePlan/UpgradePlan';
+import HighlightingTest from './components/UI/HighlightingTest';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles = [] }) => {
@@ -316,6 +317,17 @@ function AppRoutes() {
           <ProtectedRoute roles={['admin']}>
             <Layout>
               <UpgradePlan />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/highlighting-test"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HighlightingTest />
             </Layout>
           </ProtectedRoute>
         }

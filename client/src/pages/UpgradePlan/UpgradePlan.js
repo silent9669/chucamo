@@ -92,7 +92,7 @@ const UpgradePlan = () => {
 
   return (
     <div className="pricing-page">
-      <style jsx>{`
+      <style>{`
         .pricing-page {
           font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
           background: #0a0a0a;
