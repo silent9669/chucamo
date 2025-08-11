@@ -9,22 +9,6 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
   const textareaRef = useRef(null);
   const previewRef = useRef(null);
 
-  useEffect(() => {
-    setInputValue(value || '');
-  }, [value]);
-
-  useEffect(() => {
-    if (previewMode) {
-      renderPreview();
-    }
-  }, [previewMode, inputValue, renderPreview]);
-
-  const handleInputChange = (e) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
-    onChange(newValue);
-  };
-
   const renderPreview = useCallback(() => {
     if (!inputValue) {
       setPreviewContent('');
@@ -73,7 +57,7 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
             });
             processedContent += `<span class="katex-inline" data-original-text="${part}" data-math-content="${mathContent}" data-katex-type="inline" style="vertical-align: baseline; margin: 0; padding: 0; line-height: inherit; white-space: normal; word-break: normal; page-break-inside: avoid; break-inside: avoid;">${renderedMath}</span>`;
           } catch (error) {
-            processedContent += `<span style="color: #cc0000;" data-original-text="${part}" data-katex-type="inline">Error: ${part}</span>`;
+            processedContent += `<span style="color: #cc0000;" data-original-text="${part}" data-katex-type="inline">Error: ${part}</div>`;
           }
         } else {
           // Regular text - preserve line breaks and spacing
@@ -105,6 +89,22 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
       setPreviewContent(`<div style="color: #cc0000;">Error rendering preview: ${error.message}</div>`);
     }
   }, [inputValue]);
+
+  useEffect(() => {
+    setInputValue(value || '');
+  }, [value]);
+
+  useEffect(() => {
+    if (previewMode) {
+      renderPreview();
+    }
+  }, [previewMode, inputValue, renderPreview]);
+
+  const handleInputChange = (e) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    onChange(newValue);
+  };
 
   const togglePreview = () => {
     setPreviewMode(!previewMode);
@@ -197,42 +197,44 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
         </div>
       </div>
 
-      {/* Editor/Preview Toggle */}
-      {previewMode ? (
-        <div className="border border-gray-300 rounded-lg p-4 bg-white min-h-[200px]">
-          <div 
-            ref={previewRef}
-            dangerouslySetInnerHTML={{ __html: previewContent }}
-            className="prose prose-sm max-w-none"
+      {/* Input Area */}
+      {!previewMode && (
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder || "Enter your reading passage here...\n\nUse $ for inline math and $$ for display math.\nExample:\n$E = mc^2$ for inline\n$$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}$$ for display"}
+            rows={rows}
+            className="w-full p-4 border border-gray-300 rounded-lg font-mono text-sm leading-relaxed resize-y focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            style={{ 
+              fontFamily: 'monospace',
+              lineHeight: '1.6',
+              whiteSpace: 'pre-wrap'
+            }}
           />
         </div>
-      ) : (
-        <textarea
-          ref={textareaRef}
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          rows={rows}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm resize-y"
-          style={{ 
-            fontFamily: 'monospace',
-            lineHeight: '1.6',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'normal'
-          }}
-        />
       )}
 
-      {/* Character count and info */}
-      <div className="flex justify-between items-center text-xs text-gray-500">
-        <span>
-          Characters: {inputValue.length} | Words: {inputValue.trim() ? inputValue.trim().split(/\s+/).length : 0}
-        </span>
-        <span>
-          {previewMode ? 'Preview Mode' : 'Edit Mode'} - Press Tab for indentation
-        </span>
-      </div>
+      {/* Preview Area */}
+      {previewMode && (
+        <div className="border border-gray-300 rounded-lg p-4 bg-white">
+          <div className="mb-2 text-sm text-gray-600 font-medium">Preview:</div>
+          <div 
+            ref={previewRef}
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: previewContent }}
+            style={{
+              fontFamily: 'serif',
+              lineHeight: '1.6',
+              whiteSpace: 'normal',
+              wordBreak: 'normal',
+              wordWrap: 'break-word'
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
