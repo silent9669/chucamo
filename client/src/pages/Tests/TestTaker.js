@@ -89,7 +89,50 @@ const TestTaker = () => {
   // Font size state
   const [fontSize, setFontSize] = useState(16); // Default font size in pixels
 
-
+  // Apply font size styling to content elements
+  const applyFontSizeStyling = useCallback(() => {
+    if (!contentRef.current) return;
+    
+    const contentElement = contentRef.current;
+    
+    // Remove existing font size classes
+    contentElement.classList.remove(
+      'font-size-14', 'font-size-16', 'font-size-18', 
+      'font-size-20', 'font-size-22', 'font-size-24'
+    );
+    
+    // Add current font size class
+    contentElement.classList.add(`font-size-${fontSize}`);
+    
+    // Update inline styles for immediate effect
+    contentElement.style.fontSize = `${fontSize}px`;
+    
+    // Apply responsive spacing based on font size
+    const paragraphs = contentElement.querySelectorAll('p');
+    paragraphs.forEach(p => {
+      p.style.fontSize = `${fontSize}px`;
+      
+      // Adjust line height based on font size
+      if (fontSize <= 16) {
+        p.style.lineHeight = '1.5';
+        p.style.marginBottom = '0.6em';
+      } else if (fontSize <= 18) {
+        p.style.lineHeight = '1.6';
+        p.style.marginBottom = '0.7em';
+      } else if (fontSize <= 20) {
+        p.style.lineHeight = '1.7';
+        p.style.marginBottom = '0.8em';
+      } else if (fontSize <= 22) {
+        p.style.lineHeight = '1.8';
+        p.style.marginBottom = '0.9em';
+      } else {
+        p.style.lineHeight = '1.9';
+        p.style.marginBottom = '1em';
+      }
+    });
+    
+    logger.debug('Applied font size styling:', fontSize);
+  }, [fontSize]);
   
   const [showReviewPage, setShowReviewPage] = useState(false);
 
@@ -234,7 +277,7 @@ const TestTaker = () => {
         applyFontSizeStyling();
       }
     }, 100);
-  }, []);
+  }, [applyFontSizeStyling]);
 
   // Load saved progress when test data is available
   useEffect(() => {
@@ -253,7 +296,7 @@ const TestTaker = () => {
         }
       }, 500);
     }
-  }, [test, questions]);
+  }, [test, questions, applyFontSizeStyling]);
 
   // Auto-save progress every 30 seconds
   useEffect(() => {
@@ -780,56 +823,11 @@ const TestTaker = () => {
   };
 
   // Apply font size styling to content elements
-  const applyFontSizeStyling = () => {
-    if (!contentRef.current) return;
-    
-    const contentElement = contentRef.current;
-    
-    // Remove existing font size classes
-    contentElement.classList.remove(
-      'font-size-14', 'font-size-16', 'font-size-18', 
-      'font-size-20', 'font-size-22', 'font-size-24'
-    );
-    
-    // Add current font size class
-    contentElement.classList.add(`font-size-${fontSize}`);
-    
-    // Update inline styles for immediate effect
-    contentElement.style.fontSize = `${fontSize}px`;
-    
-    // Apply responsive spacing based on font size
-    const paragraphs = contentElement.querySelectorAll('p');
-    paragraphs.forEach(p => {
-      p.style.fontSize = `${fontSize}px`;
-      
-      // Adjust line height based on font size
-      if (fontSize <= 16) {
-        p.style.lineHeight = '1.5';
-        p.style.marginBottom = '0.6em';
-      } else if (fontSize <= 18) {
-        p.style.lineHeight = '1.6';
-        p.style.marginBottom = '0.7em';
-      } else if (fontSize <= 20) {
-        p.style.lineHeight = '1.7';
-        p.style.marginBottom = '0.8em';
-      } else if (fontSize <= 22) {
-        p.style.lineHeight = '1.8';
-        p.style.marginBottom = '0.9em';
-      } else {
-        p.style.lineHeight = '1.9';
-        p.style.marginBottom = '1em';
-      }
-    });
-    
-    logger.debug('Applied font size styling:', fontSize);
-  };
-
-  // Apply font size styling when fontSize changes
   useEffect(() => {
     if (contentRef.current) {
       applyFontSizeStyling();
     }
-  }, [fontSize]);
+  }, [fontSize, applyFontSizeStyling]);
 
   // Apply font size styling when content is loaded (safer approach)
   useEffect(() => {
@@ -842,7 +840,7 @@ const TestTaker = () => {
         }
       }, 200);
     }
-  }, [test, currentSection, currentQuestion, fontSize]);
+  }, [test, currentSection, currentQuestion, fontSize, applyFontSizeStyling]);
 
   const closeCalculator = () => {
     setShowCalculator(false);
