@@ -15,6 +15,7 @@ import {
 import WrittenAnswerInput from '../../components/UI/WrittenAnswerInput';
 import CalculatorPopup from '../../components/UI/CalculatorPopup';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
+import RichTextDocument from '../../components/UI/RichTextDocument';
 import { testsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import katex from 'katex';
@@ -225,12 +226,34 @@ const TestTaker = () => {
     loadTestData();
   }, [testId, loadTestData]);
 
+  // Apply initial font size styling on component mount
+  useEffect(() => {
+    // Small delay to ensure component is fully mounted
+    setTimeout(() => {
+      if (contentRef.current) {
+        applyFontSizeStyling();
+      }
+    }, 100);
+  }, []);
+
   // Load saved progress when test data is available
   useEffect(() => {
     if (test && questions.length > 0) {
       loadSavedProgress();
     }
   }, [test, questions, loadSavedProgress]);
+
+  // Apply font size styling when test data is loaded
+  useEffect(() => {
+    if (test && questions.length > 0 && contentRef.current) {
+      // Small delay to ensure content is fully rendered
+      setTimeout(() => {
+        if (contentRef.current) {
+          applyFontSizeStyling();
+        }
+      }, 500);
+    }
+  }, [test, questions]);
 
   // Auto-save progress every 30 seconds
   useEffect(() => {
@@ -273,6 +296,30 @@ const TestTaker = () => {
 
     return () => clearInterval(timer);
   }, [isTimerStopped, test]);
+
+  // Handle timer reaching 0 - automatically go to review page
+  useEffect(() => {
+    if (timeLeft === 0 && test && !showReviewPage) {
+      logger.debug('Timer reached 0, automatically going to review page');
+      setShowReviewPage(true);
+      setShowQuestionNav(false);
+      
+      // If this is the final section, the review page will show only the finish button
+      // If there are more sections, the review page will show only the next button
+      // and the timer for the next section will start automatically
+    }
+  }, [timeLeft, test, showReviewPage]);
+
+  // Auto-start timer for next section when moving to review page
+  useEffect(() => {
+    if (showReviewPage && test && currentSection < test.sections.length - 1) {
+      // If there are more sections, start the timer for the next section
+      const nextSectionTime = test.sections[currentSection + 1].timeLimit * 60;
+      setTimeLeft(nextSectionTime);
+      setIsTimerStopped(false);
+      logger.debug('Auto-started timer for next section:', currentSection + 1, 'with', nextSectionTime, 'seconds');
+    }
+  }, [showReviewPage, test, currentSection]);
 
   // Get current section data
   const getCurrentSectionData = () => {
@@ -383,6 +430,24 @@ const TestTaker = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentQuestion, currentSection, test]);
 
+  // Load highlights when question changes
+  useEffect(() => {
+    if (currentQuestion && currentSection !== undefined) {
+      const questionKey = `${currentSection}-${currentQuestion}`;
+      logger.debug('Question changed, loading highlights for:', questionKey);
+      
+      // Load highlights from storage for the new question
+      const savedHighlights = questionHighlights.get(questionKey);
+      if (savedHighlights && Array.isArray(savedHighlights)) {
+        setHighlights(savedHighlights);
+        logger.debug('Loaded highlights for question:', questionKey, savedHighlights.length);
+      } else {
+        setHighlights([]);
+        logger.debug('No highlights found for question:', questionKey);
+      }
+    }
+  }, [currentQuestion, currentSection, questionHighlights]);
+
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -459,253 +524,141 @@ const TestTaker = () => {
     setShowQuestionNav(!showQuestionNav);
   };
 
-
-
-  const handleMouseUp = (e) => {
-    // Only process if we're in highlight mode
-    if (!isHighlightMode) return;
+  // Helper function to validate text selection for reading passage
+  const isValidTextSelection = (text) => {
+    if (!text || typeof text !== 'string') {
+      return false;
+    }
     
-    // Prevent default to maintain selection
-    e.preventDefault();
-    e.stopPropagation();
-
-    setTimeout(() => {
-      const selection = window.getSelection();
-      const text = selection.toString().trim();
-      
-      logger.debug('Selection detected:', text);
-      
-      if (text.length > 0 && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        
-        // Check if selection is within our content
-        if (contentRef.current && contentRef.current.contains(range.commonAncestorContainer)) {
-          
-          // Check if selection is too short
-          if (text.length < 2) {
-            logger.debug('Selection too short - rejected');
-            window.getSelection().removeAllRanges();
-            return;
-          }
-          
-          logger.debug('Valid selection detected:', text);
-          logger.debug('Range:', range);
-          logger.debug('Common ancestor:', range.commonAncestorContainer);
-          
-          // Store the selected text and complete range information
-          setSelectedText(text);
-          setPendingSelection({
-            text: text,
-            range: {
-              startContainer: range.startContainer,
-              endContainer: range.endContainer,
-              startOffset: range.startOffset,
-              endOffset: range.endOffset,
-              commonAncestorContainer: range.commonAncestorContainer
-            }
-          });
-          
-          // Get position for color picker
-          const rect = range.getBoundingClientRect();
-          const scrollY = window.scrollY || window.pageYOffset;
-          const scrollX = window.scrollX || window.pageXOffset;
-          
-          setPickerPosition({
-            x: rect.left + scrollX + (rect.width / 2),
-            y: rect.bottom + scrollY + 10
-          });
-          
-          setShowColorPicker(true);
-        }
-      }
-    }, 50);
+    // Clean the text by removing extra whitespace and normalizing
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    
+    // Check minimum and maximum length (optimized for word-level selection)
+    if (cleanText.length < 2 || cleanText.length > 200) {
+      return false;
+    }
+    
+    // Check if text contains only whitespace
+    if (/^\s*$/.test(cleanText)) {
+      return false;
+    }
+    
+    // Check if text contains only punctuation or symbols
+    if (/^[^\w\s]*$/.test(cleanText)) {
+      return false;
+    }
+    
+    // Check if text contains at least one letter
+    if (!/[a-zA-Z]/.test(cleanText)) {
+      return false;
+    }
+    
+    // Check word count - allow single words or short phrases
+    const words = cleanText.split(/\s+/).filter(word => word.length > 0);
+    if (words.length < 1 || words.length > 10) {
+      return false;
+    }
+    
+    // Check if each word is meaningful (at least 2 characters)
+    const meaningfulWords = words.filter(word => word.length >= 2);
+    if (meaningfulWords.length < 1) {
+      return false;
+    }
+    
+    // Allow more flexible text selection for reading passages
+    return true;
   };
 
+  // Remove unused functions - replaced with JSON-based approach
 
 
+
+
+
+  // Simplified highlighting system for JSON-based rich text
   const applyHighlight = (color) => {
     if (!pendingSelection) return;
 
     try {
-      const { text, range } = pendingSelection;
+      const { text, originalText } = pendingSelection;
+      
+      // Validate text data before creating highlight
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        logger.debug('Invalid text selection - rejected:', text);
+        closeColorPicker();
+        return;
+      }
+      
       const highlightId = `highlight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      logger.debug('Applying highlight:', { text, color: color.name, highlightId });
+      logger.debug('Applying highlight:', { text, originalText, color: color.name, highlightId });
       
-      // COMPLETELY ISOLATED APPROACH: Use range-based highlighting
-      setTimeout(() => {
-        if (!contentRef.current) {
-          logger.debug('Content ref not available');
-          return;
-        }
-        
-        const contentElement = contentRef.current;
-        
-        try {
-          // Create a new range from the saved range data
-          const newRange = document.createRange();
-          const startContainer = range.startContainer;
-          const endContainer = range.endContainer;
-          const startOffset = range.startOffset;
-          const endOffset = range.endOffset;
-          
-          newRange.setStart(startContainer, startOffset);
-          newRange.setEnd(endContainer, endOffset);
-          
-          // Create highlight element
-          const highlightElement = document.createElement('span');
-          highlightElement.setAttribute('data-highlight-id', highlightId);
-          highlightElement.className = `custom-highlight ${color.class}`;
-          highlightElement.style.cssText = `
-            background-color: ${color.value} !important;
-            color: inherit !important;
-            padding: 1px 2px !important;
-            border-radius: 2px !important;
-            cursor: pointer !important;
-            display: inline !important;
-            position: relative !important;
-            z-index: 1000 !important;
-            transition: all 0.2s ease !important;
-            font-weight: normal !important;
-            border: none !important;
-            margin: 0 !important;
-          `;
-          
-          // Extract the content and wrap it in the highlight element
-          const extractedContent = newRange.extractContents();
-          highlightElement.appendChild(extractedContent);
-          newRange.insertNode(highlightElement);
-          
-          // Add click events to the highlight element
-          highlightElement.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            removeHighlight(highlightId);
-          });
-          
-          // Add hover effects
-          highlightElement.addEventListener('mouseenter', () => {
-            highlightElement.style.opacity = '0.8';
-          });
-          
-          highlightElement.addEventListener('mouseleave', () => {
-            highlightElement.style.opacity = '1';
-          });
-          
-          // Add visual confirmation
-          highlightElement.style.animation = 'highlightPulse 0.5s ease-in-out';
-          
-          logger.debug('Highlight applied successfully using range method');
-          
-        } catch (rangeError) {
-          logger.debug('Range method failed, falling back to text replacement');
-          
-          // Fallback: text replacement method
-          const currentHTML = contentElement.innerHTML;
-          const highlightHTML = `<span data-highlight-id="${highlightId}" class="custom-highlight ${color.class}" style="background-color: ${color.value} !important; color: inherit !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important; display: inline !important; position: relative !important; z-index: 1000 !important; transition: all 0.2s ease !important; font-weight: normal !important; border: none !important; margin: 0 !important;">${text}</span>`;
-          
-          const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp(`(${escapedText})`, 'g');
-          const newHTML = currentHTML.replace(regex, highlightHTML);
-          
-          if (newHTML !== currentHTML) {
-            contentElement.innerHTML = newHTML;
-            
-            // Add click events to the new highlight elements
-            const newHighlight = contentElement.querySelector(`[data-highlight-id="${highlightId}"]`);
-            if (newHighlight) {
-              newHighlight.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                removeHighlight(highlightId);
-              });
-              
-              newHighlight.addEventListener('mouseenter', () => {
-                newHighlight.style.opacity = '0.8';
-              });
-              
-              newHighlight.addEventListener('mouseleave', () => {
-                newHighlight.style.opacity = '1';
-              });
-              
-              newHighlight.style.animation = 'highlightPulse 0.5s ease-in-out';
-            }
-          }
-        }
-        
-        // Save highlight data to current question
-        const questionKey = `${currentSection}-${currentQuestion}`;
-        const newHighlight = {
-          id: highlightId,
-          color: color.name,
-          colorValue: color.value,
-          text: text,
-          range: {
-            startContainer: range.startContainer,
-            endContainer: range.endContainer,
-            startOffset: range.startOffset,
-            endOffset: range.endOffset
-          }
-        };
-        
-        setHighlights(prev => [...prev, newHighlight]);
-        setQuestionHighlights(prev => {
-          const newMap = new Map(prev);
-          const questionHighlights = newMap.get(questionKey) || [];
-          newMap.set(questionKey, [...questionHighlights, newHighlight]);
-          return newMap;
-        });
-        
-        // Clear selection and close picker
-        window.getSelection().removeAllRanges();
-        setPendingSelection(null);
-        setSelectedText('');
-        setShowColorPicker(false);
-        setPickerPosition(null);
-        
-        logger.debug('Highlight process completed');
-        
-      }, 50);
+      // Validate text selection
+      if (!isValidTextSelection(text)) {
+        logger.debug('Invalid text selection - rejected:', text);
+        closeColorPicker();
+        return;
+      }
       
-    } catch (error) {
-      logger.error('Error applying highlight:', error);
+      // Create new highlight with validated data
+      const newHighlight = {
+        id: highlightId,
+        color: color.name,
+        colorValue: color.value,
+        text: text.trim(), // Ensure text is trimmed
+        originalText: originalText.trim() // Ensure original text is trimmed
+      };
+      
+      // Add to highlights state
+      setHighlights(prev => [...prev, newHighlight]);
+      
+      // Save to question highlights
+      const questionKey = `${currentSection}-${currentQuestion}`;
+      setQuestionHighlights(prev => {
+        const newMap = new Map(prev);
+        const questionHighlights = newMap.get(questionKey) || [];
+        newMap.set(questionKey, [...questionHighlights, newHighlight]);
+        return newMap;
+      });
+      
+      // Clear selection and close picker
       window.getSelection().removeAllRanges();
       setPendingSelection(null);
       setSelectedText('');
       setShowColorPicker(false);
       setPickerPosition(null);
+      
+      // Save progress
+      saveProgress();
+      
+      logger.debug('Highlight applied successfully');
+      
+    } catch (error) {
+      logger.error('Error applying highlight:', error);
+      closeColorPicker();
     }
   };
 
   const removeHighlight = (highlightId) => {
     try {
-      // Find the highlight element
-      const highlightElement = document.querySelector(`[data-highlight-id="${highlightId}"]`);
+      logger.debug('Removing highlight:', highlightId);
       
-      if (highlightElement) {
-        logger.debug('Removing highlight:', highlightId);
-        
-        // Get the text content
-        const textContent = highlightElement.textContent;
-        
-        // Replace the highlight element with its text content
-        const textNode = document.createTextNode(textContent);
-        highlightElement.parentNode.replaceChild(textNode, highlightElement);
-        
-        // Remove from highlights state and per-question storage
-        const questionKey = `${currentSection}-${currentQuestion}`;
-        setHighlights(prev => prev.filter(h => h.id !== highlightId));
-        setQuestionHighlights(prev => {
-          const newMap = new Map(prev);
-          const questionHighlights = newMap.get(questionKey) || [];
-          newMap.set(questionKey, questionHighlights.filter(h => h.id !== highlightId));
-          return newMap;
-        });
-        
-        logger.debug('Highlight removed successfully');
-      } else {
-        logger.debug('Highlight element not found:', highlightId);
-      }
+      // Remove from highlights state
+      setHighlights(prev => prev.filter(h => h.id !== highlightId));
+      
+      // Remove from question highlights
+      const questionKey = `${currentSection}-${currentQuestion}`;
+      setQuestionHighlights(prev => {
+        const newMap = new Map(prev);
+        const questionHighlights = newMap.get(questionKey) || [];
+        newMap.set(questionKey, questionHighlights.filter(h => h.id !== highlightId));
+        return newMap;
+      });
+      
+      // Save progress
+      saveProgress();
+      
+      logger.debug('Highlight removed successfully');
     } catch (error) {
       logger.error('Error removing highlight:', error);
     }
@@ -742,56 +695,15 @@ const TestTaker = () => {
       const highlightsArray = Array.isArray(savedHighlights) ? savedHighlights : [];
       setHighlights(highlightsArray);
       
-      // Apply highlights to DOM after a longer delay to ensure content is fully rendered
+      // Highlights are now managed by RichTextDocument component
       if (highlightsArray.length > 0) {
-        setTimeout(() => {
-          if (contentRef.current) {
-            logger.debug('Applying highlights for question:', questionKey, highlightsArray.length);
-            applySavedHighlights(highlightsArray);
-          }
-        }, 200); // Increased delay to ensure content is fully rendered
+        logger.debug('Loaded highlights for question:', questionKey, highlightsArray.length);
       } else {
-        logger.debug('No highlights to apply for question:', questionKey);
+        logger.debug('No highlights found for question:', questionKey);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSection, currentQuestion, test, questions, questionHighlights]);
-
-  const clearAllHighlights = () => {
-    try {
-      logger.debug('Clearing all highlights from DOM');
-      
-      if (!contentRef.current) return;
-      
-      // Get the original content without highlights
-      const currentQuestionData = getCurrentQuestionData();
-      const originalContent = currentQuestionData?.passage || currentQuestionData?.question || currentQuestionData?.content || '';
-      
-      // Re-render the content without highlights
-      const contentElement = contentRef.current;
-      
-      // Force a complete re-render of the content to ensure no highlight remnants
-      if (currentQuestionData?.passage) {
-        // For reading passages, use the renderPassageWithKaTeX function
-        const cleanContent = renderPassageWithKaTeX(originalContent);
-        contentElement.innerHTML = cleanContent;
-        logger.debug('Restored reading passage content');
-      } else {
-        // For questions, use the renderContent function
-        const currentSectionData = getCurrentSectionData();
-        const cleanContent = renderContent(originalContent, currentSectionData?.type);
-        contentElement.innerHTML = cleanContent;
-        logger.debug('Restored question content');
-      }
-      
-      // Clear current highlights state (but keep per-question storage)
-      setHighlights([]);
-      
-      logger.debug('All highlights cleared from DOM successfully');
-    } catch (error) {
-      logger.error('Error clearing highlights:', error);
-    }
-  };
 
   const saveCurrentQuestionHighlights = () => {
     const questionKey = `${currentSection}-${currentQuestion}`;
@@ -805,123 +717,7 @@ const TestTaker = () => {
     }
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const loadQuestionHighlights = (questionKey) => {
-    const savedHighlights = questionHighlights.get(questionKey);
-    
-    // Ensure we have a valid array
-    const highlightsArray = Array.isArray(savedHighlights) ? savedHighlights : [];
-    
-    setHighlights(highlightsArray);
-    logger.debug('Loaded highlights for question:', questionKey, highlightsArray.length);
-    
-    // Apply highlights to DOM after a short delay to ensure content is rendered
-    setTimeout(() => {
-      if (contentRef.current && highlightsArray.length > 0) {
-        applySavedHighlights(highlightsArray);
-      }
-    }, 100);
-  };
-
-  const applySavedHighlights = (savedHighlights) => {
-    if (!contentRef.current) return;
-    
-    // Ensure savedHighlights is an array
-    if (!Array.isArray(savedHighlights)) {
-      logger.warn('savedHighlights is not an array:', savedHighlights);
-      return;
-    }
-    
-    if (savedHighlights.length === 0) return;
-    
-    logger.debug('Starting to apply saved highlights:', savedHighlights.length);
-    
-    // First, ensure we have clean original content
-    const currentQuestionData = getCurrentQuestionData();
-    const originalContent = currentQuestionData?.passage || currentQuestionData?.question || currentQuestionData?.content || '';
-    
-    const contentElement = contentRef.current;
-    let currentHTML;
-    
-    // Force a complete reset of the content first
-    if (currentQuestionData?.passage) {
-      // For reading passages, use the renderPassageWithKaTeX function
-      currentHTML = renderPassageWithKaTeX(originalContent);
-      logger.debug('Reset reading passage content');
-    } else {
-      // For questions, use the renderContent function
-      const currentSectionData = getCurrentSectionData();
-      currentHTML = renderContent(originalContent, currentSectionData?.type);
-      logger.debug('Reset question content');
-    }
-    
-    // Set clean content first
-    contentElement.innerHTML = currentHTML;
-    
-    // Apply highlights one by one using text replacement
-    savedHighlights.forEach((highlight, index) => {
-      if (!highlight || !highlight.text || !highlight.id) {
-        logger.warn('Invalid highlight data:', highlight);
-        return;
-      }
-      
-      logger.debug(`Applying highlight ${index + 1}/${savedHighlights.length}:`, highlight.text);
-      
-      const highlightHTML = `<span data-highlight-id="${highlight.id}" class="custom-highlight ${highlight.color}" style="background-color: ${highlight.colorValue} !important; color: inherit !important; padding: 1px 2px !important; border-radius: 2px !important; cursor: pointer !important; display: inline !important; position: relative !important; z-index: 1000 !important; transition: all 0.2s ease !important; font-weight: normal !important; border: none !important; margin: 0 !important;">${highlight.text}</span>`;
-      
-      const escapedText = highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedText})`, 'g');
-      const newHTML = contentElement.innerHTML.replace(regex, highlightHTML);
-      
-      if (newHTML !== contentElement.innerHTML) {
-        contentElement.innerHTML = newHTML;
-        logger.debug(`Successfully applied highlight ${index + 1}`);
-      } else {
-        logger.warn(`Could not find text for highlight ${index + 1}:`, highlight.text);
-      }
-    });
-    
-    // Add click events to restored highlights
-    savedHighlights.forEach(highlight => {
-      if (!highlight || !highlight.id) return;
-      
-      const highlightElement = contentElement.querySelector(`[data-highlight-id="${highlight.id}"]`);
-      if (highlightElement) {
-        highlightElement.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          removeHighlight(highlight.id);
-        });
-        
-        highlightElement.addEventListener('mouseenter', () => {
-          highlightElement.style.opacity = '0.8';
-        });
-        
-        highlightElement.addEventListener('mouseleave', () => {
-          highlightElement.style.opacity = '1';
-        });
-      }
-    });
-    
-    logger.debug('Successfully applied', savedHighlights.length, 'saved highlights');
-  };
-
-
-
-
-
-  const toggleHighlightMode = () => {
-    setIsHighlightMode(!isHighlightMode);
-    if (isHighlightMode) {
-      // Clear any existing selection when turning off highlight mode
-      window.getSelection().removeAllRanges();
-    }
-  };
-
   const deleteAllHighlights = () => {
-    // Clear highlights from DOM
-    clearAllHighlights();
-    
     // Clear highlights from current question storage
     const questionKey = `${currentSection}-${currentQuestion}`;
     setQuestionHighlights(prev => {
@@ -930,26 +726,123 @@ const TestTaker = () => {
       return newMap;
     });
     
+    // Clear current highlights
+    setHighlights([]);
+    
     saveProgress();
   };
+
+  // Remove unused function - replaced with JSON-based approach
+
+  // Remove unused function - replaced with JSON-based approach
+
+
+
+
+
+  const toggleHighlightMode = () => {
+    const newHighlightMode = !isHighlightMode;
+    setIsHighlightMode(newHighlightMode);
+    
+    if (newHighlightMode) {
+      // Turning ON highlight mode
+      console.log('Highlight mode turned ON');
+      // Don't clear selection when turning on highlight mode
+    } else {
+      // Turning OFF highlight mode
+      console.log('Highlight mode turned OFF');
+      // Clear any existing selection when turning off highlight mode
+      window.getSelection().removeAllRanges();
+      setShowColorPicker(false);
+      setPendingSelection(null);
+      setSelectedText('');
+      setPickerPosition(null);
+    }
+  };
+
+  // Remove duplicate function
 
   // Calculator functions
   const toggleCalculator = () => {
     setShowCalculator(!showCalculator);
   };
   
-  // Font size adjustment functions
   const increaseFontSize = () => {
-    setFontSize(prev => Math.min(prev + 2, 24)); // Max 24px
+    setFontSize(prev => Math.min(prev + 2, 24));
   };
-  
+
   const decreaseFontSize = () => {
-    setFontSize(prev => Math.max(prev - 2, 12)); // Min 12px
+    setFontSize(prev => Math.max(prev - 2, 14));
   };
-  
+
   const resetFontSize = () => {
-    setFontSize(16); // Reset to default
+    setFontSize(16);
   };
+
+  // Apply font size styling to content elements
+  const applyFontSizeStyling = () => {
+    if (!contentRef.current) return;
+    
+    const contentElement = contentRef.current;
+    
+    // Remove existing font size classes
+    contentElement.classList.remove(
+      'font-size-14', 'font-size-16', 'font-size-18', 
+      'font-size-20', 'font-size-22', 'font-size-24'
+    );
+    
+    // Add current font size class
+    contentElement.classList.add(`font-size-${fontSize}`);
+    
+    // Update inline styles for immediate effect
+    contentElement.style.fontSize = `${fontSize}px`;
+    
+    // Apply responsive spacing based on font size
+    const paragraphs = contentElement.querySelectorAll('p');
+    paragraphs.forEach(p => {
+      p.style.fontSize = `${fontSize}px`;
+      
+      // Adjust line height based on font size
+      if (fontSize <= 16) {
+        p.style.lineHeight = '1.5';
+        p.style.marginBottom = '0.6em';
+      } else if (fontSize <= 18) {
+        p.style.lineHeight = '1.6';
+        p.style.marginBottom = '0.7em';
+      } else if (fontSize <= 20) {
+        p.style.lineHeight = '1.7';
+        p.style.marginBottom = '0.8em';
+      } else if (fontSize <= 22) {
+        p.style.lineHeight = '1.8';
+        p.style.marginBottom = '0.9em';
+      } else {
+        p.style.lineHeight = '1.9';
+        p.style.marginBottom = '1em';
+      }
+    });
+    
+    logger.debug('Applied font size styling:', fontSize);
+  };
+
+  // Apply font size styling when fontSize changes
+  useEffect(() => {
+    if (contentRef.current) {
+      applyFontSizeStyling();
+    }
+  }, [fontSize]);
+
+  // Apply font size styling when content is loaded (safer approach)
+  useEffect(() => {
+    // Only run after test data is loaded and component is initialized
+    if (test && currentSection !== undefined && currentQuestion && contentRef.current) {
+      // Small delay to ensure content is fully rendered
+      setTimeout(() => {
+        if (contentRef.current) {
+          applyFontSizeStyling();
+        }
+      }, 200);
+    }
+  }, [test, currentSection, currentQuestion, fontSize]);
 
   const closeCalculator = () => {
     setShowCalculator(false);
@@ -965,20 +858,156 @@ const TestTaker = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCalculator]);
 
-
-
-
-
-
-
-
+  // Document-level text selection handler for highlighting
+  useEffect(() => {
+    const handleDocumentSelection = () => {
+      if (!isHighlightMode) return;
+      
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        return;
+      }
+      
+      const selectedText = selection.toString().trim();
+      if (!selectedText) return;
+      
+      // Check if selection is within our rich text content area
+      const richTextElements = document.querySelectorAll('.rich-text-document');
+      let isWithinReadingPassage = false;
+      
+      const range = selection.getRangeAt(0);
+      
+      // More flexible detection - allow highlighting in reading passage
+      richTextElements.forEach(element => {
+        if (element.contains(range.commonAncestorContainer)) {
+          // Check if it's within the reading passage container
+          const readingPassageContainer = element.closest('.reading-passage-container');
+          if (readingPassageContainer) {
+            // Check if we're not in question text or other areas
+            const isInQuestionArea = element.closest('.question-content') || 
+                                   element.closest('.answer-options') ||
+                                   element.closest('.question-text');
+            
+            // If not in question area, allow highlighting
+            if (!isInQuestionArea) {
+              isWithinReadingPassage = true;
+            }
+          }
+        }
+      });
+      
+      // Only allow highlighting in reading passage text
+      if (!isWithinReadingPassage) {
+        return; // Don't clear selection, just don't allow highlighting
+      }
+      
+      // Additional validation: ensure selection is meaningful
+      if (selectedText.length < 2) {
+        return;
+      }
+      
+      // Check if selection contains only whitespace or special characters
+      if (/^\s*$/.test(selectedText) || /^[^\w\s]*$/.test(selectedText)) {
+        return;
+      }
+      
+      // Check if selection is too long (prevent selecting entire paragraphs)
+      if (selectedText.length > 200) {
+        return;
+      }
+      
+      // Check if selection contains meaningful words
+      const words = selectedText.split(/\s+/).filter(word => word.length >= 2);
+      if (words.length === 0) {
+        return;
+      }
+      
+      // Final validation using the improved validation function
+      if (!isValidTextSelection(selectedText)) {
+        return;
+      }
+      
+      // Additional safety check - ensure text is valid
+      if (!selectedText || typeof selectedText !== 'string' || selectedText.trim().length === 0) {
+        return;
+      }
+      
+      // Debug logging
+      console.log('Text selection detected:', {
+        selectedText,
+        isHighlightMode,
+        isWithinReadingPassage,
+        range: range.toString(),
+        container: range.commonAncestorContainer?.className || 'unknown'
+      });
+      
+      // Store selection info
+      setPendingSelection({
+        text: selectedText,
+        originalText: selectedText,
+        isKaTeX: false,
+        range: {
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset
+        }
+      });
+      
+      // Position color picker with a small delay for stability
+      setTimeout(() => {
+        const rect = range.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          // Get viewport dimensions
+          const viewportWidth = window.innerWidth;
+          const viewportHeight = window.innerHeight;
+          
+          // Calculate initial position
+          let x = rect.left + rect.width / 2;
+          let y = rect.top - 10;
+          
+          // Ensure color picker stays within viewport bounds
+          const pickerWidth = 160; // Updated to match new smaller picker
+          const pickerHeight = 80;
+          
+          // Adjust horizontal position if it goes off-screen
+          if (x - pickerWidth / 2 < 10) {
+            x = pickerWidth / 2 + 10;
+          } else if (x + pickerWidth / 2 > viewportWidth - 10) {
+            x = viewportWidth - pickerWidth / 2 - 10;
+          }
+          
+          // Adjust vertical position if it goes off-screen
+          if (y < 10) {
+            y = rect.bottom + 10;
+          } else if (y + pickerHeight > viewportHeight - 10) {
+            y = rect.top - pickerHeight - 10;
+          }
+          
+          setPickerPosition({ x, y });
+          setShowColorPicker(true);
+          setSelectedText(selectedText);
+          
+          // Debug logging
+          console.log('Color picker should appear:', { x, y, selectedText, isWithinReadingPassage });
+        }
+      }, 100); // Small delay for stability
+    };
+    
+    // Add event listeners for text selection - use mouseup for better control
+    document.addEventListener('mouseup', handleDocumentSelection);
+    
+    return () => {
+      document.removeEventListener('mouseup', handleDocumentSelection);
+    };
+  }, [isHighlightMode]);
 
   const handleQuestionChange = (questionNum) => {
     // Save current question highlights before changing
     saveCurrentQuestionHighlights();
     
     // Clear highlights from DOM (but keep them in storage)
-    clearAllHighlights();
+    // Highlights are now managed by the RichTextDocument component
     
     setCurrentQuestion(questionNum);
     const questionKey = `${currentSection}-${questionNum}`;
@@ -1001,6 +1030,13 @@ const TestTaker = () => {
     
     setIsMarkedForReview(markedForReviewQuestions.has(questionKey));
     setShowQuestionNav(false);
+    
+    // Apply font size styling after question change
+    setTimeout(() => {
+      if (contentRef.current) {
+        applyFontSizeStyling();
+      }
+    }, 300);
     
     // The useEffect will handle loading highlights for the new question
   };
@@ -1070,10 +1106,31 @@ const TestTaker = () => {
     const totalQuestionsInSection = getTotalQuestionsInSection();
     setShowReviewPage(false);
     setCurrentQuestion(totalQuestionsInSection);
+    
+    // Reset timer for current section when going back
+    const currentSectionData = getCurrentSectionData();
+    if (currentSectionData && currentSectionData.timeLimit) {
+      const sectionTime = currentSectionData.timeLimit * 60;
+      setTimeLeft(sectionTime);
+      setIsTimerStopped(false); // Ensure timer is running
+      logger.debug('Going back to section', currentSection, 'with', sectionTime, 'seconds');
+    }
+    
     const questionKey = `${currentSection}-${totalQuestionsInSection}`;
     const previousAnswer = answeredQuestions.get(questionKey);
     setSelectedAnswer(previousAnswer || null);
     setIsMarkedForReview(markedForReviewQuestions.has(questionKey));
+    
+    // Clear any auto-started timer from next section
+    if (currentSection < test.sections.length - 1) {
+      const currentSectionData = getCurrentSectionData();
+      if (currentSectionData && currentSectionData.timeLimit) {
+        const sectionTime = currentSectionData.timeLimit * 60;
+        setTimeLeft(sectionTime);
+        setIsTimerStopped(false);
+        logger.debug('Reset timer for current section when going back:', sectionTime, 'seconds');
+      }
+    }
   };
 
   const handleReviewNext = async () => {
@@ -1083,9 +1140,10 @@ const TestTaker = () => {
       setCurrentQuestion(1);
       setShowReviewPage(false);
       
-      // Update timer for new section
+      // Reset timer for new section and ensure it's running
       const newSectionTime = test.sections[currentSection + 1].timeLimit * 60;
       setTimeLeft(newSectionTime);
+      setIsTimerStopped(false); // Ensure timer is running for new section
       logger.debug('Moving to section', currentSection + 1, 'with', newSectionTime, 'seconds');
       
       // Load saved answers for new section
@@ -1295,41 +1353,13 @@ const TestTaker = () => {
 
 
 
-  // Function to process passage content for better highlighting
-  // eslint-disable-next-line no-unused-vars
-  const processPassageForHighlighting = (passageContent) => {
-    if (!passageContent) return '';
-    
-    // Create a temporary div to parse the HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = passageContent;
-    
-    // Remove KaTeX elements
-    const katexElements = tempDiv.querySelectorAll('.katex, [class*="katex"]');
-    katexElements.forEach(el => el.remove());
-    
-    // Remove math delimiters
-    let cleaned = tempDiv.innerHTML
-      .replace(/\$\$.*?\$\$/g, '') // Remove display math
-      .replace(/\$.*?\$/g, '') // Remove inline math
-      .replace(/<span class="katex.*?<\/span>/g, '') // Remove any remaining KaTeX spans
-      .replace(/<span class="katex.*?>/g, '') // Remove opening KaTeX spans
-      .replace(/<\/span>/g, ''); // Remove closing spans
-    
-    // Clean up whitespace
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
-    
-    // Ensure proper paragraph structure
-    if (!cleaned.includes('<p>')) {
-      cleaned = cleaned.split('\n').map(line => line.trim()).filter(line => line.length > 0).map(line => `<p>${line}</p>`).join('');
-    }
-    
-    return cleaned;
-  };
+
 
   // Function to render KaTeX content while preserving highlighting functionality
   const renderPassageWithKaTeX = (passageContent) => {
     if (!passageContent) return '';
+    
+    logger.debug('Rendering passage with KaTeX:', passageContent.substring(0, 100) + '...');
     
     // Function to render KaTeX content
     const renderKaTeX = (text) => {
@@ -1338,30 +1368,52 @@ const TestTaker = () => {
       // Split text by KaTeX delimiters
       const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/);
       
+      logger.debug('KaTeX parts found:', parts.length);
+      
       return parts.map((part, index) => {
         if (part.startsWith('$$') && part.endsWith('$$')) {
           // Display math mode
           try {
             const mathContent = part.slice(2, -2);
-            return katex.renderToString(mathContent, {
+            logger.debug('Processing display math:', mathContent);
+            // Add a hidden span with the original text for highlighting
+            const renderedMath = katex.renderToString(mathContent, {
               displayMode: true,
               throwOnError: false,
-              errorColor: '#cc0000'
+              errorColor: '#cc0000',
+              strict: false, // Disable strict mode to prevent warnings
+              trust: true, // Allow more LaTeX commands
+              macros: {
+                "\\newline": "\\\\", // Handle \newline properly
+                "\\\\": "\\\\" // Handle \\ properly
+              }
             });
+            return `<span class="katex-display" data-original-text="${part}" data-math-content="${mathContent}" data-katex-type="display">${renderedMath}</span>`;
           } catch (error) {
-            return `<span style="color: #cc0000;">Error: ${part}</span>`;
+            logger.error('Error rendering display math:', error);
+            return `<span style="color: #cc0000;" data-original-text="${part}" data-katex-type="display">Error: ${part}</span>`;
           }
         } else if (part.startsWith('$') && part.endsWith('$') && part.length > 1) {
           // Inline math mode
           try {
             const mathContent = part.slice(1, -1);
-            return katex.renderToString(mathContent, {
+            logger.debug('Processing inline math:', mathContent);
+            // Add a hidden span with the original text for highlighting
+            const renderedMath = katex.renderToString(mathContent, {
               displayMode: false,
               throwOnError: false,
-              errorColor: '#cc0000'
+              errorColor: '#cc0000',
+              strict: false, // Disable strict mode to prevent warnings
+              trust: true, // Allow more LaTeX commands
+              macros: {
+                "\\newline": "\\\\", // Handle \newline properly
+                "\\\\": "\\\\" // Handle \\ properly
+              }
             });
+            return `<span class="katex-inline" data-original-text="${part}" data-math-content="${mathContent}" data-katex-type="inline">${renderedMath}</span>`;
           } catch (error) {
-            return `<span style="color: #cc0000;">Error: ${part}</span>`;
+            logger.error('Error rendering inline math:', error);
+            return `<span style="color: #cc0000;" data-original-text="${part}" data-katex-type="inline">Error: ${part}</span>`;
           }
         } else {
           // Regular text - preserve line breaks for highlighting
@@ -1383,22 +1435,27 @@ const TestTaker = () => {
     }
     
     // Add proper spacing and styling for better highlighting with serif font
-    processedContent = processedContent.replace(/<p>/g, '<p style="margin-bottom: 1rem; line-height: 1.6; font-family: serif;">');
+    // Apply font size responsive spacing
+    const lineHeight = fontSize <= 16 ? '1.5' : fontSize <= 18 ? '1.6' : fontSize <= 20 ? '1.7' : fontSize <= 22 ? '1.8' : '1.9';
+    const marginBottom = fontSize <= 16 ? '0.6em' : fontSize <= 18 ? '0.7em' : fontSize <= 20 ? '0.8em' : fontSize <= 22 ? '0.9em' : '1em';
+    
+    // Ensure proper paragraph structure without unwanted spacing
+    processedContent = processedContent.replace(/<p>/g, `<p style="margin-bottom: ${marginBottom}; line-height: ${lineHeight}; font-family: serif; font-size: ${fontSize}px; white-space: normal; word-break: normal; page-break-inside: avoid;">`);
+    
+    // Add specific styling to prevent KaTeX from breaking layout
+    processedContent = processedContent.replace(/<span class="katex-inline/g, '<span class="katex-inline" style="vertical-align: baseline; margin: 0; padding: 0; line-height: inherit; white-space: normal;"');
+    processedContent = processedContent.replace(/<span class="katex-display/g, '<span class="katex-display" style="margin: 0.2em 0; padding: 0; line-height: inherit; white-space: normal;"');
+    
+    logger.debug('Final processed content length:', processedContent.length);
+    logger.debug('KaTeX elements found:', (processedContent.match(/data-original-text/g) || []).length);
+    logger.debug('Applied font size styling:', { fontSize, lineHeight, marginBottom });
     
     return processedContent;
   };
 
-  const renderContent = (content, sectionType) => {
-    if (!content) return '';
-    
-    // For math sections, preserve the original content with math formatting
-    if (sectionType === 'math') {
-      return content; // Keep original content for math sections
-    }
-    
-    // For English sections, render KaTeX properly while preserving highlighting
-    return renderPassageWithKaTeX(content);
-  };
+  // Remove unused function - replaced with RichTextDocument component
+
+  // Remove unused function - replaced with RichTextDocument component
 
 
 
@@ -1448,6 +1505,9 @@ const TestTaker = () => {
 
   // Review Page Component
   if (showReviewPage) {
+    const isFinalSection = currentSection >= test.sections.length - 1;
+    const timeReachedZero = timeLeft === 0;
+    
     return (
       <div className="h-screen flex flex-col bg-white relative">
         {/* Watermark */}
@@ -1460,15 +1520,23 @@ const TestTaker = () => {
         {/* Main Content */}
         <div className="flex-1 flex items-center justify-center p-6 relative z-10">
           <div className="max-w-2xl w-full">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Check Your Work</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              {timeReachedZero ? 'Time\'s Up!' : 'Check Your Work'}
+            </h1>
             <p className="text-gray-700 mb-2">
-              On test day, you won't be able to move on to the next module until time expires.
+              {timeReachedZero 
+                ? 'Time has expired for this section. You can review your answers but cannot navigate to questions.'
+                : 'On test day, you won\'t be able to move on to the next module until time expires.'
+              }
             </p>
             <p className="text-gray-700 mb-8">
-              For these practice questions, you can click <strong>Next</strong> when you're ready to move on.
+              {timeReachedZero 
+                ? 'Click the button below to continue.'
+                : 'For these practice questions, you can click the button below when you\'re ready to move on.'
+              }
             </p>
 
-            {/* Question Navigation Card */}
+            {/* Question Navigation Card - Disabled when time reaches 0 */}
             <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-gray-900">
@@ -1486,7 +1554,7 @@ const TestTaker = () => {
                 </div>
               </div>
 
-              {/* Question Grid */}
+              {/* Question Grid - Disabled when time reaches 0 */}
               <div className="grid grid-cols-12 gap-2">
                 {Array.from({ length: totalQuestionsInSection }, (_, i) => {
                   const questionNum = i + 1;
@@ -1498,13 +1566,20 @@ const TestTaker = () => {
                     <button
                       key={i}
                       onClick={() => {
+                        if (!timeReachedZero) {
                         setShowReviewPage(false);
                         handleQuestionChange(questionNum);
+                        }
                       }}
+                      disabled={timeReachedZero}
                       className={`w-10 h-10 text-sm border-2 border-dashed border-gray-400 rounded flex items-center justify-center relative ${
                         hasAnswer
                           ? 'bg-blue-500 text-white border-blue-500 border-solid'
                           : 'bg-white text-blue-600'
+                      } ${
+                        timeReachedZero 
+                          ? 'opacity-50 cursor-not-allowed' 
+                          : 'hover:bg-gray-50 cursor-pointer'
                       }`}
                     >
                       {questionNum}
@@ -1515,6 +1590,14 @@ const TestTaker = () => {
                   );
                 })}
               </div>
+              
+              {timeReachedZero && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-yellow-800 text-sm text-center">
+                    ⚠️ Question navigation is disabled when time expires
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1523,23 +1606,33 @@ const TestTaker = () => {
         <div className="bg-gray-100 border-t border-gray-200 px-4 py-3 flex items-center justify-between relative z-10">
           <div></div>
           <div className="flex space-x-2">
+            {!timeReachedZero && (
             <button 
               onClick={handleReviewBack}
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
             >
               Back
             </button>
+            )}
             <button 
               onClick={handleReviewNext}
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
             >
-              {currentSection < test.sections.length - 1 ? 'Next Section' : 'Finish Test'}
+              {isFinalSection ? 'Finish Test' : 'Next Section'}
             </button>
           </div>
         </div>
       </div>
     );
   }
+
+  // Highlight colors
+  const highlightColors = [
+    { name: 'Yellow', value: '#fef08a', class: 'yellow' },
+    { name: 'Green', value: '#bbf7d0', class: 'green' },
+    { name: 'Blue', value: '#bfdbfe', class: 'blue' },
+    { name: 'Pink', value: '#fecaca', class: 'pink' }
+  ];
 
   return (
     <div 
@@ -1566,9 +1659,17 @@ const TestTaker = () => {
 
         {/* Center - Timer */}
         <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-          <div className="text-lg font-bold text-gray-900">
+          <div className={`text-lg font-bold ${
+            timeLeft <= 60 ? 'text-red-600 animate-pulse' : 
+            timeLeft <= 300 ? 'text-orange-600' : 'text-gray-900'
+          }`}>
             {formatTime(timeLeft)}
           </div>
+          {showReviewPage && currentSection < test.sections.length - 1 && (
+            <div className="text-xs text-blue-600 font-medium mb-1">
+              Next Section Timer
+            </div>
+          )}
           <button 
             onClick={toggleTimer}
             className={`text-xs px-3 py-1 rounded transition-colors ${
@@ -1601,7 +1702,7 @@ const TestTaker = () => {
               <div className="flex items-center bg-gray-100 rounded-lg px-2 py-1">
                 <button
                   onClick={decreaseFontSize}
-                  disabled={fontSize <= 12}
+                  disabled={fontSize <= 14}
                   className="p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Decrease font size"
                 >
@@ -1659,7 +1760,7 @@ const TestTaker = () => {
               <div className="flex items-center bg-gray-100 rounded-lg px-2 py-1">
                 <button
                   onClick={decreaseFontSize}
-                  disabled={fontSize <= 12}
+                  disabled={fontSize <= 14}
                   className="p-1 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Decrease font size"
                 >
@@ -1727,29 +1828,33 @@ const TestTaker = () => {
 
           {/* Reading Passage - Display Below Images */}
           {currentQuestionData.passage && (
-            <div className="mt-6">
+            <div className="mt-6 reading-passage-container">
               <div 
                 key={`passage-${currentSection}-${currentQuestion}`}
-                ref={contentRef}
-                className={`text-gray-700 leading-relaxed text-base ${isHighlightMode ? 'highlighter-cursor' : ''}`}
-                onMouseUp={handleMouseUp}
-                onTouchEnd={handleMouseUp}
-                onSelect={handleMouseUp}
+                className={`reading-passage ${isHighlightMode ? 'highlighter-cursor highlightable-area' : ''}`}
                 style={{ 
-                  userSelect: isHighlightMode ? 'text' : 'none',
-                  WebkitUserSelect: isHighlightMode ? 'text' : 'none',
-                  cursor: isHighlightMode ? 'text' : 'default',
                   fontFamily: 'serif',
                   fontSize: `${fontSize}px`
                 }}
               >
-                <div 
-                  dangerouslySetInnerHTML={{ __html: renderPassageWithKaTeX(currentQuestionData.passage) }} 
-                  className="prose prose-sm max-w-none"
-                  style={{ fontSize: `${fontSize}px`, lineHeight: '1.6', fontFamily: 'serif' }}
-                  suppressContentEditableWarning={true}
-                  contentEditable={false}
-                />
+                {currentSectionData?.type === 'english' ? (
+                  <RichTextDocument
+                    content={currentQuestionData.passage}
+                    highlights={highlights}
+                    fontFamily="serif"
+                    fontSize={fontSize}
+                    className="reading-passage-content prose prose-sm max-w-none"
+                    onHighlightClick={removeHighlight}
+                  />
+                ) : (
+                  <div 
+                    dangerouslySetInnerHTML={{ __html: renderPassageWithKaTeX(currentQuestionData.passage) }} 
+                    className="reading-passage-content prose prose-sm max-w-none"
+                    style={{ fontSize: `${fontSize}px`, lineHeight: '1.6', fontFamily: 'serif' }}
+                    suppressContentEditableWarning={true}
+                    contentEditable={false}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1786,32 +1891,24 @@ const TestTaker = () => {
               {/* Question */}
               <div className="mb-6">
                 {currentSectionData?.type === 'math' ? (
-                  <div key={`math-question-${currentSection}-${currentQuestion}`} className="question-content text-gray-900 text-base leading-relaxed">
+                  <div key={`math-question-${currentSection}-${currentQuestion}`} className="question-content text-gray-900 text-base leading-relaxed" style={{ fontFamily: 'serif' }}>
                     <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} />
                   </div>
                 ) : (
                   <div 
                     key={`question-${currentSection}-${currentQuestion}`}
                     className={`question-content text-gray-900 text-base leading-relaxed ${isHighlightMode ? 'highlighter-cursor' : ''}`}
-                    onMouseDown={(e) => {
-                      if (isHighlightMode) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    }}
-                    onMouseUp={handleMouseUp}
-                    onTouchEnd={handleMouseUp}
-                    onSelect={handleMouseUp}
                     style={{ 
-                      userSelect: isHighlightMode ? 'text' : 'none',
-                      WebkitUserSelect: isHighlightMode ? 'text' : 'none',
-                      cursor: isHighlightMode ? 'text' : 'default'
+                      fontFamily: 'serif',
+                      fontSize: `${fontSize}px`
                     }}
                   >
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: renderContent(currentQuestionData.question || currentQuestionData.content, currentSectionData?.type) }} 
-                      className="prose prose-sm max-w-none"
-                      style={{ fontSize: `${fontSize}px`, lineHeight: '1.6' }}
+                    <RichTextDocument
+                      content={currentQuestionData.question || currentQuestionData.content}
+                      highlights={highlights}
+                      fontFamily="serif"
+                      fontSize={fontSize}
+                      className="rich-text-content"
                     />
                   </div>
                 )}
@@ -1930,28 +2027,17 @@ const TestTaker = () => {
                   </div>
                 ) : (
                   <div 
-                    ref={contentRef}
                     className={`text-gray-900 text-base leading-relaxed ${isHighlightMode ? 'highlighter-cursor' : ''}`}
-                    onMouseDown={(e) => {
-                      if (isHighlightMode) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    }}
-                    onMouseUp={handleMouseUp}
-                    onTouchEnd={handleMouseUp}
-                    onSelect={handleMouseUp}
                     style={{ 
-                      userSelect: isHighlightMode ? 'text' : 'none',
-                      WebkitUserSelect: isHighlightMode ? 'text' : 'none',
-                      cursor: isHighlightMode ? 'text' : 'default',
                       fontSize: `${fontSize}px`
                     }}
                   >
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: renderContent(currentQuestionData.question || currentQuestionData.content, currentSectionData?.type) }} 
+                    <RichTextDocument
+                      content={currentQuestionData.question || currentQuestionData.content}
+                      highlights={highlights}
+                      fontFamily="serif"
+                      fontSize={fontSize}
                       className="prose prose-sm max-w-none"
-                      style={{ fontSize: `${fontSize}px`, lineHeight: '1.6' }}
                     />
                   </div>
                 )}
@@ -2017,41 +2103,33 @@ const TestTaker = () => {
           </div>
         )}
 
-        {/* Color Picker Popup - Global */}
-        {showColorPicker && (
-          <div 
-            className="fixed z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2 color-picker-popup"
-            style={{ 
-              left: `${pickerPosition.x}px`, 
-              top: `${pickerPosition.y}px`,
-              transform: 'translateX(-50%)'
-            }}
-            onMouseDown={(e) => e.preventDefault()}
-          >
-            <div className="text-xs text-gray-600 mb-2 text-center max-w-xs">
-              "{selectedText.length > 30 ? selectedText.substring(0, 30) + '...' : selectedText}"
-            </div>
-            <div className="flex justify-center gap-2">
-              {[
-                { name: 'Yellow', value: '#fef08a', class: 'yellow' },
-                { name: 'Green', value: '#bbf7d0', class: 'green' },
-                { name: 'Blue', value: '#bfdbfe', class: 'blue' },
-                { name: 'Pink', value: '#fecaca', class: 'pink' }
-              ].map((color) => (
-                <button
-                  key={color.name}
-                  onClick={() => {
-                    logger.debug('Color button clicked:', color.name);
-                    applyHighlight(color);
+              {/* Color Picker */}
+              {showColorPicker && pickerPosition && (
+                <div 
+                  className="fixed z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2"
+                  style={{
+                    left: pickerPosition.x - 100, // Center the smaller picker
+                    top: pickerPosition.y,
+                    minWidth: '160px', // Smaller width
+                    maxWidth: '160px'
                   }}
-                  className="w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-500 hover:scale-110 transition-all duration-200 shadow-sm"
-                  style={{ backgroundColor: color.value }}
-                  title={color.name}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+                >
+                  <div className="text-xs text-gray-600 mb-2 text-center font-medium">
+                    {selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {highlightColors.map((color) => (
+                      <button
+                        key={color.name}
+                        onClick={() => applyHighlight(color)}
+                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
       </div>
 
@@ -2302,6 +2380,103 @@ const TestTaker = () => {
         onClose={closeCalculator}
         calculatorRef={calculatorRef}
       />
+
+      {/* CSS for highlighting with rich text compatibility */}
+      <style>{`
+        /* Highlight mode visual indicators */
+        .highlightable-area {
+          position: relative;
+          transition: all 0.2s ease;
+        }
+        
+        .highlightable-area::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, transparent 98%, rgba(59, 130, 246, 0.1) 100%);
+          pointer-events: none;
+          z-index: 1;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        
+        .highlightable-area:hover::before {
+          opacity: 1;
+        }
+        
+        /* Ensure reading passage text is selectable */
+        .reading-passage-container {
+          position: relative;
+        }
+        
+        .reading-passage-content {
+          position: relative;
+          z-index: 2;
+        }
+        
+        /* Highlight mode cursor and text selection */
+        .highlighter-cursor {
+          cursor: text !important;
+        }
+        
+        .highlighter-cursor * {
+          cursor: text !important;
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+        }
+        
+        /* Normal text selection behavior in highlight mode */
+        .highlighter-cursor .rich-text-document {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+        }
+        
+        .highlighter-cursor .rich-text-document * {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+        }
+        
+        /* Prevent highlighting in non-passage areas */
+        .question-content,
+        .answer-options,
+        .question-text {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          cursor: default !important;
+        }
+        
+        .question-content *,
+        .answer-options *,
+        .question-text * {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          cursor: default !important;
+        }
+        
+        /* Ensure highlights are visible and clickable */
+        .rich-text-highlight {
+          position: relative;
+          z-index: 10;
+          cursor: pointer !important;
+        }
+        
+        .rich-text-highlight:hover {
+          opacity: 0.8;
+        }
+      `}</style>
     </div>
   );
 };
