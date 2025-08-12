@@ -47,7 +47,7 @@ const StudyPlan = () => {
     {
       id: 'planning',
       title: 'PLAN YOUR FUTURE',
-      description: 'Set goals and track your academic progress',
+      description: 'Set academic goals, track progress, and plan your path to success',
       icon: Target,
       gradient: 'from-orange-500 to-orange-600',
       hoverGradient: 'from-orange-400 to-orange-500',
@@ -56,7 +56,7 @@ const StudyPlan = () => {
     {
       id: 'pethouse',
       title: 'PET HOUSE',
-      description: 'Your personal study space and achievements',
+      description: 'Your personal study sanctuary - track achievements and stay motivated',
       icon: Home,
       gradient: 'from-teal-500 to-teal-600',
       hoverGradient: 'from-teal-400 to-teal-500',
@@ -82,8 +82,11 @@ const StudyPlan = () => {
           <h1 className="text-5xl font-bold text-slate-800 mb-4 tracking-tight">
             Study Plan
           </h1>
-          <p className="text-xl text-slate-600 font-medium">
+          <p className="text-xl text-slate-600 font-medium mb-2">
             Choose your study path and start your learning journey
+          </p>
+          <p className="text-lg text-slate-500">
+            Access comprehensive study tools, track your progress, and plan your academic future
           </p>
         </div>
 
