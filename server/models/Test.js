@@ -90,9 +90,20 @@ const testSchema = new mongoose.Schema({
       options: [{
         content: {
           type: String,
-          required: true,
-          maxlength: [1000, 'Option content cannot exceed 1000 characters']
+          required: false, // Make content optional since options can be image-only
+          maxlength: [1000, 'Option content cannot exceed 1000 characters'],
+          default: '' // Provide empty string as default
         },
+        images: [{
+          url: {
+            type: String,
+            required: true
+          },
+          name: {
+            type: String,
+            required: true
+          }
+        }],
         isCorrect: {
           type: Boolean,
           default: false
@@ -203,6 +214,30 @@ testSchema.pre('save', function(next) {
   if (this.sections && this.sections.length > 0) {
     this.totalTime = this.sections.reduce((total, section) => total + section.timeLimit, 0);
     this.totalQuestions = this.sections.reduce((total, section) => total + section.questionCount, 0);
+  }
+  next();
+});
+
+// Validate that options have either content or images
+testSchema.pre('save', function(next) {
+  if (this.sections && this.sections.length > 0) {
+    for (const section of this.sections) {
+      if (section.questions && section.questions.length > 0) {
+        for (const question of section.questions) {
+          if (question.options && question.options.length > 0) {
+            for (const option of question.options) {
+              // Check if option has either content or images
+              const hasContent = option.content && option.content.trim().length > 0;
+              const hasImages = option.images && option.images.length > 0;
+              
+              if (!hasContent && !hasImages) {
+                return next(new Error(`Option in question "${question.question?.substring(0, 50)}..." must have either content or images`));
+              }
+            }
+          }
+        }
+      }
+    }
   }
   next();
 });

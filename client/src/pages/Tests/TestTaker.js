@@ -1912,7 +1912,7 @@ const TestTaker = () => {
                 )}
               </div>
 
-              {/* Answer Options */}
+              {/* Answer Options - English Section */}
               <div className="space-y-3">
                 {currentQuestionData.answerType === 'written' ? (
                   // Written Answer Input
@@ -1925,44 +1925,65 @@ const TestTaker = () => {
                     isTestMode={true}
                   />
                 ) : (
-                  // Multiple Choice Options
+                  // Multiple Choice Options - English Section - First occurrence with image support
                   currentQuestionData.options && currentQuestionData.options.map((option, index) => (
                     <div key={index} className="flex items-center">
                       <button
-                        onClick={() => handleAnswerSelect(option.content)}
+                        onClick={() => handleAnswerSelect(option.content || '')}
                         className={`flex-1 flex items-center p-4 border rounded-lg text-left transition-colors ${
-                          selectedAnswer === option.content
+                          selectedAnswer === (option.content || '')
                             ? 'border-blue-500 bg-blue-50'
-                            : eliminatedAnswers.includes(option.content)
+                            : eliminatedAnswers.includes(option.content || '')
                             ? 'border-red-300 bg-red-50 opacity-50'
                             : 'border-gray-300 hover:border-gray-400'
                         }`}
                       >
                         <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
-                          selectedAnswer === option.content
+                          selectedAnswer === (option.content || '')
                             ? 'border-blue-500 bg-blue-500'
-                            : eliminatedAnswers.includes(option.content)
+                            : eliminatedAnswers.includes(option.content || '')
                             ? 'border-red-300 bg-red-300'
                             : 'border-gray-400'
                         }`}>
-                          {selectedAnswer === option.content && (
+                          {selectedAnswer === (option.content || '') && (
                             <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                           )}
-                          {eliminatedAnswers.includes(option.content) && (
+                          {eliminatedAnswers.includes(option.content || '') && (
                             <FiX className="w-4 h-4 text-white" />
                           )}
                         </div>
-                        <span className={`text-gray-900 text-base ${
-                          eliminatedAnswers.includes(option.content) ? 'line-through' : ''
-                        }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" fontSize={`${fontSize}px`} />
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          {/* Option Images - English Section */}
+                          {option.images && option.images.length > 0 && (
+                            <div className="mb-2">
+                              {option.images.map((image, imgIndex) => (
+                                <img 
+                                  key={imgIndex}
+                                  src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                  alt={image.name}
+                                  className="max-w-xs h-auto mb-2 rounded border border-gray-200"
+                                  onError={(e) => {
+                                    logger.error('Option image failed to load:', image);
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Option Content - English Section */}
+                          <span className={`text-gray-900 text-base ${
+                            eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
+                          }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
+                            {option.letter || String.fromCharCode(65 + index)} <KaTeXDisplay content={option.content || ''} fontFamily="serif" fontSize={`${fontSize}px`} />
+                          </span>
+                        </div>
                       </button>
                       <button
-                        onClick={() => handleEliminateAnswer(option.content)}
+                        onClick={() => handleEliminateAnswer(option.content || '')}
                         className="ml-3 p-3 text-gray-600 hover:text-red-600"
                       >
-                        {eliminatedAnswers.includes(option.content) ? 'Undo' : '✕'}
+                        {eliminatedAnswers.includes(option.content || '') ? 'Undo' : '✕'}
                       </button>
                     </div>
                   ))
@@ -2054,44 +2075,65 @@ const TestTaker = () => {
                     isTestMode={true}
                   />
                 ) : (
-                  // Multiple Choice Options
+                  // Multiple Choice Options - Math Section - Second occurrence with image support
                   currentQuestionData.options && currentQuestionData.options.map((option, index) => (
                     <div key={index} className="flex items-center">
                       <button
-                        onClick={() => handleAnswerSelect(option.content)}
+                        onClick={() => handleAnswerSelect(option.content || '')}
                         className={`flex-1 flex items-center p-4 border rounded-lg text-left transition-colors ${
-                          selectedAnswer === option.content
+                          selectedAnswer === (option.content || '')
                             ? 'border-blue-500 bg-blue-50'
-                            : eliminatedAnswers.includes(option.content)
+                            : eliminatedAnswers.includes(option.content || '')
                             ? 'border-red-300 bg-red-50 opacity-50'
                             : 'border-gray-300 hover:border-gray-400'
                         }`}
                       >
                         <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
-                          selectedAnswer === option.content
+                          selectedAnswer === (option.content || '')
                             ? 'border-blue-500 bg-blue-500'
-                            : eliminatedAnswers.includes(option.content)
+                            : eliminatedAnswers.includes(option.content || '')
                             ? 'border-red-300 bg-red-300'
                             : 'border-gray-400'
                         }`}>
-                          {selectedAnswer === option.content && (
+                          {selectedAnswer === (option.content || '') && (
                             <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                           )}
-                          {eliminatedAnswers.includes(option.content) && (
+                          {eliminatedAnswers.includes(option.content || '') && (
                             <FiX className="w-4 h-4 text-white" />
                           )}
                         </div>
-                        <span className={`text-gray-900 text-base ${
-                          eliminatedAnswers.includes(option.content) ? 'line-through' : ''
-                        }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" fontSize={`${fontSize}px`} />
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          {/* Option Images - Math Section */}
+                          {option.images && option.images.length > 0 && (
+                            <div className="mb-2">
+                              {option.images.map((image, imgIndex) => (
+                                <img 
+                                  key={imgIndex}
+                                  src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                  alt={image.name}
+                                  className="max-w-xs h-auto mb-2 rounded border border-gray-200"
+                                  onError={(e) => {
+                                    logger.error('Option image failed to load:', image);
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Option Content - Math Section */}
+                          <span className={`text-gray-900 text-base ${
+                            eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
+                          }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
+                            {option.letter || String.fromCharCode(65 + index)} <KaTeXDisplay content={option.content || ''} fontFamily="serif" fontSize={`${fontSize}px`} />
+                          </span>
+                        </div>
                       </button>
                       <button
-                        onClick={() => handleEliminateAnswer(option.content)}
+                        onClick={() => handleEliminateAnswer(option.content || '')}
                         className="ml-3 p-3 text-gray-600 hover:text-red-600"
                       >
-                        {eliminatedAnswers.includes(option.content) ? 'Undo' : '✕'}
+                        {eliminatedAnswers.includes(option.content || '') ? 'Undo' : '✕'}
                       </button>
                     </div>
                   ))

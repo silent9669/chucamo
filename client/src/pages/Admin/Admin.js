@@ -504,7 +504,12 @@ const RealTestManagement = () => {
   });
   const [currentQuestion, setCurrentQuestion] = useState({
     question: '',
-    options: ['', '', '', ''],
+    options: [
+      { content: '', images: [] },
+      { content: '', images: [] },
+      { content: '', images: [] },
+      { content: '', images: [] }
+    ],
     correctAnswer: 0,
     explanation: '',
     difficulty: 'medium',
@@ -516,6 +521,7 @@ const RealTestManagement = () => {
   });
 
   const fileInputRef = useRef(null);
+  const optionFileInputRefs = useRef({});
 
   // Memoized onChange handlers to prevent typing disruption
   const handleQuestionChange = useCallback((value) => {
@@ -589,16 +595,61 @@ const RealTestManagement = () => {
     }));
   };
 
+  const handleOptionImageUpload = (optionIndex, event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newImage = {
+          id: Date.now(),
+          url: e.target.result,
+          name: file.name
+        };
+        setCurrentQuestion(prev => ({
+          ...prev,
+          options: prev.options.map((option, index) => 
+            index === optionIndex 
+              ? { 
+                  ...option, 
+                  images: [...(option.images || []), newImage] 
+                }
+              : option
+          )
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeOptionImage = (optionIndex, imageIndex) => {
+    setCurrentQuestion(prev => ({
+      ...prev,
+      options: prev.options.map((option, index) => 
+        index === optionIndex 
+          ? { 
+              ...option, 
+              images: option.images.filter((_, imgIndex) => imgIndex !== imageIndex) 
+            }
+          : option
+      )
+    }));
+  };
+
   const addOption = () => {
     setCurrentQuestion(prev => ({
       ...prev,
-      options: [...prev.options, '']
+      options: [...prev.options, { content: '', images: [] }]
     }));
   };
 
   const handleOptionChange = (index, value) => {
     const newOptions = [...currentQuestion.options];
-    newOptions[index] = value;
+    // Handle both old string format and new object format
+    if (typeof newOptions[index] === 'string') {
+      newOptions[index] = { content: value, images: [] };
+    } else {
+      newOptions[index] = { ...newOptions[index], content: value };
+    }
     setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
   };
 
@@ -857,15 +908,31 @@ const RealTestManagement = () => {
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
         type: currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice', // This is the answer type
+        // Options with image support - saveQuestion function
         options: currentQuestion.answerType === 'multiple-choice' 
-          ? currentQuestion.options.map((opt, index) => ({
-              content: opt || '',
-              isCorrect: index === currentQuestion.correctAnswer
-            }))
+          ? currentQuestion.options.map((opt, index) => {
+              const content = typeof opt === 'string' ? opt : (opt.content || '');
+              const images = typeof opt === 'string' ? [] : (opt.images || []);
+              
+              // If option has images but no content, provide a default content
+              let finalContent = content;
+              if (!content && images && images.length > 0) {
+                finalContent = `Image Option ${String.fromCharCode(65 + index)}`;
+              }
+              
+              return {
+                content: finalContent,
+                images: images,
+                isCorrect: index === currentQuestion.correctAnswer
+              };
+            })
           : [],
         correctAnswer: currentQuestion.answerType === 'written' 
           ? currentQuestion.writtenAnswer || ''
-          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer]) || '',
+          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+             (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+               ? currentQuestion.options[currentQuestion.correctAnswer] 
+               : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
         images: (currentQuestion.images || []).map(img => ({
           url: img.url,
           name: img.name
@@ -1066,8 +1133,22 @@ const RealTestManagement = () => {
       question: question.question || question.content || '',
       topic: question.topic || 'general', // Add topic loading
       options: question.options && question.options.length > 0 
-        ? question.options.map(opt => typeof opt === 'string' ? opt : opt.content || '')
-        : ['', '', '', ''],
+        ? question.options.map(opt => {
+            if (typeof opt === 'string') {
+              return { content: opt, images: [] };
+            } else {
+              return { 
+                content: opt.content || '', 
+                images: opt.images || [] 
+              };
+            }
+          })
+        : [
+            { content: '', images: [] },
+            { content: '', images: [] },
+            { content: '', images: [] },
+            { content: '', images: [] }
+          ],
       correctAnswer: correctAnswer,
       explanation: question.explanation || '',
       difficulty: question.difficulty || 'medium',
@@ -1079,11 +1160,17 @@ const RealTestManagement = () => {
     };
 
     logger.debug('Processed question data:', questionData);
-    logger.debug('KaTeX content preserved:', {
+    logger.debug('KaTeX content preserved - loadQuestionForEditing:', {
       question: questionData.question?.includes('$'),
       explanation: questionData.explanation?.includes('$'),
       passage: questionData.passage?.includes('$'),
-      options: questionData.options?.map(opt => opt.includes('$'))
+      options: questionData.options?.map(opt => {
+        if (typeof opt === 'string') {
+          return opt.includes('$');
+        } else {
+          return opt.content?.includes('$') || false;
+        }
+      })
     });
 
     setCurrentQuestion(questionData);
@@ -1300,14 +1387,29 @@ const RealTestManagement = () => {
         // CRITICAL: Preserve the original question type, don't override it
         type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
         options: currentQuestion.answerType === 'multiple-choice' 
-          ? currentQuestion.options.map((opt, index) => ({
-              content: opt || '',
-              isCorrect: index === currentQuestion.correctAnswer
-            }))
+          ? currentQuestion.options.map((opt, index) => {
+              const content = typeof opt === 'string' ? opt : (opt.content || '');
+              const images = typeof opt === 'string' ? [] : (opt.images || []);
+              
+              // If option has images but no content, provide a default content
+              let finalContent = content;
+              if (!content && images && images.length > 0) {
+                finalContent = `Image Option ${String.fromCharCode(65 + index)}`;
+              }
+              
+              return {
+                content: finalContent,
+                images: images,
+                isCorrect: index === currentQuestion.correctAnswer
+              };
+            })
           : [],
         correctAnswer: currentQuestion.answerType === 'written' 
           ? currentQuestion.writtenAnswer || ''
-          : currentQuestion.correctAnswer,
+          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+             (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+               ? currentQuestion.options[currentQuestion.correctAnswer] 
+               : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
         images: (currentQuestion.images || []).map(img => ({
           url: img.url,
           name: img.name
@@ -2081,7 +2183,12 @@ const RealTestManagement = () => {
               setEditingQuestion(null);
               setCurrentQuestion({
                 question: '',
-                options: ['', '', '', ''],
+                options: [
+                  { content: '', images: [] },
+                  { content: '', images: [] },
+                  { content: '', images: [] },
+                  { content: '', images: [] }
+                ],
                 correctAnswer: 0,
                 explanation: '',
                 difficulty: 'medium',
@@ -2301,7 +2408,12 @@ const RealTestManagement = () => {
                     onChange={(e) => setCurrentQuestion(prev => ({ 
                       ...prev, 
                       answerType: e.target.value,
-                      options: e.target.value === 'multiple-choice' ? ['', '', '', ''] : []
+                      options: e.target.value === 'multiple-choice' ? [
+                        { content: '', images: [] },
+                        { content: '', images: [] },
+                        { content: '', images: [] },
+                        { content: '', images: [] }
+                      ] : []
                     }))}
                     className="mr-2"
                   />
@@ -2439,7 +2551,7 @@ const RealTestManagement = () => {
                       <div className="flex-1 min-w-0">
                         {currentSection.type === 'english' ? (
                           <SimpleRichTextEditor
-                            value={option}
+                            value={typeof option === 'string' ? option : option.content}
                             onChange={(value) => handleOptionChange(index, value)}
                             placeholder={`Option ${String.fromCharCode(65 + index)}`}
                             rows={3}
@@ -2447,11 +2559,58 @@ const RealTestManagement = () => {
                           />
                         ) : (
                           <KaTeXEditor
-                            value={option}
+                            value={typeof option === 'string' ? option : option.content}
                             onChange={(value) => handleOptionChange(index, value)}
                             placeholder={`Option ${String.fromCharCode(65 + index)}`}
                             rows={3}
                           />
+                        )}
+                        
+                        {/* Image upload for math section multiple choice options */}
+                        {currentSection.type === 'math' && currentQuestion.answerType === 'multiple-choice' && (
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-2">
+                              <label className="block text-sm font-medium text-gray-600">
+                                Option Images (Optional)
+                              </label>
+                              <button
+                                onClick={() => optionFileInputRefs.current[index]?.click()}
+                                className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs flex items-center gap-1 hover:bg-gray-200"
+                              >
+                                <FiUpload size={12} />
+                                Add Image
+                              </button>
+                            </div>
+                            <input
+                              ref={el => optionFileInputRefs.current[index] = el}
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleOptionImageUpload(index, e)}
+                              className="hidden"
+                            />
+                            
+                            {/* Display option images */}
+                            {option.images && Array.isArray(option.images) && option.images.length > 0 && (
+                              <div className="grid grid-cols-2 gap-2">
+                                {option.images.map((image, imgIndex) => (
+                                  <div key={imgIndex} className="relative group">
+                                    <img
+                                      src={image.url}
+                                      alt={image.name}
+                                      className="w-full h-16 object-cover rounded border"
+                                    />
+                                    <button
+                                      onClick={() => removeOptionImage(index, imgIndex)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                                    >
+                                      <FiX size={10} />
+                                    </button>
+                                    <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                       {currentQuestion.options.length > 2 && (
@@ -3169,11 +3328,17 @@ const MockTestManagement = () => {
     };
 
     logger.debug('Processed question data:', questionData);
-    logger.debug('KaTeX content preserved:', {
+    logger.debug('KaTeX content preserved - createCompleteQuestionDataMock:', {
       question: questionData.question?.includes('$'),
       explanation: questionData.explanation?.includes('$'),
       passage: questionData.passage?.includes('$'),
-      options: questionData.options?.map(opt => opt.includes('$'))
+      options: questionData.options?.map(opt => {
+        if (typeof opt === 'string') {
+          return opt.includes('$');
+        } else {
+          return opt.content?.includes('$') || false;
+        }
+      })
     });
 
     setCurrentQuestion(questionData);
@@ -3193,14 +3358,29 @@ const MockTestManagement = () => {
       // Preserve the original question type, don't override it
       type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
       options: currentQuestion.answerType === 'multiple-choice' 
-        ? currentQuestion.options.map((opt, index) => ({
-            content: opt || '',
-            isCorrect: index === currentQuestion.correctAnswer
-          }))
+        ? currentQuestion.options.map((opt, index) => {
+            const content = typeof opt === 'string' ? opt : (opt.content || '');
+            const images = typeof opt === 'string' ? [] : (opt.images || []);
+            
+            // If option has images but no content, provide a default content
+            let finalContent = content;
+            if (!content && images && images.length > 0) {
+              finalContent = `Image Option ${String.fromCharCode(65 + index)}`;
+            }
+            
+            return {
+              content: finalContent,
+              images: images,
+              isCorrect: index === currentQuestion.correctAnswer
+            };
+          })
         : [],
       correctAnswer: currentQuestion.answerType === 'written' 
         ? currentQuestion.writtenAnswer || ''
-        : currentQuestion.correctAnswer,
+        : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+           (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+             ? currentQuestion.options[currentQuestion.correctAnswer] 
+             : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
       images: (currentQuestion.images || []).map(img => ({
         url: img.url,
         name: img.name
@@ -3713,7 +3893,12 @@ const MockTestManagement = () => {
               setEditingQuestion(null);
               setCurrentQuestion({
                 question: '',
-                options: ['', '', '', ''],
+                options: [
+                  { content: '', images: [] },
+                  { content: '', images: [] },
+                  { content: '', images: [] },
+                  { content: '', images: [] }
+                ],
                 correctAnswer: 0,
                 explanation: '',
                 difficulty: 'medium',

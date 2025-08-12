@@ -77,7 +77,16 @@ const TestDetails = () => {
     if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
       // Method 1: Check if the selected answer matches an option with isCorrect flag
       if (question.options) {
-        const selectedOption = question.options.find(opt => opt.content === selectedAnswer);
+        const selectedOption = question.options.find(opt => {
+          // Handle both text content and image-only options
+          if (opt.content === selectedAnswer) return true;
+          // For image-only options, check if the selected answer matches the fallback pattern
+          if (!opt.content && opt.images && opt.images.length > 0) {
+            const fallbackContent = `Image Option ${String.fromCharCode(65 + question.options.indexOf(opt))}`;
+            return selectedAnswer === fallbackContent;
+          }
+          return false;
+        });
         if (selectedOption && selectedOption.isCorrect === true) {
           return true;
         }
@@ -99,8 +108,14 @@ const TestDetails = () => {
       // Method 3: Check if the selected answer matches any option marked as correct
       if (question.options) {
         const correctOption = question.options.find(opt => opt.isCorrect === true);
-        if (correctOption && correctOption.content === selectedAnswer) {
-          return true;
+        if (correctOption && correctOption.isCorrect === true) {
+          // Handle both text content and image-only options
+          if (correctOption.content === selectedAnswer) return true;
+          // For image-only options, check if the selected answer matches the fallback pattern
+          if (!correctOption.content && correctOption.images && correctOption.images.length > 0) {
+            const fallbackContent = `Image Option ${String.fromCharCode(65 + question.options.indexOf(correctOption))}`;
+            return selectedAnswer === fallbackContent;
+          }
         }
       }
     } else if (question.answerType === 'written' || question.type === 'grid-in') {
@@ -135,7 +150,16 @@ const TestDetails = () => {
     if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
       // Method 1: Check if this option has isCorrect flag
       if (question.options) {
-        const option = question.options.find(opt => opt.content === optionContent);
+        const option = question.options.find(opt => {
+          // Handle both text content and image-only options
+          if (opt.content === optionContent) return true;
+          // For image-only options, check if the optionContent matches the fallback pattern
+          if (!opt.content && opt.images && opt.images.length > 0) {
+            const fallbackContent = `image-option-${question.options.indexOf(opt)}`;
+            return optionContent === fallbackContent;
+          }
+          return false;
+        });
         if (option && option.isCorrect === true) {
           isCorrectAnswer = true;
         }
@@ -157,8 +181,17 @@ const TestDetails = () => {
       // Method 3: Check if this option matches any option marked as correct
       if (!isCorrectAnswer && question.options) {
         const correctOption = question.options.find(opt => opt.isCorrect === true);
-        if (correctOption && correctOption.content === optionContent) {
-          isCorrectAnswer = true;
+        if (correctOption && correctOption.isCorrect === true) {
+          // Handle both text content and image-only options
+          if (correctOption.content === optionContent) {
+            isCorrectAnswer = true;
+          } else if (!correctOption.content && correctOption.images && correctOption.images.length > 0) {
+            // For image-only options, check if the optionContent matches the fallback pattern
+            const fallbackContent = `image-option-${question.options.indexOf(correctOption)}`;
+            if (optionContent === fallbackContent) {
+              isCorrectAnswer = true;
+            }
+          }
         }
       }
     }
@@ -295,8 +328,17 @@ const TestDetails = () => {
                 // Method 3: Check if the selected answer matches any option marked as correct
                 if (!isCorrect && question.options) {
                   const correctOption = question.options.find(opt => opt.isCorrect === true);
-                  if (correctOption && correctOption.content === questionResult.selectedAnswer) {
-                    isCorrect = true;
+                  if (correctOption && correctOption.isCorrect === true) {
+                    // Handle both text content and image-only options
+                    if (correctOption.content === questionResult.selectedAnswer) {
+                      isCorrect = true;
+                    } else if (!correctOption.content && correctOption.images && correctOption.images.length > 0) {
+                      // For image-only options, check if the selected answer matches the fallback pattern
+                      const fallbackContent = `Image Option ${String.fromCharCode(65 + question.options.indexOf(correctOption))}`;
+                      if (questionResult.selectedAnswer === fallbackContent) {
+                        isCorrect = true;
+                      }
+                    }
                   }
                 }
               } else if (question.answerType === 'written' || question.type === 'grid-in') {
@@ -592,7 +634,9 @@ const TestDetails = () => {
                         <div className="space-y-3">
                           {currentQuestionData.options.map((option, index) => {
                             const questionId = `${currentSection}-${currentQuestion}`;
-                            const status = getAnswerStatus(questionId, option.content);
+                            // Create a unique identifier for the option that works with both text and image-only options
+                            const optionIdentifier = option.content || `image-option-${index}`;
+                            const status = getAnswerStatus(questionId, optionIdentifier);
                             const statusClasses = {
                               'correct': 'bg-green-100 border-green-400 text-green-900 shadow-sm',
                               'incorrect': 'bg-red-100 border-red-400 text-red-900 shadow-sm',
@@ -624,16 +668,35 @@ const TestDetails = () => {
                                     </span>
                                   </div>
                                                                      <div className="flex-1" style={{ fontFamily: 'serif' }}>
-                                     {getCurrentSectionData()?.type === 'english' ? (
-                                       <RichTextDisplay 
-                                         content={option.content}
-                                         sectionType={getCurrentSectionData()?.type}
-                                         fontFamily="serif"
-                                       />
-                                     ) : (
-                                       <KaTeXDisplay content={option.content} fontFamily="serif" />
-                                     )}
-                                   </div>
+                                    {/* Option Images */}
+                                    {option.images && option.images.length > 0 && (
+                                      <div className="mb-2">
+                                        {option.images.map((image, imgIndex) => (
+                                          <img 
+                                            key={imgIndex}
+                                            src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                            alt={image.name}
+                                            className="max-w-xs h-auto mb-2 rounded border border-gray-200"
+                                            onError={(e) => {
+                                              logger.error('Option image failed to load:', image);
+                                              e.target.style.display = 'none';
+                                            }}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                    
+                                    {/* Option Content */}
+                                    {getCurrentSectionData()?.type === 'english' ? (
+                                      <RichTextDisplay 
+                                        content={option.content || ''}
+                                        sectionType={getCurrentSectionData()?.type}
+                                        fontFamily="serif"
+                                      />
+                                    ) : (
+                                      <KaTeXDisplay content={option.content || ''} fontFamily="serif" />
+                                    )}
+                                  </div>
                                   {showAnswers && status === 'correct' && (
                                     <FiCheck className="h-5 w-5 text-green-600 ml-2" />
                                   )}

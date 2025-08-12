@@ -56,6 +56,20 @@ const questionSchema = new mongoose.Schema({
       required: true,
       maxlength: [1000, 'Option content cannot exceed 1000 characters']
     },
+    images: [{
+      url: {
+        type: String,
+        required: true
+      },
+      name: {
+        type: String,
+        required: true
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
     isCorrect: {
       type: Boolean,
       default: false
