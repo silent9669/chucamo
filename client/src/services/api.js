@@ -44,15 +44,17 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Log request details for debugging
-    console.log('API Request:', {
-      url: config.url,
-      method: config.method,
-      baseURL: config.baseURL,
-      hasToken: !!token,
-      environment: process.env.NODE_ENV,
-      currentHost: window.location.hostname
-    });
+    // Log request details for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('API Request:', {
+        url: config.url,
+        method: config.method,
+        baseURL: config.baseURL,
+        hasToken: !!token,
+        environment: process.env.NODE_ENV,
+        currentHost: window.location.hostname
+      });
+    }
     
     return config;
   },
@@ -65,18 +67,20 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log detailed error information for debugging
-    console.error('API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      baseURL: error.config?.baseURL,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      message: error.message,
-      code: error.code,
-      environment: process.env.NODE_ENV,
-      currentHost: window.location.hostname
-    });
+    // Log detailed error information for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        message: error.message,
+        code: error.code,
+        environment: process.env.NODE_ENV,
+        currentHost: window.location.hostname
+      });
+    }
     
     if (error.response?.status === 401) {
       localStorage.removeItem('token');

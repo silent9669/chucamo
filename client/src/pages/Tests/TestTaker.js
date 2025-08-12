@@ -1812,7 +1812,7 @@ const TestTaker = () => {
               {currentQuestionData.images.map((image, index) => (
                 <img 
                   key={index}
-                  src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                        src={image.url || `${window.location.origin}/uploads/${image.name}`}
                   alt={image.name}
                   className="max-w-lg h-auto mb-4 rounded-lg shadow-sm border border-gray-200 mx-auto"
                   onError={(e) => {
@@ -1953,13 +1953,13 @@ const TestTaker = () => {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          {/* Option Images - English Section */}
+                          {/* Option Images - English Section - First occurrence */}
                           {option.images && option.images.length > 0 && (
                             <div className="mb-2">
                               {option.images.map((image, imgIndex) => (
                                 <img 
                                   key={imgIndex}
-                                  src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                  src={image.url || `${window.location.origin}/uploads/${image.name}`}
                                   alt={image.name}
                                   className="max-w-xs h-auto mb-2 rounded border border-gray-200"
                                   onError={(e) => {
@@ -2027,7 +2027,7 @@ const TestTaker = () => {
                     {currentQuestionData.images.map((image, index) => (
                       <img 
                         key={index}
-                        src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                        src={image.url || `${window.location.origin}/uploads/${image.name}`}
                         alt={image.name}
                         className="max-w-lg h-auto mb-4 rounded-lg shadow-sm border border-gray-200 mx-auto"
                         onError={(e) => {
@@ -2103,13 +2103,13 @@ const TestTaker = () => {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          {/* Option Images - Math Section */}
+                          {/* Option Images - Math Section - Second occurrence */}
                           {option.images && option.images.length > 0 && (
                             <div className="mb-2">
                               {option.images.map((image, imgIndex) => (
                                 <img 
                                   key={imgIndex}
-                                  src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                  src={image.url || `${window.location.origin}/uploads/${image.name}`}
                                   alt={image.name}
                                   className="max-w-xs h-auto mb-2 rounded border border-gray-200"
                                   onError={(e) => {

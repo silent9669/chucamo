@@ -674,7 +674,7 @@ const TestDetails = () => {
                                         {option.images.map((image, imgIndex) => (
                                           <img 
                                             key={imgIndex}
-                                            src={image.url || `http://localhost:5000/uploads/${image.name}`}
+                                            src={image.url || `${window.location.origin}/uploads/${image.name}`}
                                             alt={image.name}
                                             className="max-w-xs h-auto mb-2 rounded border border-gray-200"
                                             onError={(e) => {
