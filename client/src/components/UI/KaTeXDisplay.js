@@ -16,7 +16,7 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
     processed = processed.replace(/\\sqrt\{([^}]+)\}/g, '\\sqrt{\\quad$1}');
     
     // Fix other common spacing issues
-    processed = processed.replace(/\\sqrt([^\{])/g, '\\sqrt{$1');
+    processed = processed.replace(/\\sqrt([^{])/g, '\\sqrt{$1');
     
     // Remove problematic font size commands
     processed = processed.replace(/\\sixptsize/g, '');

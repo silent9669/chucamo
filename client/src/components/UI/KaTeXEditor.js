@@ -37,7 +37,7 @@ const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label 
     processed = processed.replace(/\\sqrt\{([^}]+)\}/g, '\\sqrt{\\quad$1}');
     
     // Fix other common spacing issues
-    processed = processed.replace(/\\sqrt([^\{])/g, '\\sqrt{$1');
+    processed = processed.replace(/\\sqrt([^{])/g, '\\sqrt{$1');
     
     return processed;
   };
