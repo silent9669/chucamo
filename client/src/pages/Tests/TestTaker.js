@@ -1889,7 +1889,7 @@ const TestTaker = () => {
               {/* Question */}
               <div className="mb-6">
                 {currentSectionData?.type === 'math' ? (
-                  <div key={`math-question-${currentSection}-${currentQuestion}`} className="question-content text-gray-900 text-base leading-relaxed" style={{ fontFamily: 'serif' }}>
+                  <div key={`math-question-${currentSection}-${currentQuestion}`} className="question-content text-gray-900 text-base leading-relaxed math-section" style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
                     <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} />
                   </div>
                 ) : (
@@ -1955,7 +1955,7 @@ const TestTaker = () => {
                         <span className={`text-gray-900 text-base ${
                           eliminatedAnswers.includes(option.content) ? 'line-through' : ''
                         }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" />
+                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" fontSize={`${fontSize}px`} />
                         </span>
                       </button>
                       <button
@@ -2020,7 +2020,7 @@ const TestTaker = () => {
                 
                 {/* Question Text */}
                 {currentSectionData?.type === 'math' ? (
-                  <div className="text-gray-900 text-base leading-relaxed" style={{ fontSize: `${fontSize}px` }}>
+                  <div className="text-gray-900 text-base leading-relaxed math-section" style={{ fontSize: `${fontSize}px` }}>
                     <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} />
                   </div>
                 ) : (
@@ -2084,7 +2084,7 @@ const TestTaker = () => {
                         <span className={`text-gray-900 text-base ${
                           eliminatedAnswers.includes(option.content) ? 'line-through' : ''
                         }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" />
+                          {option.letter} <KaTeXDisplay content={option.content} fontFamily="serif" fontSize={`${fontSize}px`} />
                         </span>
                       </button>
                       <button
@@ -2473,6 +2473,49 @@ const TestTaker = () => {
         
         .rich-text-highlight:hover {
           opacity: 0.8;
+        }
+        
+        /* Math section styling for better readability */
+        .math-section {
+          line-height: 1.8 !important;
+          padding: 1rem 0 !important;
+        }
+        
+        .math-section .katex-display-container {
+          margin: 1rem 0 !important;
+          font-size: 1.15em !important;
+        }
+        
+        .math-section .katex-inline-container {
+          margin: 0 0.3rem !important;
+          font-size: 1.1em !important;
+        }
+        
+        /* Ensure proper spacing in math sections */
+        .math-section p {
+          margin: 0.75rem 0 !important;
+        }
+        
+        .math-section div:not(.katex-display-container) {
+          margin: 0.5rem 0 !important;
+        }
+        
+        /* Improve readability of math content */
+        .math-section .question-content {
+          font-size: 1.05em !important;
+        }
+        
+        /* Make math equations more prominent in math sections */
+        .math-section .katex {
+          font-size: 1.1em !important;
+        }
+        
+        .math-section .katex-display {
+          font-size: 1.15em !important;
+        }
+        
+        .math-section .katex-inline {
+          font-size: 1.1em !important;
         }
       `}</style>
     </div>
