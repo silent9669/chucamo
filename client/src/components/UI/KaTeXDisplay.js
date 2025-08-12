@@ -5,6 +5,38 @@ import katex from 'katex';
 const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize = 'inherit' }) => {
   if (!content) return null;
 
+  // Function to preprocess LaTeX content for better square root spacing
+  const preprocessLaTeX = (tex) => {
+    if (!tex) return tex;
+    
+    let processed = tex;
+    
+    // Fix square root spacing by adding proper LaTeX spacing commands
+    // This ensures the radical covers the entire expression
+    processed = processed.replace(/\\sqrt\{([^}]+)\}/g, '\\sqrt{\\quad$1}');
+    
+    // Fix other common spacing issues
+    processed = processed.replace(/\\sqrt([^\{])/g, '\\sqrt{$1');
+    
+    // Remove problematic font size commands
+    processed = processed.replace(/\\sixptsize/g, '');
+    processed = processed.replace(/\\eightptsize/g, '');
+    processed = processed.replace(/\\nineptsize/g, '');
+    processed = processed.replace(/\\tenptsize/g, '');
+    processed = processed.replace(/\\elevenptsize/g, '');
+    processed = processed.replace(/\\twelveptsize/g, '');
+    
+    // Simplify \underline{\text{}} to just \underline{}
+    processed = processed.replace(/\\underline\{\\text\{([^}]*)\}\}/g, '\\underline{$1}');
+    
+    if (debug) {
+      console.log('Original LaTeX:', tex);
+      console.log('Processed LaTeX:', processed);
+    }
+    
+    return processed;
+  };
+
   // Function to render KaTeX content
   const renderKaTeX = (text) => {
     if (!text) return '';
@@ -18,24 +50,8 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
         const mathContent = part.slice(2, -2);
         
         try {
-          // Preprocess LaTeX content to handle custom commands
-          let processedContent = mathContent;
-          
-          // Remove problematic font size commands
-          processedContent = processedContent.replace(/\\sixptsize/g, '');
-          processedContent = processedContent.replace(/\\eightptsize/g, '');
-          processedContent = processedContent.replace(/\\nineptsize/g, '');
-          processedContent = processedContent.replace(/\\tenptsize/g, '');
-          processedContent = processedContent.replace(/\\elevenptsize/g, '');
-          processedContent = processedContent.replace(/\\twelveptsize/g, '');
-          
-          // Simplify \underline{\text{}} to just \underline{}
-          processedContent = processedContent.replace(/\\underline\{\\text\{([^}]*)\}\}/g, '\\underline{$1}');
-          
-          if (debug) {
-            console.log('Original LaTeX:', mathContent);
-            console.log('Processed LaTeX:', processedContent);
-          }
+          // Preprocess LaTeX content to handle custom commands and spacing
+          let processedContent = preprocessLaTeX(mathContent);
           
           const katexHTML = katex.renderToString(processedContent, {
             displayMode: true,
@@ -60,24 +76,8 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
         const mathContent = part.slice(1, -1);
         
         try {
-          // Preprocess LaTeX content to handle custom commands
-          let processedContent = mathContent;
-          
-          // Remove problematic font size commands
-          processedContent = processedContent.replace(/\\sixptsize/g, '');
-          processedContent = processedContent.replace(/\\eightptsize/g, '');
-          processedContent = processedContent.replace(/\\nineptsize/g, '');
-          processedContent = processedContent.replace(/\\tenptsize/g, '');
-          processedContent = processedContent.replace(/\\elevenptsize/g, '');
-          processedContent = processedContent.replace(/\\twelveptsize/g, '');
-          
-          // Simplify \underline{\text{}} to just \underline{}
-          processedContent = processedContent.replace(/\\underline\{\\text\{([^}]*)\}\}/g, '\\underline{$1}');
-          
-          if (debug) {
-            console.log('Original inline LaTeX:', mathContent);
-            console.log('Processed inline LaTeX:', processedContent);
-          }
+          // Preprocess LaTeX content to handle custom commands and spacing
+          let processedContent = preprocessLaTeX(mathContent);
           
           const katexHTML = katex.renderToString(processedContent, {
             displayMode: false,
@@ -264,6 +264,22 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
         p + .katex-display-container,
         div:not(.katex-display-container) + .katex-display-container {
           margin-top: 0.75rem !important;
+        }
+        
+        /* Fix square root spacing - ensure proper radical coverage */
+        .katex .sqrt {
+          display: inline !important;
+        }
+        
+        /* Ensure the radical bar extends properly */
+        .katex .sqrt .sqrt-sign {
+          position: relative !important;
+        }
+        
+        /* Remove any scrollbars */
+        .katex-display-container,
+        .katex-inline-container {
+          overflow: visible !important;
         }
       `}</style>
     </>

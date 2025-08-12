@@ -1890,7 +1890,7 @@ const TestTaker = () => {
               <div className="mb-6">
                 {currentSectionData?.type === 'math' ? (
                   <div key={`math-question-${currentSection}-${currentQuestion}`} className="question-content text-gray-900 text-base leading-relaxed math-section" style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                    <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} />
+                    <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} fontFamily="serif" fontSize={`${fontSize}px`} />
                   </div>
                 ) : (
                   <div 
@@ -2021,7 +2021,7 @@ const TestTaker = () => {
                 {/* Question Text */}
                 {currentSectionData?.type === 'math' ? (
                   <div className="text-gray-900 text-base leading-relaxed math-section" style={{ fontSize: `${fontSize}px` }}>
-                    <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} />
+                    <KaTeXDisplay content={currentQuestionData.question || currentQuestionData.content} fontFamily="serif" fontSize={`${fontSize}px`} />
                   </div>
                 ) : (
                   <div 
@@ -2479,6 +2479,7 @@ const TestTaker = () => {
         .math-section {
           line-height: 1.8 !important;
           padding: 1rem 0 !important;
+          font-family: serif !important;
         }
         
         .math-section .katex-display-container {
@@ -2508,14 +2509,17 @@ const TestTaker = () => {
         /* Make math equations more prominent in math sections */
         .math-section .katex {
           font-size: 1.1em !important;
+          font-family: serif !important;
         }
         
         .math-section .katex-display {
           font-size: 1.15em !important;
+          font-family: serif !important;
         }
         
         .math-section .katex-inline {
           font-size: 1.1em !important;
+          font-family: serif !important;
         }
       `}</style>
     </div>

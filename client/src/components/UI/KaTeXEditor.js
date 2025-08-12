@@ -26,6 +26,22 @@ const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label 
     };
   }, []);
 
+  // Function to preprocess LaTeX content for better square root spacing
+  const preprocessLaTeX = (tex) => {
+    if (!tex) return tex;
+    
+    let processed = tex;
+    
+    // Fix square root spacing by adding proper LaTeX spacing commands
+    // This ensures the radical covers the entire expression
+    processed = processed.replace(/\\sqrt\{([^}]+)\}/g, '\\sqrt{\\quad$1}');
+    
+    // Fix other common spacing issues
+    processed = processed.replace(/\\sqrt([^\{])/g, '\\sqrt{$1');
+    
+    return processed;
+  };
+
   // Function to render KaTeX content - memoized to prevent unnecessary recalculations
   const renderKaTeX = useCallback((text) => {
     if (!text) return '';
@@ -38,7 +54,8 @@ const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label 
         // Display math mode
         try {
           const mathContent = part.slice(2, -2);
-          const katexHTML = katex.renderToString(mathContent, {
+          const processedContent = preprocessLaTeX(mathContent);
+          const katexHTML = katex.renderToString(processedContent, {
             displayMode: true,
             throwOnError: false,
             errorColor: '#cc0000'
@@ -52,7 +69,8 @@ const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label 
         // Inline math mode
         try {
           const mathContent = part.slice(1, -1);
-          const katexHTML = katex.renderToString(mathContent, {
+          const processedContent = preprocessLaTeX(mathContent);
+          const katexHTML = katex.renderToString(processedContent, {
             displayMode: false,
             throwOnError: false,
             errorColor: '#cc0000'
@@ -199,6 +217,22 @@ const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label 
           -moz-user-select: none !important;
           -ms-user-select: none !important;
           pointer-events: none !important;
+        }
+        
+        /* Fix square root spacing - ensure proper radical coverage */
+        .katex .sqrt {
+          display: inline !important;
+        }
+        
+        /* Ensure the radical bar extends properly */
+        .katex .sqrt .sqrt-sign {
+          position: relative !important;
+        }
+        
+        /* Remove any scrollbars */
+        .katex-display-container,
+        .katex-inline-container {
+          overflow: visible !important;
         }
       `}</style>
     </>

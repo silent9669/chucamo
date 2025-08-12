@@ -21,6 +21,13 @@ const preprocessLaTeX = (tex) => {
   
   let processed = tex.trim();
   
+  // Fix square root spacing by adding proper LaTeX spacing commands
+  // This ensures the radical covers the entire expression
+  processed = processed.replace(/\\sqrt\{([^}]+)\}/g, '\\sqrt{\\quad$1}');
+  
+  // Fix other common spacing issues
+  processed = processed.replace(/\\sqrt([^\{])/g, '\\sqrt{$1}');
+  
   // Apply custom command replacements
   Object.entries(customCommands).forEach(([command, replacement]) => {
     processed = processed.replace(new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
@@ -61,7 +68,11 @@ export const renderPassageWithKaTeX = (passageContent) => {
         displayMode: true,
         throwOnError: false,
         errorColor: '#cc0000',
-        macros: customCommands,
+        macros: {
+          ...customCommands,
+          '\\frac': '\\frac{#1}{#2}',
+          '\\text': '\\text{#1}'
+        },
         strict: false
       });
       
@@ -81,7 +92,11 @@ export const renderPassageWithKaTeX = (passageContent) => {
         displayMode: false,
         throwOnError: false,
         errorColor: '#cc0000',
-        macros: customCommands,
+        macros: {
+          ...customCommands,
+          '\\frac': '\\frac{#1}{#2}',
+          '\\text': '\\text{#1}'
+        },
         strict: false
       });
       
@@ -117,7 +132,11 @@ export const renderContent = (content, sectionType) => {
         displayMode: true,
         throwOnError: false,
         errorColor: '#cc0000',
-        macros: customCommands,
+        macros: {
+          ...customCommands,
+          '\\frac': '\\frac{#1}{#2}',
+          '\\text': '\\text{#1}'
+        },
         strict: false
       });
       
@@ -136,7 +155,11 @@ export const renderContent = (content, sectionType) => {
         displayMode: false,
         throwOnError: false,
         errorColor: '#cc0000',
-        macros: customCommands,
+        macros: {
+          ...customCommands,
+          '\\frac': '\\frac{#1}{#2}',
+          '\\text': '\\text{#1}'
+        },
         strict: false
       });
       

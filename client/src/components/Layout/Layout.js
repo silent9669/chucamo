@@ -38,6 +38,8 @@ const Layout = ({ children, hideNavigation = false }) => {
     { name: 'Results & Analytics', href: '/results', icon: FiBarChart2 },
     { name: 'Profile', href: '/profile', icon: FiUser },
     { name: 'SAT Score Calculator', href: '/sat-score-calculator', icon: FiPieChart },
+    { name: 'Plan Future', href: '/plan-future', icon: FiTarget },
+    { name: 'Pet House', href: '/pet-house', icon: FiHome },
     ...(user?.role === 'admin' ? [
       { name: 'Upgrade Plan', href: '/upgrade-plan', icon: FiZap },
       { name: 'Admin Panel', href: '/admin', icon: FiSettings }
