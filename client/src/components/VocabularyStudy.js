@@ -224,12 +224,6 @@ const VocabularyStudy = () => {
     return null;
   };
 
-  const getSessionStats = () => {
-    const sessionTime = sessionStartTime ? Math.floor((Date.now() - sessionStartTime) / 1000 / 60) : 0;
-    const accuracy = gotIt.length + stillLearning.length > 0 ? Math.round((gotIt.length / (gotIt.length + stillLearning.length)) * 100) : 0;
-    return { sessionTime, accuracy };
-  };
-
   if (showSummary) {
     const totalReviewed = stillLearning.length + gotIt.length;
     const masteryRate = totalReviewed > 0 ? Math.round((gotIt.length / totalReviewed) * 100) : 0;
