@@ -32,6 +32,23 @@ const Login = () => {
       if (window.googleReady && window.google && window.google.accounts && window.google.accounts.id) {
         setGoogleReady(true);
         console.log('✅ Google Sign-In is ready');
+        
+        // Also try to render a fallback button
+        try {
+          const container = document.getElementById('google-signin-container');
+          if (container && window.google.accounts.id.renderButton) {
+            window.google.accounts.id.renderButton(container, {
+              theme: 'outline',
+              size: 'large',
+              text: 'signin_with',
+              shape: 'rectangular',
+              width: '100%'
+            });
+            console.log('✅ Fallback Google button rendered');
+          }
+        } catch (error) {
+          console.log('⚠️ Fallback button not available:', error);
+        }
       } else {
         console.log('⏳ Google not ready yet, retrying in 200ms...');
         setTimeout(checkGoogle, 200);
@@ -123,8 +140,8 @@ const Login = () => {
       console.log('window.google.accounts object:', window.google.accounts);
       console.log('window.google.accounts.id object:', window.google.accounts.id);
       
-      // Force re-initialization to ensure fresh state
-      console.log('🔄 Re-initializing Google ID method...');
+      // Use modern FedCM-compatible approach
+      console.log('🔄 Using modern Google ID method...');
       
       // Check if the method exists
       if (!window.google.accounts.id.initialize) {
@@ -136,31 +153,25 @@ const Login = () => {
         window.google.accounts.id.cancel();
       }
       
+      // Initialize with modern configuration
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: handleGoogleSignIn,
         auto_select: false,
         cancel_on_tap_outside: true,
-        prompt_parent_id: 'root', // Force popup to appear
+        prompt_parent_id: 'root',
+        // FedCM compatible settings
+        use_fedcm_for_prompt: true,
+        context: 'signin'
       });
       
-      console.log('✅ Google ID initialized, now prompting...');
+      console.log('✅ Google ID initialized with FedCM, now prompting...');
       
-      // Add a small delay to ensure initialization is complete
+      // Use modern prompt method without deprecated status callbacks
       setTimeout(() => {
         try {
-          window.google.accounts.id.prompt((notification) => {
-            console.log('Prompt notification:', notification);
-            if (notification.isNotDisplayed()) {
-              console.error('❌ Google popup not displayed:', notification.getNotDisplayedReason());
-              toast.error('Google popup blocked. Please check ad blocker or try again.');
-            } else if (notification.isSkippedMoment()) {
-              console.log('Google popup skipped:', notification.getSkippedReason());
-            } else if (notification.isDismissedMoment()) {
-              console.log('Google popup dismissed:', notification.getDismissedReason());
-            }
-          });
-          console.log('✅ Google Sign-In popup triggered');
+          window.google.accounts.id.prompt();
+          console.log('✅ Google Sign-In popup triggered (FedCM compatible)');
         } catch (promptError) {
           console.error('❌ Error prompting Google:', promptError);
           toast.error('Failed to show Google popup. Please try again.');
@@ -236,8 +247,8 @@ const Login = () => {
             )}
           </button>
           
-          {/* Hidden container for Google Sign-In */}
-          <div id="google-signin-container" style={{ display: 'none' }}></div>
+          {/* Fallback Google Sign-In container */}
+          <div id="google-signin-container" className="mt-2"></div>
           
           {!googleReady && (
             <p className="mt-2 text-sm text-gray-500 text-center">
@@ -260,6 +271,18 @@ const Login = () => {
             <p>• Allow popups for this site</p>
             <p>• Check browser console for errors</p>
           </div>
+          
+          {/* Manual Fallback Button */}
+          {googleReady && (
+            <div className="mt-2">
+              <button
+                onClick={handleGoogleButtonClick}
+                className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                🔄 Try Alternative Google Sign-In
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="relative">
