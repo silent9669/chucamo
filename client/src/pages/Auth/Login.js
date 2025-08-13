@@ -10,7 +10,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleReady, setGoogleReady] = useState(false);
   const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
 
@@ -20,67 +19,34 @@ const Login = () => {
     formState: { errors },
   } = useForm();
 
-  // Wait for Google to be ready
+  // Simple Google initialization
   useEffect(() => {
-    const checkGoogle = () => {
-      console.log('🔍 Checking Google availability...');
-      console.log('window.googleReady:', window.googleReady);
-      console.log('window.google:', !!window.google);
-      console.log('window.google.accounts:', !!window.google?.accounts);
-      console.log('window.google.accounts.id:', !!window.google?.accounts?.id);
-      
-      if (window.googleReady && window.google && window.google.accounts && window.google.accounts.id) {
-        setGoogleReady(true);
-        console.log('✅ Google Sign-In is ready');
+    const initGoogle = () => {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        console.log('✅ Google Sign-In ready');
         
-        // Also try to render a fallback button
-        try {
-          const container = document.getElementById('google-signin-container');
-          if (container && window.google.accounts.id.renderButton) {
-            window.google.accounts.id.renderButton(container, {
-              theme: 'outline',
-              size: 'large',
-              text: 'signin_with',
-              shape: 'rectangular',
-              width: '100%'
-            });
-            console.log('✅ Fallback Google button rendered');
-          }
-        } catch (error) {
-          console.log('⚠️ Fallback button not available:', error);
-        }
+        // Initialize Google Sign-In
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
       } else {
-        console.log('⏳ Google not ready yet, retrying in 200ms...');
-        setTimeout(checkGoogle, 200);
+        setTimeout(initGoogle, 100);
       }
     };
     
-    // Start checking after a short delay to allow the script to load
-    setTimeout(checkGoogle, 500);
+    initGoogle();
   }, []);
 
   const handleGoogleSignIn = async (response) => {
     setGoogleLoading(true);
     try {
       console.log('🔐 Google Sign-In response received');
-      console.log('Response:', response);
       
-      // Decode the ID token to get user information - handle both formats
-      let payload;
-      try {
-        // First try to decode as JWT (original Google ID token format)
-        payload = JSON.parse(atob(response.credential.split('.')[1]));
-      } catch (error) {
-        // If that fails, try to decode as our custom base64 format
-        try {
-          payload = JSON.parse(atob(response.credential));
-        } catch (decodeError) {
-          console.error('Failed to decode credential:', decodeError);
-          toast.error('Failed to decode user information');
-          return;
-        }
-      }
-      
+      // Decode the ID token to get user information
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
       console.log('Decoded payload:', payload);
       
       // Extract user information
@@ -95,7 +61,7 @@ const Login = () => {
       
       console.log('Extracted user data:', userData);
       
-      // Send the credential to the backend for verification and user creation/update
+      // Send the credential to the backend
       const result = await googleLogin(response.credential);
       
       if (result.success) {
@@ -115,72 +81,17 @@ const Login = () => {
   };
 
   const handleGoogleButtonClick = () => {
-    console.log('🔘 Google button clicked');
-    console.log('googleReady state:', googleReady);
-    console.log('googleLoading state:', googleLoading);
-    
-    if (!googleReady) {
-      console.log('❌ Google not ready');
+    if (!window.google || !window.google.accounts || !window.google.accounts.id) {
       toast.error('Google Sign-In is not ready yet. Please wait a moment.');
       return;
     }
 
-    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      console.log('❌ No Google Client ID');
-      toast.error('Google Client ID not configured');
-      return;
-    }
-
     try {
-      console.log('🚀 Attempting Google Sign-In...');
-      console.log('Client ID:', clientId);
-      console.log('Current Origin:', window.location.origin);
-      console.log('window.google object:', window.google);
-      console.log('window.google.accounts object:', window.google.accounts);
-      console.log('window.google.accounts.id object:', window.google.accounts.id);
-      
-      // Use modern FedCM-compatible approach
-      console.log('🔄 Using modern Google ID method...');
-      
-      // Check if the method exists
-      if (!window.google.accounts.id.initialize) {
-        throw new Error('Google ID method not available');
-      }
-      
-      // Clear any existing instances
-      if (window.google.accounts.id.cancel) {
-        window.google.accounts.id.cancel();
-      }
-      
-      // Initialize with modern configuration
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleSignIn,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        prompt_parent_id: 'root',
-        // FedCM compatible settings
-        use_fedcm_for_prompt: true,
-        context: 'signin'
-      });
-      
-      console.log('✅ Google ID initialized with FedCM, now prompting...');
-      
-      // Use modern prompt method without deprecated status callbacks
-      setTimeout(() => {
-        try {
-          window.google.accounts.id.prompt();
-          console.log('✅ Google Sign-In popup triggered (FedCM compatible)');
-        } catch (promptError) {
-          console.error('❌ Error prompting Google:', promptError);
-          toast.error('Failed to show Google popup. Please try again.');
-        }
-      }, 100);
-      
+      console.log('🚀 Triggering Google Sign-In...');
+      window.google.accounts.id.prompt();
     } catch (error) {
       console.error('❌ Error with Google Sign-In:', error);
-      toast.error(`Failed to open Google Sign-In: ${error.message}`);
+      toast.error('Failed to open Google Sign-In. Please try again.');
     }
   };
 
@@ -218,14 +129,8 @@ const Login = () => {
         <div className="mt-6">
           <button
             onClick={handleGoogleButtonClick}
-            disabled={googleLoading || !googleReady}
-            className={`w-full flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-700 transition-all duration-200 ${
-              googleReady 
-                ? 'bg-white hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' 
-                : 'bg-gray-100 cursor-not-allowed'
-            } ${
-              googleLoading ? 'opacity-75' : ''
-            }`}
+            disabled={googleLoading}
+            className="w-full flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
           >
             {googleLoading ? (
               <div className="flex items-center">
@@ -240,49 +145,10 @@ const Login = () => {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                <span className="font-semibold text-gray-800">
-                  {googleReady ? 'Sign in with Google' : 'Loading Google Sign-In...'}
-                </span>
+                <span className="font-semibold text-gray-800">Sign in with Google</span>
               </>
             )}
           </button>
-          
-          {/* Fallback Google Sign-In container */}
-          <div id="google-signin-container" className="mt-2"></div>
-          
-          {!googleReady && (
-            <p className="mt-2 text-sm text-gray-500 text-center">
-              Initializing Google Sign-In...
-            </p>
-          )}
-          
-          {/* Debug Info */}
-          <div className="mt-2 text-xs text-gray-400 text-center">
-            <p>Client ID: {process.env.REACT_APP_GOOGLE_CLIENT_ID ? '✅ Loaded' : '❌ Missing'}</p>
-            <p>Google Library: {googleReady ? '✅ Ready' : '⏳ Loading'}</p>
-            <p>Current Origin: {window.location.origin}</p>
-            <p>Google Object: {window.google ? '✅ Available' : '❌ Not Available'}</p>
-          </div>
-          
-          {/* Ad Blocker Warning */}
-          <div className="mt-2 text-xs text-amber-600 text-center">
-            <p>💡 If Google popup doesn't appear, try:</p>
-            <p>• Disable ad blocker for this site</p>
-            <p>• Allow popups for this site</p>
-            <p>• Check browser console for errors</p>
-          </div>
-          
-          {/* Manual Fallback Button */}
-          {googleReady && (
-            <div className="mt-2">
-              <button
-                onClick={handleGoogleButtonClick}
-                className="w-full px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                🔄 Try Alternative Google Sign-In
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="relative">
