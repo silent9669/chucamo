@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
@@ -19,28 +19,7 @@ const Login = () => {
     formState: { errors },
   } = useForm();
 
-  // Simple Google initialization
-  useEffect(() => {
-    const initGoogle = () => {
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        console.log('✅ Google Sign-In ready');
-        
-        // Initialize Google Sign-In
-        window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-      } else {
-        setTimeout(initGoogle, 100);
-      }
-    };
-    
-    initGoogle();
-  }, []);
-
-  const handleGoogleSignIn = async (response) => {
+  const handleGoogleSignIn = useCallback(async (response) => {
     setGoogleLoading(true);
     try {
       console.log('🔐 Google Sign-In response received');
@@ -78,7 +57,28 @@ const Login = () => {
     } finally {
       setGoogleLoading(false);
     }
-  };
+  }, [googleLogin, navigate]);
+
+  // Simple Google initialization
+  useEffect(() => {
+    const initGoogle = () => {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        console.log('✅ Google Sign-In ready');
+        
+        // Initialize Google Sign-In
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+      } else {
+        setTimeout(initGoogle, 100);
+      }
+    };
+    
+    initGoogle();
+  }, [handleGoogleSignIn]);
 
   const handleGoogleButtonClick = () => {
     if (!window.google || !window.google.accounts || !window.google.accounts.id) {
