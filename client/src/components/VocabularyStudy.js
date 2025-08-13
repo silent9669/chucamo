@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, RotateCcw, BookOpen, CheckCircle, Clock, Star, Shuffle, Target, Brain, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ChevronLeft, RotateCcw, BookOpen, CheckCircle, Clock, Shuffle, Target, Brain } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import vocabularyAPI from '../services/vocabularyAPI';
 import { toast } from 'react-hot-toast';
@@ -24,17 +24,7 @@ const VocabularyStudy = () => {
   const cardRef = useRef(null);
   const touchStartRef = useRef(0);
 
-  useEffect(() => {
-    if (!sessionStartTime) {
-      setSessionStartTime(Date.now());
-    }
-  }, []);
-
-  useEffect(() => {
-    loadVocabSet();
-  }, [setId]);
-
-  const loadVocabSet = async () => {
+  const loadVocabSet = useCallback(async () => {
     try {
       setLoading(true);
       const response = await vocabularyAPI.getSetById(setId);
@@ -46,7 +36,17 @@ const VocabularyStudy = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setId, navigate]);
+
+  useEffect(() => {
+    if (!sessionStartTime) {
+      setSessionStartTime(Date.now());
+    }
+  }, [sessionStartTime]);
+
+  useEffect(() => {
+    loadVocabSet();
+  }, [loadVocabSet]);
 
   if (loading) {
     return (
@@ -231,7 +231,6 @@ const VocabularyStudy = () => {
   };
 
   if (showSummary) {
-    const stats = getSessionStats();
     const totalReviewed = stillLearning.length + gotIt.length;
     const masteryRate = totalReviewed > 0 ? Math.round((gotIt.length / totalReviewed) * 100) : 0;
 

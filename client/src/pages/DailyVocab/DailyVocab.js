@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Book, Play, Users, Calendar, TrendingUp } from 'lucide-react';
+import { Book, Play } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import vocabularyAPI from '../../services/vocabularyAPI';
@@ -76,19 +76,9 @@ const DailyVocab = () => {
                   <p className="text-slate-600 mb-4 line-clamp-2">{set.description}</p>
                   
                   <div className="flex items-center justify-between text-sm text-slate-500">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <Book className="w-4 h-4" />
-                        <span>{set.wordCount} words</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        <span>{set.studyCount || 0} students</span>
-                      </div>
-                    </div>
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>{new Date(set.createdAt).toLocaleDateString()}</span>
+                      <Book className="w-4 h-4" />
+                      <span>{set.wordCount} words</span>
                     </div>
                   </div>
                   

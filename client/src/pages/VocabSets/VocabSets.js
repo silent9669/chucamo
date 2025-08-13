@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, BookOpen, Play, Users, Calendar } from 'lucide-react';
+import { Search, BookOpen, Play } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import vocabularyAPI from '../../services/vocabularyAPI';
@@ -143,19 +143,9 @@ const VocabSets = () => {
                   <p className="text-slate-600 mb-4 line-clamp-2">{set.description}</p>
                   
                   <div className="flex items-center justify-between text-sm text-slate-500">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <BookOpen size={16} />
-                        <span>{set.wordCount} words</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users size={16} />
-                        <span>{set.studyCount || 0} students</span>
-                      </div>
-                    </div>
                     <div className="flex items-center gap-1">
-                      <Calendar size={16} />
-                      <span>{new Date(set.createdAt).toLocaleDateString()}</span>
+                      <BookOpen size={16} />
+                      <span>{set.wordCount} words</span>
                     </div>
                   </div>
                   

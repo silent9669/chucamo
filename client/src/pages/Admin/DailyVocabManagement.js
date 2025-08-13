@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiBookOpen, FiList, FiImage, FiUpload } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiX, FiEye } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import logger from '../../utils/logger';
 import vocabularyAPI from '../../services/vocabularyAPI';
+import logger from '../../utils/logger';
 
 const DailyVocabManagement = () => {
   const [vocabSets, setVocabSets] = useState([]);
@@ -349,7 +349,7 @@ const DailyVocabManagement = () => {
                     ))
                   ) : (
                     <div className="p-4 text-center text-gray-500">
-                      <FiList className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                      <FiEye className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                       <p>No words added yet. Click "Add Word" to get started.</p>
                     </div>
                   )}
@@ -358,7 +358,7 @@ const DailyVocabManagement = () => {
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow p-12 text-center">
-              <FiBookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <FiEye className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Vocabulary Set</h3>
               <p className="text-gray-600">Choose a vocabulary set from the left to view and manage its words.</p>
             </div>
@@ -440,7 +440,7 @@ const DailyVocabManagement = () => {
                    disabled={isSubmitting}
                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                  >
-                   <FiSave className="mr-2" />
+                   <FiEdit className="mr-2" />
                    {isSubmitting ? 'Saving...' : (editingSet ? 'Update' : 'Create')}
                  </button>
               </div>
@@ -563,7 +563,7 @@ const DailyVocabManagement = () => {
                    disabled={isSubmitting}
                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                  >
-                   <FiSave className="mr-2" />
+                   <FiEdit className="mr-2" />
                    {isSubmitting ? 'Saving...' : (editingWord ? 'Update' : 'Add')}
                  </button>
               </div>
