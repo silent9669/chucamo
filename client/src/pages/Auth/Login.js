@@ -123,12 +123,17 @@ const Login = () => {
       console.log('window.google.accounts object:', window.google.accounts);
       console.log('window.google.accounts.id object:', window.google.accounts.id);
       
-      // Use ID method directly for simpler authentication
-      console.log('🔄 Using Google ID method...');
+      // Force re-initialization to ensure fresh state
+      console.log('🔄 Re-initializing Google ID method...');
       
       // Check if the method exists
       if (!window.google.accounts.id.initialize) {
         throw new Error('Google ID method not available');
+      }
+      
+      // Clear any existing instances
+      if (window.google.accounts.id.cancel) {
+        window.google.accounts.id.cancel();
       }
       
       window.google.accounts.id.initialize({
@@ -136,11 +141,31 @@ const Login = () => {
         callback: handleGoogleSignIn,
         auto_select: false,
         cancel_on_tap_outside: true,
+        prompt_parent_id: 'root', // Force popup to appear
       });
       
       console.log('✅ Google ID initialized, now prompting...');
-      window.google.accounts.id.prompt();
-      console.log('✅ Google Sign-In popup triggered');
+      
+      // Add a small delay to ensure initialization is complete
+      setTimeout(() => {
+        try {
+          window.google.accounts.id.prompt((notification) => {
+            console.log('Prompt notification:', notification);
+            if (notification.isNotDisplayed()) {
+              console.error('❌ Google popup not displayed:', notification.getNotDisplayedReason());
+              toast.error('Google popup blocked. Please check ad blocker or try again.');
+            } else if (notification.isSkippedMoment()) {
+              console.log('Google popup skipped:', notification.getSkippedReason());
+            } else if (notification.isDismissedMoment()) {
+              console.log('Google popup dismissed:', notification.getDismissedReason());
+            }
+          });
+          console.log('✅ Google Sign-In popup triggered');
+        } catch (promptError) {
+          console.error('❌ Error prompting Google:', promptError);
+          toast.error('Failed to show Google popup. Please try again.');
+        }
+      }, 100);
       
     } catch (error) {
       console.error('❌ Error with Google Sign-In:', error);
@@ -227,6 +252,14 @@ const Login = () => {
             <p>Current Origin: {window.location.origin}</p>
             <p>Google Object: {window.google ? '✅ Available' : '❌ Not Available'}</p>
           </div>
+          
+          {/* Ad Blocker Warning */}
+          <div className="mt-2 text-xs text-amber-600 text-center">
+            <p>💡 If Google popup doesn't appear, try:</p>
+            <p>• Disable ad blocker for this site</p>
+            <p>• Allow popups for this site</p>
+            <p>• Check browser console for errors</p>
+          </div>
         </div>
 
         <div className="relative">
@@ -250,17 +283,13 @@ const Login = () => {
                 </div>
                 <input
                   id="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
                   required
                   className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter your email"
+                  placeholder="Enter your username or email"
                   {...register('email', {
-                    required: 'Email is required',
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address'
-                    }
+                    required: 'Username or email is required'
                   })}
                 />
                 {errors.email && (
