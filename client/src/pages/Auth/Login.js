@@ -106,82 +106,21 @@ const Login = () => {
       console.log('Client ID:', clientId);
       console.log('Current Origin:', window.location.origin);
       
-      // Try OAuth2 approach first
-      if (window.google.accounts.oauth2) {
-        console.log('🔄 Using OAuth2 approach...');
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: 'openid email profile',
-          callback: async (response) => {
-            if (response.error) {
-              console.error('OAuth2 error:', response.error);
-              // Fallback to ID method
-              tryIdMethod();
-            } else {
-              console.log('OAuth2 success:', response);
-              // Get user info from Google
-              try {
-                const userInfo = await fetchGoogleUserInfo(response.access_token);
-                console.log('Google user info:', userInfo);
-                
-                // Create a mock credential-like response for the backend
-                const mockResponse = {
-                  credential: btoa(unescape(encodeURIComponent(JSON.stringify({
-                    email: userInfo.email,
-                    given_name: userInfo.given_name,
-                    family_name: userInfo.family_name,
-                    name: userInfo.name,
-                    picture: userInfo.picture,
-                    sub: userInfo.id,
-                    email_verified: userInfo.verified_email
-                  }))))
-                };
-                
-                // Use the existing Google login handler
-                await handleGoogleSignIn(mockResponse);
-              } catch (error) {
-                console.error('Failed to get user info:', error);
-                toast.error('Failed to get user information from Google');
-              }
-            }
-          },
-        });
-        tokenClient.requestAccessToken();
-      } else {
-        // Fallback to ID method
-        tryIdMethod();
-      }
-      
-    } catch (error) {
-      console.error('❌ Error with Google Sign-In:', error);
-      toast.error('Failed to open Google Sign-In. Please try again.');
-    }
-  };
-
-  // Function to fetch user info from Google using access token
-  const fetchGoogleUserInfo = async (accessToken) => {
-    const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch user info from Google');
-    }
-    return await response.json();
-  };
-
-  const tryIdMethod = () => {
-    try {
-      console.log('🔄 Trying ID method...');
+      // Use ID method directly for simpler authentication
+      console.log('🔄 Using Google ID method...');
       window.google.accounts.id.initialize({
-        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+        client_id: clientId,
         callback: handleGoogleSignIn,
         auto_select: false,
         cancel_on_tap_outside: true,
       });
       
       window.google.accounts.id.prompt();
-      console.log('✅ ID method triggered');
+      console.log('✅ Google Sign-In popup triggered');
+      
     } catch (error) {
-      console.error('❌ ID method failed:', error);
-      toast.error('Google Sign-In is not available. Please try again later.');
+      console.error('❌ Error with Google Sign-In:', error);
+      toast.error('Failed to open Google Sign-In. Please try again.');
     }
   };
 
