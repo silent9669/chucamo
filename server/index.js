@@ -47,7 +47,8 @@ if (isDevelopment) {
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
-          "https://fonts.googleapis.com"
+          "https://fonts.googleapis.com",
+          "https://accounts.google.com"
         ],
         fontSrc: [
           "'self'",
