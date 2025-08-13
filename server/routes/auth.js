@@ -194,6 +194,160 @@ router.post('/login', [
   }
 });
 
+// @route   POST /api/auth/google
+// @desc    Authenticate user with Google
+// @access  Public
+router.post('/google', [
+  body('credential').notEmpty().withMessage('Google credential is required')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
+    }
+
+    const { credential } = req.body;
+    
+    // Ensure Buffer is available
+    if (typeof Buffer === 'undefined') {
+      logger.error('Buffer is not available');
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
+    
+    // Decode the Google ID token - handle both JWT format and our custom base64 format
+    let payload;
+    try {
+      // First try to decode as JWT (original Google ID token format)
+      if (credential.includes('.')) {
+        payload = JSON.parse(Buffer.from(credential.split('.')[1], 'base64').toString());
+      } else {
+        // If that fails, try to decode as our custom base64 format
+        const decodedString = Buffer.from(credential, 'base64').toString('utf8');
+        payload = JSON.parse(decodedString);
+      }
+    } catch (decodeError) {
+      logger.error('Failed to decode credential:', decodeError);
+      return res.status(400).json({ message: 'Invalid credential format' });
+    }
+    
+    const { email, given_name, family_name, name, picture, sub: googleId, email_verified } = payload;
+
+    logger.debug('Google authentication attempt for:', email);
+
+    // Check if user already exists
+    let user = await User.findOne({ 
+      $or: [
+        { email: email.toLowerCase() },
+        { googleId: googleId }
+      ]
+    });
+
+    if (!user) {
+      // Create new user with free account
+      const firstName = given_name || name?.split(' ')[0] || 'User';
+      const lastName = family_name || name?.split(' ').slice(1).join(' ') || '';
+      const username = email.split('@')[0] + '_' + Math.random().toString(36).substr(2, 5);
+
+      user = await User.create({
+        firstName,
+        lastName,
+        username,
+        email: email.toLowerCase(),
+        password: 'google-auth-' + Math.random().toString(36).substr(2, 15),
+        googleId,
+        profilePicture: picture,
+        emailVerified: email_verified || true,
+        isActive: true,
+        role: 'user',
+        accountType: 'free',
+        // Set default values for free account
+        grade: 12, // Default grade
+        school: 'Not specified',
+        targetScore: 1200, // Default target score
+        loginStreak: 1,
+        totalTestsTaken: 0,
+        averageAccuracy: 0,
+        coins: 100, // Starting coins for free users
+        lastTestCompletionDate: null,
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        // Add additional fields for user management
+        studyGoals: 'Improve SAT score through practice',
+        lastLoginDate: new Date()
+      });
+
+      logger.info('✅ New Google user created with free account:', {
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        accountType: user.accountType,
+        coins: user.coins
+      });
+    } else {
+      // Update existing user
+      if (!user.googleId) {
+        user.googleId = googleId;
+        logger.info('✅ Updated existing user with Google ID:', user.username);
+      }
+      
+      // Update profile picture if available
+      if (picture && !user.profilePicture) {
+        user.profilePicture = picture;
+      }
+      
+      // Update last login and streak
+      user.lastLogin = new Date();
+      user.lastLoginDate = new Date();
+      user.loginStreak = (user.loginStreak || 0) + 1;
+      
+      await user.save();
+      logger.info('✅ Updated existing Google user:', user.username);
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({ message: 'Account is deactivated' });
+    }
+
+    // Generate JWT token
+    const token = generateToken(user._id);
+
+    // Return user data
+    res.json({
+      success: true,
+      message: 'Google authentication successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        accountType: user.accountType,
+        grade: user.grade,
+        school: user.school,
+        targetScore: user.targetScore,
+        profilePicture: user.profilePicture,
+        lastLogin: user.lastLogin,
+        loginStreak: user.loginStreak,
+        totalTestsTaken: user.totalTestsTaken,
+        averageAccuracy: user.averageAccuracy,
+        coins: user.coins,
+        lastTestCompletionDate: user.lastTestCompletionDate,
+        isGoogleUser: true,
+        googleId: user.googleId
+      }
+    });
+  } catch (error) {
+    logger.error('Google authentication error:', error);
+    res.status(500).json({ message: 'Server error during Google authentication' });
+  }
+});
+
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private

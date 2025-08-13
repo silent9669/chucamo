@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import Button from '../../components/UI/Button';
-import Input from '../../components/UI/Input';
-
-import logger from '../../utils/logger';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -21,79 +20,289 @@ const Login = () => {
     formState: { errors },
   } = useForm();
 
-  const onSubmit = async (data) => {
-    setLoading(true);
+  // Wait for Google to be ready
+  useEffect(() => {
+    const checkGoogle = () => {
+      if (window.googleReady && window.google && window.google.accounts) {
+        setGoogleReady(true);
+        console.log('✅ Google Sign-In is ready');
+      } else {
+        setTimeout(checkGoogle, 200);
+      }
+    };
+    
+    checkGoogle();
+  }, []);
+
+  const handleGoogleSignIn = async (response) => {
+    setGoogleLoading(true);
     try {
-      logger.debug('Attempting login with:', data.username);
-      const result = await login(data.username, data.password);
-      logger.debug('Login result:', result);
+      console.log('🔐 Google Sign-In response received');
+      console.log('Response:', response);
+      
+      // Decode the ID token to get user information - handle both formats
+      let payload;
+      try {
+        // First try to decode as JWT (original Google ID token format)
+        payload = JSON.parse(atob(response.credential.split('.')[1]));
+      } catch (error) {
+        // If that fails, try to decode as our custom base64 format
+        try {
+          payload = JSON.parse(atob(response.credential));
+        } catch (decodeError) {
+          console.error('Failed to decode credential:', decodeError);
+          toast.error('Failed to decode user information');
+          return;
+        }
+      }
+      
+      console.log('Decoded payload:', payload);
+      
+      // Extract user information
+      const userData = {
+        email: payload.email,
+        firstName: payload.given_name || payload.name?.split(' ')[0] || 'User',
+        lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
+        profilePicture: payload.picture,
+        googleId: payload.sub,
+        emailVerified: payload.email_verified || true
+      };
+      
+      console.log('Extracted user data:', userData);
+      
+      // Send the credential to the backend for verification and user creation/update
+      const result = await googleLogin(response.credential);
+      
       if (result.success) {
-        toast.success('Login successful!');
-        // Add a small delay before navigation
+        toast.success(`Welcome back, ${userData.firstName}!`);
         setTimeout(() => {
           navigate('/dashboard');
         }, 1000);
       } else {
-        toast.error(result.error || 'Login failed');
-        // Add a delay to show the error
-        setTimeout(() => {
-          setLoading(false);
-        }, 2000);
-        return;
+        toast.error(result.error || 'Google Sign-In failed');
       }
     } catch (error) {
-      logger.error('Login error:', error);
-      toast.error(error.message || 'An unexpected error occurred');
-      // Add a delay to show the error
-      setTimeout(() => {
-        setLoading(false);
-      }, 2000);
+      console.error('❌ Google Sign-In error:', error);
+      toast.error('Google Sign-In failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleButtonClick = () => {
+    if (!googleReady) {
+      toast.error('Google Sign-In is not ready yet. Please wait a moment.');
       return;
     }
-    setLoading(false);
+
+    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      toast.error('Google Client ID not configured');
+      return;
+    }
+
+    try {
+      console.log('🚀 Attempting Google Sign-In...');
+      console.log('Client ID:', clientId);
+      console.log('Current Origin:', window.location.origin);
+      
+      // Try OAuth2 approach first
+      if (window.google.accounts.oauth2) {
+        console.log('🔄 Using OAuth2 approach...');
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'openid email profile',
+          callback: async (response) => {
+            if (response.error) {
+              console.error('OAuth2 error:', response.error);
+              // Fallback to ID method
+              tryIdMethod();
+            } else {
+              console.log('OAuth2 success:', response);
+              // Get user info from Google
+              try {
+                const userInfo = await fetchGoogleUserInfo(response.access_token);
+                console.log('Google user info:', userInfo);
+                
+                // Create a mock credential-like response for the backend
+                const mockResponse = {
+                  credential: btoa(unescape(encodeURIComponent(JSON.stringify({
+                    email: userInfo.email,
+                    given_name: userInfo.given_name,
+                    family_name: userInfo.family_name,
+                    name: userInfo.name,
+                    picture: userInfo.picture,
+                    sub: userInfo.id,
+                    email_verified: userInfo.verified_email
+                  }))))
+                };
+                
+                // Use the existing Google login handler
+                await handleGoogleSignIn(mockResponse);
+              } catch (error) {
+                console.error('Failed to get user info:', error);
+                toast.error('Failed to get user information from Google');
+              }
+            }
+          },
+        });
+        tokenClient.requestAccessToken();
+      } else {
+        // Fallback to ID method
+        tryIdMethod();
+      }
+      
+    } catch (error) {
+      console.error('❌ Error with Google Sign-In:', error);
+      toast.error('Failed to open Google Sign-In. Please try again.');
+    }
+  };
+
+  // Function to fetch user info from Google using access token
+  const fetchGoogleUserInfo = async (accessToken) => {
+    const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch user info from Google');
+    }
+    return await response.json();
+  };
+
+  const tryIdMethod = () => {
+    try {
+      console.log('🔄 Trying ID method...');
+      window.google.accounts.id.initialize({
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+        callback: handleGoogleSignIn,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      
+      window.google.accounts.id.prompt();
+      console.log('✅ ID method triggered');
+    } catch (error) {
+      console.error('❌ ID method failed:', error);
+      toast.error('Google Sign-In is not available. Please try again later.');
+    }
+  };
+
+  const onSubmit = async (data) => {
+    setLoading(true);
+    try {
+      const result = await login(data.email, data.password);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        toast.error(result.error || 'Login failed');
+      }
+    } catch (error) {
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 bg-primary-600 rounded-lg flex items-center justify-center">
-            <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Sign in to your account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-              create a new account
-            </Link>
-          </p>
+        </div>
+
+        {/* Google Sign-In Button */}
+        <div className="mt-6">
+          <button
+            onClick={handleGoogleButtonClick}
+            disabled={googleLoading || !googleReady}
+            className={`w-full flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-700 transition-all duration-200 ${
+              googleReady 
+                ? 'bg-white hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' 
+                : 'bg-gray-100 cursor-not-allowed'
+            } ${
+              googleLoading ? 'opacity-75' : ''
+            }`}
+          >
+            {googleLoading ? (
+              <div className="flex items-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                <span className="font-medium">Signing in...</span>
+              </div>
+            ) : (
+              <>
+                <svg className="w-6 h-6 mr-3" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                <span className="font-semibold text-gray-800">
+                  {googleReady ? 'Sign in with Google' : 'Loading Google Sign-In...'}
+                </span>
+              </>
+            )}
+          </button>
+          
+          {/* Hidden container for Google Sign-In */}
+          <div id="google-signin-container" style={{ display: 'none' }}></div>
+          
+          {!googleReady && (
+            <p className="mt-2 text-sm text-gray-500 text-center">
+              Initializing Google Sign-In...
+            </p>
+          )}
+          
+          {/* Debug Info */}
+          <div className="mt-2 text-xs text-gray-400 text-center">
+            <p>Client ID: {process.env.REACT_APP_GOOGLE_CLIENT_ID ? '✅ Loaded' : '❌ Missing'}</p>
+            <p>Google Library: {googleReady ? '✅ Ready' : '⏳ Loading'}</p>
+            <p>Current Origin: {window.location.origin}</p>
+            <p>Google Object: {window.google ? '✅ Available' : '❌ Not Available'}</p>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-gray-50 text-gray-500">Or continue with email</span>
+          </div>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Username or Email
               </label>
               <div className="mt-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FiMail className="h-5 w-5 text-gray-400" />
                 </div>
-                <Input
-                  id="username"
-                  type="text"
-                  autoComplete="username"
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
                   required
-                  className="pl-10"
-                  error={errors.username?.message}
-                  {...register('username', {
-                    required: 'Username or email is required',
+                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter your email"
+                  {...register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address'
+                    }
                   })}
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                )}
               </div>
             </div>
 
@@ -105,32 +314,33 @@ const Login = () => {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FiLock className="h-5 w-5 text-gray-400" />
                 </div>
-                <Input
+                <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
-                  className="pl-10 pr-10"
-                  error={errors.password?.message}
+                  className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter your password"
                   {...register('password', {
                     required: 'Password is required',
                     minLength: {
                       value: 6,
-                      message: 'Password must be at least 6 characters',
-                    },
+                      message: 'Password must be at least 6 characters'
+                    }
                   })}
                 />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <FiEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
-                </button>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+                )}
               </div>
             </div>
           </div>
@@ -141,7 +351,7 @@ const Login = () => {
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                 Remember me
@@ -149,42 +359,29 @@ const Login = () => {
             </div>
 
             <div className="text-sm">
-              <button type="button" className="font-medium text-primary-600 hover:text-primary-500">
+              <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                 Forgot your password?
-              </button>
+              </Link>
             </div>
           </div>
 
-          <div>
-            <Button
-              type="submit"
-              className="w-full"
-              loading={loading}
-              disabled={loading}
-            >
-              Sign in
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            className="w-full"
+            loading={loading}
+            disabled={loading}
+          >
+            Sign in
+          </Button>
         </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 text-gray-500">New to chucamo?</span>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Link
-              to="/register"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            New to chucamo?{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
               Create your account
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </div>

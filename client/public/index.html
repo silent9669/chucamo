@@ -20,9 +20,17 @@
     <link rel="shortcut icon" href="%PUBLIC_URL%/apple.png" />
     
     <!-- Google Identity Services -->
-    <meta name="google-signin-client_id" content="%REACT_APP_GOOGLE_CLIENT_ID%">
-    <meta name="google-signin-callback" content="handleCredentialResponse">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      // Simple Google loading check
+      let googleCheckInterval = setInterval(() => {
+        if (window.google && window.google.accounts) {
+          clearInterval(googleCheckInterval);
+          window.googleReady = true;
+          console.log('✅ Google Identity Services loaded and ready');
+        }
+      }, 100);
+    </script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

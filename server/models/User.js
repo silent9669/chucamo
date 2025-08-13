@@ -30,22 +30,29 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
+  googleId: {
+    type: String,
+    sparse: true,
+    index: true
+  },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      return !this.googleId; // Password is only required if not using Google auth
+    },
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },
 
   role: {
     type: String,
-    enum: ['student', 'admin', 'teacher'],
-    default: 'student'
+    enum: ['user', 'student', 'admin', 'teacher'],
+    default: 'user'
   },
   accountType: {
     type: String,
-    enum: ['free', 'student', 'teacher', 'admin'],
-    default: 'student'
+    enum: ['free', 'premium', 'student', 'teacher', 'admin'],
+    default: 'free'
   },
   profilePicture: {
     type: String,
@@ -54,7 +61,8 @@ const userSchema = new mongoose.Schema({
   grade: {
     type: Number,
     min: [9, 'Grade must be at least 9'],
-    max: [12, 'Grade cannot exceed 12']
+    max: [12, 'Grade cannot exceed 12'],
+    default: 12
   },
   school: {
     type: String,

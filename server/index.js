@@ -79,13 +79,25 @@ if (isDevelopment) {
   }));
 }
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'https://chucamo-production.up.railway.app',
-        'https://railway.com',
-        process.env.RAILWAY_URL || 'https://chucamo-production.up.railway.app'
-      ] 
-    : ['http://localhost:3000'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001', 
+      'http://localhost:5000',
+      'http://localhost:5173',
+      'https://chucamo-production.up.railway.app',
+      'https://railway.com'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 

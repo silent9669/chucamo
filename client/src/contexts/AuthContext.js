@@ -103,11 +103,18 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [state.token]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, googleData = null) => {
     try {
       dispatch({ type: 'AUTH_START' });
       
-      const response = await authAPI.login(email, password);
+      let response;
+      if (googleData && googleData.isGoogleUser) {
+        // Handle Google authentication
+        response = await authAPI.googleAuth(googleData);
+      } else {
+        // Handle regular login
+        response = await authAPI.login(email, password);
+      }
       
       dispatch({
         type: 'AUTH_SUCCESS',
@@ -119,6 +126,27 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
+      dispatch({ type: 'AUTH_FAILURE', payload: message });
+      return { success: false, error: message };
+    }
+  };
+
+  const googleLogin = async (credential) => {
+    try {
+      dispatch({ type: 'AUTH_START' });
+      
+      const response = await authAPI.googleAuth(credential);
+      
+      dispatch({
+        type: 'AUTH_SUCCESS',
+        payload: {
+          user: response.data.user,
+          token: response.data.token
+        }
+      });
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google authentication failed';
       dispatch({ type: 'AUTH_FAILURE', payload: message });
       return { success: false, error: message };
     }
@@ -198,6 +226,7 @@ export const AuthProvider = ({ children }) => {
     loading: state.loading,
     error: state.error,
     login,
+    googleLogin,
     register,
     logout,
     updateProfile,
