@@ -23,15 +23,23 @@ const Login = () => {
   // Wait for Google to be ready
   useEffect(() => {
     const checkGoogle = () => {
-      if (window.googleReady && window.google && window.google.accounts) {
+      console.log('🔍 Checking Google availability...');
+      console.log('window.googleReady:', window.googleReady);
+      console.log('window.google:', !!window.google);
+      console.log('window.google.accounts:', !!window.google?.accounts);
+      console.log('window.google.accounts.id:', !!window.google?.accounts?.id);
+      
+      if (window.googleReady && window.google && window.google.accounts && window.google.accounts.id) {
         setGoogleReady(true);
         console.log('✅ Google Sign-In is ready');
       } else {
+        console.log('⏳ Google not ready yet, retrying in 200ms...');
         setTimeout(checkGoogle, 200);
       }
     };
     
-    checkGoogle();
+    // Start checking after a short delay to allow the script to load
+    setTimeout(checkGoogle, 500);
   }, []);
 
   const handleGoogleSignIn = async (response) => {
@@ -90,13 +98,19 @@ const Login = () => {
   };
 
   const handleGoogleButtonClick = () => {
+    console.log('🔘 Google button clicked');
+    console.log('googleReady state:', googleReady);
+    console.log('googleLoading state:', googleLoading);
+    
     if (!googleReady) {
+      console.log('❌ Google not ready');
       toast.error('Google Sign-In is not ready yet. Please wait a moment.');
       return;
     }
 
     const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     if (!clientId) {
+      console.log('❌ No Google Client ID');
       toast.error('Google Client ID not configured');
       return;
     }
@@ -105,9 +119,18 @@ const Login = () => {
       console.log('🚀 Attempting Google Sign-In...');
       console.log('Client ID:', clientId);
       console.log('Current Origin:', window.location.origin);
+      console.log('window.google object:', window.google);
+      console.log('window.google.accounts object:', window.google.accounts);
+      console.log('window.google.accounts.id object:', window.google.accounts.id);
       
       // Use ID method directly for simpler authentication
       console.log('🔄 Using Google ID method...');
+      
+      // Check if the method exists
+      if (!window.google.accounts.id.initialize) {
+        throw new Error('Google ID method not available');
+      }
+      
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: handleGoogleSignIn,
@@ -115,12 +138,13 @@ const Login = () => {
         cancel_on_tap_outside: true,
       });
       
+      console.log('✅ Google ID initialized, now prompting...');
       window.google.accounts.id.prompt();
       console.log('✅ Google Sign-In popup triggered');
       
     } catch (error) {
       console.error('❌ Error with Google Sign-In:', error);
-      toast.error('Failed to open Google Sign-In. Please try again.');
+      toast.error(`Failed to open Google Sign-In: ${error.message}`);
     }
   };
 
