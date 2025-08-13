@@ -172,6 +172,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clean up Google session state
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        window.google.accounts.id.cancel();
+        console.log('✅ Google session cleaned up');
+      } catch (error) {
+        console.log('⚠️ Google cleanup error:', error);
+      }
+    }
+    
     dispatch({ type: 'LOGOUT' });
   };
 
