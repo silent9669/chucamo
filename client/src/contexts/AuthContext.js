@@ -172,22 +172,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Only clean up Google session if it exists and is active
-    if (window.google && window.google.accounts && window.google.accounts.id) {
-      try {
-        // Only cancel if there's an active session
-        if (window.google.accounts.id.getMomentType) {
-          const momentType = window.google.accounts.id.getMomentType();
-          if (momentType && momentType !== 'display') {
-            window.google.accounts.id.cancel();
-            console.log('✅ Google session cleaned up');
-          }
-        }
-      } catch (error) {
-        console.log('⚠️ Google cleanup error:', error);
-      }
-    }
-    
     dispatch({ type: 'LOGOUT' });
   };
 

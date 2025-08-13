@@ -72,8 +72,6 @@ const Login = () => {
           auto_select: false,
           cancel_on_tap_outside: true
         });
-        
-        console.log('✅ Google Sign-In initialized');
       } else {
         setTimeout(initGoogle, 100);
       }
