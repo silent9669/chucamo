@@ -1218,8 +1218,10 @@ const TestTaker = () => {
             
             try {
               const errorData = JSON.parse(errorText);
-              if (errorData.message === 'Upgrade to student account to re-do test') {
-                alert('⚠️ Upgrade to student account to re-do test');
+              if (errorData.message === 'Upgrade to student account to re-do test' || 
+                  errorData.message === 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.' ||
+                  errorData.upgradeRequired) {
+                alert('⚠️ Free accounts can only attempt each test once. Upgrade to student account for more attempts.');
                 navigate('/tests');
                 return;
               } else if (errorData.message === 'Maximum attempts reached for this test') {
@@ -1229,6 +1231,14 @@ const TestTaker = () => {
               }
             } catch (e) {
               logger.error('Error parsing error response:', e);
+            }
+            
+            // Check if it's a free account limitation error (fallback for unparseable responses)
+            if (errorText.includes('Free accounts can only attempt each test once') || 
+                errorText.includes('Upgrade to student account')) {
+              alert('⚠️ Free accounts can only attempt each test once. Upgrade to student account for more attempts.');
+              navigate('/tests');
+              return;
             }
             
             alert('Failed to start test. Please try again.');
@@ -2011,7 +2021,14 @@ const TestTaker = () => {
         ) : (
           // Math Section Layout - Single Centered Pane
           <div className="w-full p-6 overflow-y-auto">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto relative">
+              {/* Watermark - For Math section */}
+              <Watermark 
+                userEmail={user?.email} 
+                hasImages={false}
+                isMathSection={true}
+              />
+              
               {/* Question Header */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6">
                 <div className="flex items-center justify-between">
@@ -2606,6 +2623,17 @@ const TestTaker = () => {
           height: 100%;
           pointer-events: none;
           z-index: 5;
+        }
+        
+        /* Math section specific watermark positioning */
+        .max-w-4xl .watermark-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 3;
         }
         
         /* Email watermark line positioning */

@@ -136,7 +136,8 @@ router.post('/', protect, async (req, res) => {
           message: 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.',
           accountType: 'free',
           maxAttempts: maxAttempts,
-          currentAttempts: existingAttempts
+          currentAttempts: existingAttempts,
+          upgradeRequired: true
         });
       } else {
         return res.status(400).json({ 
