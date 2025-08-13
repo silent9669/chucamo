@@ -65,15 +65,6 @@ const Login = () => {
       if (window.google && window.google.accounts && window.google.accounts.id) {
         console.log('✅ Google Sign-In ready');
         
-        // Clean up any existing instances first
-        try {
-          if (window.google.accounts.id.cancel) {
-            window.google.accounts.id.cancel();
-          }
-        } catch (error) {
-          console.log('⚠️ Google cleanup error:', error);
-        }
-        
         // Initialize Google Sign-In
         window.google.accounts.id.initialize({
           client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
@@ -82,25 +73,13 @@ const Login = () => {
           cancel_on_tap_outside: true
         });
         
-        console.log('✅ Google Sign-In re-initialized');
+        console.log('✅ Google Sign-In initialized');
       } else {
         setTimeout(initGoogle, 100);
       }
     };
     
     initGoogle();
-    
-    // Cleanup function to cancel Google session when component unmounts
-    return () => {
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        try {
-          window.google.accounts.id.cancel();
-          console.log('✅ Google session cleaned up on unmount');
-        } catch (error) {
-          console.log('⚠️ Google cleanup error on unmount:', error);
-        }
-      }
-    };
   }, [handleGoogleSignIn]);
 
   const handleGoogleButtonClick = () => {
@@ -111,21 +90,6 @@ const Login = () => {
 
     try {
       console.log('🚀 Triggering Google Sign-In...');
-      
-      // Force re-initialization to ensure fresh state
-      try {
-        window.google.accounts.id.cancel();
-        window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-        console.log('✅ Google Sign-In re-initialized before prompt');
-      } catch (error) {
-        console.log('⚠️ Re-initialization error:', error);
-      }
-      
       window.google.accounts.id.prompt();
     } catch (error) {
       console.error('❌ Error with Google Sign-In:', error);
