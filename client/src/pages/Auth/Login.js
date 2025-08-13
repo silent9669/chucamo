@@ -10,6 +10,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
   const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
 
@@ -62,18 +63,31 @@ const Login = () => {
   // Simple Google initialization
   useEffect(() => {
     const initGoogle = () => {
+      console.log('🔍 Checking Google availability...');
+      console.log('window.google:', !!window.google);
+      console.log('window.google.accounts:', !!window.google?.accounts);
+      console.log('window.google.accounts.id:', !!window.google?.accounts?.id);
+      
       if (window.google && window.google.accounts && window.google.accounts.id) {
         console.log('✅ Google Sign-In ready');
+        setGoogleReady(true);
         
         // Initialize Google Sign-In
-        window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
+        try {
+          window.google.accounts.id.initialize({
+            client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignIn,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+          console.log('✅ Google Sign-In initialized successfully');
+        } catch (error) {
+          console.error('❌ Error initializing Google:', error);
+          setGoogleReady(false);
+        }
       } else {
-        setTimeout(initGoogle, 100);
+        console.log('⏳ Google not ready yet, retrying in 200ms...');
+        setTimeout(initGoogle, 200);
       }
     };
     
@@ -81,14 +95,29 @@ const Login = () => {
   }, [handleGoogleSignIn]);
 
   const handleGoogleButtonClick = () => {
-    if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+    console.log('🔘 Google button clicked');
+    console.log('googleReady state:', googleReady);
+    console.log('window.google:', !!window.google);
+    console.log('window.google.accounts.id:', !!window.google?.accounts?.id);
+    
+    if (!googleReady || !window.google || !window.google.accounts || !window.google.accounts.id) {
       toast.error('Google Sign-In is not ready yet. Please wait a moment.');
       return;
     }
 
     try {
       console.log('🚀 Triggering Google Sign-In...');
+      console.log('Client ID:', process.env.REACT_APP_GOOGLE_CLIENT_ID);
+      
+      // Cancel any existing prompts to ensure fresh popup
+      if (window.google.accounts.id.cancel) {
+        window.google.accounts.id.cancel();
+      }
+      
+      // Trigger the popup
       window.google.accounts.id.prompt();
+      console.log('✅ Google Sign-In popup triggered');
+      
     } catch (error) {
       console.error('❌ Error with Google Sign-In:', error);
       toast.error('Failed to open Google Sign-In. Please try again.');
@@ -129,8 +158,12 @@ const Login = () => {
         <div className="mt-6">
           <button
             onClick={handleGoogleButtonClick}
-            disabled={googleLoading}
-            className="w-full flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+            disabled={googleLoading || !googleReady}
+            className={`w-full flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg shadow-sm text-gray-700 transition-all duration-200 ${
+              googleReady 
+                ? 'bg-white hover:bg-gray-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' 
+                : 'bg-gray-100 cursor-not-allowed'
+            }`}
           >
             {googleLoading ? (
               <div className="flex items-center">
@@ -145,10 +178,24 @@ const Login = () => {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                <span className="font-semibold text-gray-800">Sign in with Google</span>
+                <span className="font-semibold text-gray-800">
+                  {googleReady ? 'Sign in with Google' : 'Loading Google Sign-In...'}
+                </span>
               </>
             )}
           </button>
+          
+          {/* Status indicator */}
+          <div className="mt-2 text-xs text-center">
+            <p className={googleReady ? 'text-green-600' : 'text-gray-500'}>
+              {googleReady ? '✅ Google Sign-In Ready' : '⏳ Initializing Google Sign-In...'}
+            </p>
+            {!googleReady && (
+              <p className="text-gray-400 text-xs mt-1">
+                Please wait while Google services load...
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="relative">
