@@ -80,11 +80,7 @@ const TestDetails = () => {
         const selectedOption = question.options.find(opt => {
           // Handle both text content and image-only options
           if (opt.content === selectedAnswer) return true;
-          // For image-only options, check if the selected answer matches the fallback pattern
-          if (!opt.content && opt.images && opt.images.length > 0) {
-            const fallbackContent = `Image Option ${String.fromCharCode(65 + question.options.indexOf(opt))}`;
-            return selectedAnswer === fallbackContent;
-          }
+          // No fallback content logic - use content as provided by user
           return false;
         });
         if (selectedOption && selectedOption.isCorrect === true) {
@@ -111,11 +107,7 @@ const TestDetails = () => {
         if (correctOption && correctOption.isCorrect === true) {
           // Handle both text content and image-only options
           if (correctOption.content === selectedAnswer) return true;
-          // For image-only options, check if the selected answer matches the fallback pattern
-          if (!correctOption.content && correctOption.images && correctOption.images.length > 0) {
-            const fallbackContent = `Image Option ${String.fromCharCode(65 + question.options.indexOf(correctOption))}`;
-            return selectedAnswer === fallbackContent;
-          }
+          // No fallback content logic - use content as provided by user
         }
       }
     } else if (question.answerType === 'written' || question.type === 'grid-in') {
@@ -153,11 +145,7 @@ const TestDetails = () => {
         const option = question.options.find(opt => {
           // Handle both text content and image-only options
           if (opt.content === optionContent) return true;
-          // For image-only options, check if the optionContent matches the fallback pattern
-          if (!opt.content && opt.images && opt.images.length > 0) {
-            const fallbackContent = `image-option-${question.options.indexOf(opt)}`;
-            return optionContent === fallbackContent;
-          }
+          // No fallback content logic - use content as provided by user
           return false;
         });
         if (option && option.isCorrect === true) {
@@ -185,13 +173,8 @@ const TestDetails = () => {
           // Handle both text content and image-only options
           if (correctOption.content === optionContent) {
             isCorrectAnswer = true;
-          } else if (!correctOption.content && correctOption.images && correctOption.images.length > 0) {
-            // For image-only options, check if the optionContent matches the fallback pattern
-            const fallbackContent = `image-option-${question.options.indexOf(correctOption)}`;
-            if (optionContent === fallbackContent) {
-              isCorrectAnswer = true;
-            }
           }
+          // No fallback content logic - use content as provided by user
         }
       }
     }
@@ -332,13 +315,8 @@ const TestDetails = () => {
                     // Handle both text content and image-only options
                     if (correctOption.content === questionResult.selectedAnswer) {
                       isCorrect = true;
-                    } else if (!correctOption.content && correctOption.images && correctOption.images.length > 0) {
-                      // For image-only options, check if the selected answer matches the fallback pattern
-                      const fallbackContent = `Image Option ${String.fromCharCode(65 + question.options.indexOf(correctOption))}`;
-                      if (questionResult.selectedAnswer === fallbackContent) {
-                        isCorrect = true;
-                      }
                     }
+                    // No fallback content logic - use content as provided by user
                   }
                 }
               } else if (question.answerType === 'written' || question.type === 'grid-in') {

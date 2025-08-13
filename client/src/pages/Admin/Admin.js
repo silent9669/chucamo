@@ -914,11 +914,8 @@ const RealTestManagement = () => {
               const content = typeof opt === 'string' ? opt : (opt.content || '');
               const images = typeof opt === 'string' ? [] : (opt.images || []);
               
-              // If option has images but no content, provide a default content
+              // Use the content as provided by the user - no automatic fallback content
               let finalContent = content;
-              if (!content && images && images.length > 0) {
-                finalContent = `Image Option ${String.fromCharCode(65 + index)}`;
-              }
               
               return {
                 content: finalContent,
@@ -1391,11 +1388,8 @@ const RealTestManagement = () => {
               const content = typeof opt === 'string' ? opt : (opt.content || '');
               const images = typeof opt === 'string' ? [] : (opt.images || []);
               
-              // If option has images but no content, provide a default content
+              // Use the content as provided by the user - no automatic fallback content
               let finalContent = content;
-              if (!content && images && images.length > 0) {
-                finalContent = `Image Option ${String.fromCharCode(65 + index)}`;
-              }
               
               return {
                 content: finalContent,
@@ -3362,11 +3356,8 @@ const MockTestManagement = () => {
             const content = typeof opt === 'string' ? opt : (opt.content || '');
             const images = typeof opt === 'string' ? [] : (opt.images || []);
             
-            // If option has images but no content, provide a default content
+            // Use the content as provided by the user - no automatic fallback content
             let finalContent = content;
-            if (!content && images && images.length > 0) {
-              finalContent = `Image Option ${String.fromCharCode(65 + index)}`;
-            }
             
             return {
               content: finalContent,
