@@ -642,7 +642,7 @@ const TestDetails = () => {
                                       status === 'correct-answer' ? 'text-green-600' :
                                       'text-gray-600'
                                     }`}>
-                                      {index + 1}
+                                      {String.fromCharCode(65 + index)}
                                     </span>
                                   </div>
                                                                      <div className="flex-1" style={{ fontFamily: 'serif' }}>
