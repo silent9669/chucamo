@@ -25,6 +25,7 @@ import StudyPlan from './pages/StudyPlan/StudyPlan';
 import DailyVocab from './pages/DailyVocab/DailyVocab';
 import VocabSets from './pages/VocabSets/VocabSets';
 import VocabQuizzes from './pages/VocabQuizzes/VocabQuizzes';
+import VocabularyStudy from './components/VocabularyStudy';
 import PlanFuture from './pages/PlanFuture/PlanFuture';
 import PetHouse from './pages/PetHouse/PetHouse';
 import Recording from './pages/Recording/Recording';
@@ -136,6 +137,15 @@ function AppRoutes() {
             <Layout>
               <VocabSets />
             </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/daily-vocab/study/:setId"
+        element={
+          <ProtectedRoute>
+            <VocabularyStudy />
           </ProtectedRoute>
         }
       />

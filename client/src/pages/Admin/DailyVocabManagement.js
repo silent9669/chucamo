@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiBookOpen, FiList } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiBookOpen, FiList, FiImage, FiUpload } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
+import vocabularyAPI from '../../services/vocabularyAPI';
 
 const DailyVocabManagement = () => {
   const [vocabSets, setVocabSets] = useState([]);
@@ -11,48 +12,24 @@ const DailyVocabManagement = () => {
   const [editingSet, setEditingSet] = useState(null);
   const [editingWord, setEditingWord] = useState(null);
   const [selectedSet, setSelectedSet] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSet, setCurrentSet] = useState({
     title: '',
     description: '',
-    difficulty: 'medium',
-    date: new Date().toISOString().split('T')[0]
+    difficulty: 'medium'
   });
   const [currentWord, setCurrentWord] = useState({
     word: '',
     definition: '',
-    example: '',
-    partOfSpeech: '',
-    difficulty: 'medium'
+    image: '',
+    example: ''
   });
 
   const loadVocabSets = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await vocabAPI.getAllSets();
-      // setVocabSets(response.data.vocabSets);
-      
-      // Mock data for now
-      setVocabSets([
-        {
-          _id: '1',
-          title: 'Basic SAT Vocabulary',
-          description: 'Essential words for SAT preparation',
-          difficulty: 'medium',
-          date: '2024-01-15',
-          wordCount: 20,
-          isActive: true
-        },
-        {
-          _id: '2',
-          title: 'Advanced Academic Words',
-          description: 'Complex vocabulary for advanced students',
-          difficulty: 'hard',
-          date: '2024-01-16',
-          wordCount: 15,
-          isActive: true
-        }
-      ]);
+      const response = await vocabularyAPI.getAdminSets();
+      setVocabSets(response.data.vocabSets);
     } catch (error) {
       logger.error('Error loading vocab sets:', error);
       toast.error('Failed to load vocabulary sets');
@@ -66,8 +43,7 @@ const DailyVocabManagement = () => {
     setCurrentSet({
       title: '',
       description: '',
-      difficulty: 'medium',
-      date: new Date().toISOString().split('T')[0]
+      difficulty: 'medium'
     });
     setShowSetModal(true);
   };
@@ -77,8 +53,7 @@ const DailyVocabManagement = () => {
     setCurrentSet({
       title: set.title,
       description: set.description,
-      difficulty: set.difficulty,
-      date: set.date
+      difficulty: set.difficulty
     });
     setShowSetModal(true);
   };
@@ -86,8 +61,7 @@ const DailyVocabManagement = () => {
   const handleDeleteSet = async (setId) => {
     if (window.confirm('Are you sure you want to delete this vocabulary set? This will also delete all words in the set.')) {
       try {
-        // TODO: Replace with actual API call
-        // await vocabAPI.deleteSet(setId);
+        await vocabularyAPI.deleteSet(setId);
         
         setVocabSets(prev => prev.filter(set => set._id !== setId));
         if (selectedSet && selectedSet._id === setId) {
@@ -102,35 +76,25 @@ const DailyVocabManagement = () => {
   };
 
   const handleSaveSet = async () => {
+    if (isSubmitting) return; // Prevent duplicate submissions
+    
     try {
+      setIsSubmitting(true);
+      
       if (!currentSet.title || !currentSet.description) {
         toast.error('Title and description are required');
         return;
       }
 
       if (editingSet) {
-        // TODO: Replace with actual API call
-        // const response = await vocabAPI.updateSet(editingSet._id, currentSet);
-        // setVocabSets(prev => prev.map(set => 
-        //   set._id === editingSet._id ? response.data.vocabSet : set
-        // ));
-        
+        const response = await vocabularyAPI.updateSet(editingSet._id, currentSet);
         setVocabSets(prev => prev.map(set => 
-          set._id === editingSet._id ? { ...set, ...currentSet } : set
+          set._id === editingSet._id ? response.data.vocabSet : set
         ));
         toast.success('Vocabulary set updated successfully');
       } else {
-        // TODO: Replace with actual API call
-        // const response = await vocabAPI.createSet(currentSet);
-        // setVocabSets(prev => [...prev, response.data.vocabSet]);
-        
-        const newSet = {
-          _id: Date.now().toString(),
-          ...currentSet,
-          wordCount: 0,
-          isActive: true
-        };
-        setVocabSets(prev => [...prev, newSet]);
+        const response = await vocabularyAPI.createSet(currentSet);
+        setVocabSets(prev => [...prev, response.data.vocabSet]);
         toast.success('Vocabulary set created successfully');
       }
       
@@ -138,6 +102,8 @@ const DailyVocabManagement = () => {
     } catch (error) {
       logger.error('Error saving vocab set:', error);
       toast.error('Failed to save vocabulary set');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -150,9 +116,8 @@ const DailyVocabManagement = () => {
     setCurrentWord({
       word: '',
       definition: '',
-      example: '',
-      partOfSpeech: '',
-      difficulty: 'medium'
+      image: '',
+      example: ''
     });
     setShowWordModal(true);
   };
@@ -160,29 +125,23 @@ const DailyVocabManagement = () => {
 
 
   const handleSaveWord = async () => {
+    if (isSubmitting) return; // Prevent duplicate submissions
+    
     try {
+      setIsSubmitting(true);
+      
       if (!currentWord.word || !currentWord.definition) {
         toast.error('Word and definition are required');
         return;
       }
 
       if (editingWord) {
-        // TODO: Replace with actual API call
-        // const response = await vocabAPI.updateWord(editingWord._id, currentWord);
-        // Update the word in the selected set
+        const response = await vocabularyAPI.updateWord(selectedSet._id, editingWord._id, currentWord);
+        setSelectedSet(response.data.vocabSet);
         toast.success('Word updated successfully');
       } else {
-        // TODO: Replace with actual API call
-        // const response = await vocabAPI.createWord(selectedSet._id, currentWord);
-        // Add the word to the selected set
-        
-        // Update the selected set's word count
-        if (selectedSet) {
-          setSelectedSet(prev => ({
-            ...prev,
-            wordCount: prev.wordCount + 1
-          }));
-        }
+        const response = await vocabularyAPI.addWord(selectedSet._id, currentWord);
+        setSelectedSet(response.data.vocabSet);
         toast.success('Word added successfully');
       }
       
@@ -190,6 +149,8 @@ const DailyVocabManagement = () => {
     } catch (error) {
       logger.error('Error saving word:', error);
       toast.error('Failed to save word');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -255,7 +216,7 @@ const DailyVocabManagement = () => {
                           {set.difficulty}
                         </span>
                         <span className="text-xs text-gray-500">{set.wordCount} words</span>
-                        <span className="text-xs text-gray-500">{new Date(set.date).toLocaleDateString()}</span>
+                                                 <span className="text-xs text-gray-500">{new Date(set.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 ml-2">
@@ -300,30 +261,98 @@ const DailyVocabManagement = () => {
                         {selectedSet.difficulty}
                       </span>
                       <span className="text-xs text-gray-500">{selectedSet.wordCount} words</span>
-                      <span className="text-xs text-gray-500">{new Date(selectedSet.date).toLocaleDateString()}</span>
+                                               <span className="text-xs text-gray-500">{new Date(selectedSet.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={handleCreateWord}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <FiPlus className="mr-2" />
-                    Add Word
-                  </button>
+                                     <div className="flex items-center gap-3">
+                     <button
+                       onClick={handleCreateWord}
+                       className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                     >
+                       <FiPlus className="mr-2" />
+                       Add Word
+                     </button>
+                     <button
+                       onClick={() => handleEditSet(selectedSet)}
+                       className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                     >
+                       <FiEdit className="mr-2" />
+                       Update Vocab Set
+                     </button>
+                   </div>
                 </div>
               </div>
 
               {/* Words List */}
               <div className="bg-white rounded-lg shadow overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">Words in Set</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Words in Set ({selectedSet.words?.length || 0})</h3>
                 </div>
                 <div className="divide-y divide-gray-200">
-                  {/* TODO: Replace with actual words from the selected set */}
-                  <div className="p-4 text-center text-gray-500">
-                    <FiList className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                    <p>No words added yet. Click "Add Word" to get started.</p>
-                  </div>
+                  {selectedSet.words && selectedSet.words.length > 0 ? (
+                    selectedSet.words.map((word, index) => (
+                      <div key={word._id || index} className="p-4 hover:bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                                                         <div className="mb-2">
+                               <h4 className="font-semibold text-gray-900">{word.word}</h4>
+                             </div>
+                            <p className="text-sm text-gray-600 mb-2">{word.definition}</p>
+                            {word.image && (
+                              <img 
+                                src={word.image} 
+                                alt={word.word}
+                                className="w-16 h-12 object-cover rounded border mb-2"
+                                onError={(e) => e.target.style.display = 'none'}
+                              />
+                            )}
+                            {word.example && (
+                              <p className="text-xs text-gray-500 italic">"{word.example}"</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            <button
+                                                             onClick={() => {
+                                 setEditingWord(word);
+                                 setCurrentWord({
+                                   word: word.word,
+                                   definition: word.definition,
+                                   image: word.image,
+                                   example: word.example
+                                 });
+                                 setShowWordModal(true);
+                               }}
+                              className="p-1 text-gray-400 hover:text-blue-600"
+                            >
+                              <FiEdit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (window.confirm('Are you sure you want to delete this word?')) {
+                                  try {
+                                    const response = await vocabularyAPI.deleteWord(selectedSet._id, word._id);
+                                    setSelectedSet(response.data.vocabSet);
+                                    toast.success('Word deleted successfully');
+                                  } catch (error) {
+                                    logger.error('Error deleting word:', error);
+                                    toast.error('Failed to delete word');
+                                  }
+                                }
+                              }}
+                              className="p-1 text-gray-400 hover:text-red-600"
+                            >
+                              <FiTrash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      <FiList className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                      <p>No words added yet. Click "Add Word" to get started.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -396,17 +425,7 @@ const DailyVocabManagement = () => {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={currentSet.date}
-                    onChange={(e) => setCurrentSet(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+
               </div>
               
               <div className="flex justify-end space-x-3 mt-6">
@@ -416,13 +435,14 @@ const DailyVocabManagement = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSaveSet}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <FiSave className="mr-2" />
-                  {editingSet ? 'Update' : 'Create'}
-                </button>
+                                 <button
+                   onClick={handleSaveSet}
+                   disabled={isSubmitting}
+                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   <FiSave className="mr-2" />
+                   {isSubmitting ? 'Saving...' : (editingSet ? 'Update' : 'Create')}
+                 </button>
               </div>
             </div>
           </div>
@@ -472,6 +492,48 @@ const DailyVocabManagement = () => {
                     placeholder="Enter definition"
                   />
                 </div>
+
+                                                  <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                     Image for Definition (Optional)
+                   </label>
+                   <div className="space-y-2">
+                     <input
+                       type="file"
+                       accept="image/*"
+                       onChange={(e) => {
+                         const file = e.target.files[0];
+                         if (file) {
+                           const reader = new FileReader();
+                           reader.onload = (e) => {
+                             setCurrentWord(prev => ({ ...prev, image: e.target.result }));
+                           };
+                           reader.readAsDataURL(file);
+                         }
+                       }}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                     />
+                     {currentWord.image && (
+                       <div className="flex items-center gap-2">
+                         <img 
+                           src={currentWord.image} 
+                           alt="Preview" 
+                           className="w-16 h-16 object-cover rounded border"
+                           onError={(e) => e.target.style.display = 'none'}
+                         />
+                         <button
+                           type="button"
+                           onClick={() => setCurrentWord(prev => ({ ...prev, image: '' }))}
+                           className="px-2 py-1 text-red-600 hover:text-red-700 text-sm"
+                         >
+                           <FiX className="w-4 h-4" />
+                         </button>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+
+
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -486,41 +548,7 @@ const DailyVocabManagement = () => {
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Part of Speech
-                  </label>
-                  <select
-                    value={currentWord.partOfSpeech}
-                    onChange={(e) => setCurrentWord(prev => ({ ...prev, partOfSpeech: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select part of speech</option>
-                    <option value="noun">Noun</option>
-                    <option value="verb">Verb</option>
-                    <option value="adjective">Adjective</option>
-                    <option value="adverb">Adverb</option>
-                    <option value="pronoun">Pronoun</option>
-                    <option value="preposition">Preposition</option>
-                    <option value="conjunction">Conjunction</option>
-                    <option value="interjection">Interjection</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Difficulty
-                  </label>
-                  <select
-                    value={currentWord.difficulty}
-                    onChange={(e) => setCurrentWord(prev => ({ ...prev, difficulty: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                </div>
+
               </div>
               
               <div className="flex justify-end space-x-3 mt-6">
@@ -530,13 +558,14 @@ const DailyVocabManagement = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSaveWord}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <FiSave className="mr-2" />
-                  {editingWord ? 'Update' : 'Add'}
-                </button>
+                                 <button
+                   onClick={handleSaveWord}
+                   disabled={isSubmitting}
+                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   <FiSave className="mr-2" />
+                   {isSubmitting ? 'Saving...' : (editingWord ? 'Update' : 'Add')}
+                 </button>
               </div>
             </div>
           </div>

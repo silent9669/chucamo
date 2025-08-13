@@ -15,6 +15,7 @@ const questionRoutes = require('./routes/questions');
 const resultRoutes = require('./routes/results');
 const uploadRoutes = require('./routes/upload');
 const articleRoutes = require('./routes/articles');
+const vocabularyRoutes = require('./routes/vocabulary');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -160,6 +161,7 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/articles', articleRoutes);
+app.use('/api/vocabulary', vocabularyRoutes);
 
 // Health check endpoints
 app.get('/health', (req, res) => {
