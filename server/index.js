@@ -40,15 +40,12 @@ if (isDevelopment) {
           "'self'",
           "'unsafe-inline'",
           "'unsafe-eval'",
-          "https://www.desmos.com",
-          "https://accounts.google.com",
-          "https://www.gstatic.com"
+          "https://www.desmos.com"
         ],
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
-          "https://fonts.googleapis.com",
-          "https://accounts.google.com"
+          "https://fonts.googleapis.com"
         ],
         fontSrc: [
           "'self'",
@@ -70,15 +67,12 @@ if (isDevelopment) {
         connectSrc: [
           "'self'",
           "https://www.desmos.com",
-          "https://*.railway.app",
-          "https://accounts.google.com",
-          "https://www.googleapis.com"
+          "https://*.railway.app"
         ],
         frameSrc: [
           "'self'",
           "https://www.desmos.com",
-          "https://*.railway.app",
-          "https://accounts.google.com"
+          "https://*.railway.app"
         ]
       }
     }

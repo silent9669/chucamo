@@ -30,16 +30,9 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
   },
-  googleId: {
-    type: String,
-    sparse: true,
-    index: true
-  },
   password: {
     type: String,
-    required: function() {
-      return !this.googleId; // Password is only required if not using Google auth
-    },
+    required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters'],
     select: false
   },

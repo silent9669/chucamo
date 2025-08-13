@@ -131,26 +131,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const googleLogin = async (credential) => {
-    try {
-      dispatch({ type: 'AUTH_START' });
-      
-      const response = await authAPI.googleAuth(credential);
-      
-      dispatch({
-        type: 'AUTH_SUCCESS',
-        payload: {
-          user: response.data.user,
-          token: response.data.token
-        }
-      });
-      return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Google authentication failed';
-      dispatch({ type: 'AUTH_FAILURE', payload: message });
-      return { success: false, error: message };
-    }
-  };
+
 
   const register = async (userData) => {
     try {
@@ -226,7 +207,6 @@ export const AuthProvider = ({ children }) => {
     loading: state.loading,
     error: state.error,
     login,
-    googleLogin,
     register,
     logout,
     updateProfile,
