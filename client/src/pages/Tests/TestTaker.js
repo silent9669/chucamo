@@ -1975,7 +1975,7 @@ const TestTaker = () => {
                           <span className={`text-gray-900 text-base ${
                             eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
                           }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                            {option.letter || String.fromCharCode(65 + index)} <KaTeXDisplay content={option.content || ''} fontFamily="serif" fontSize={`${fontSize}px`} />
+                            <KaTeXDisplay content={option.content || ''} fontFamily="serif" fontSize={`${fontSize}px`} />
                           </span>
                         </div>
                       </button>
@@ -2125,7 +2125,7 @@ const TestTaker = () => {
                           <span className={`text-gray-900 text-base ${
                             eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
                           }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                            {option.letter || String.fromCharCode(65 + index)} <KaTeXDisplay content={option.content || ''} fontFamily="serif" fontSize={`${fontSize}px`} />
+                            <KaTeXDisplay content={option.content || ''} fontFamily="serif" fontSize={`${fontSize}px`} />
                           </span>
                         </div>
                       </button>

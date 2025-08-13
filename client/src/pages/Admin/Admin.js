@@ -2411,7 +2411,7 @@ const RealTestManagement = () => {
                     }))}
                     className="mr-2"
                   />
-                  Multiple Choice (A, B, C, D)
+                  Multiple Choice (1, 2, 3, 4)
                 </label>
                 <label className="flex items-center">
                   <input
@@ -2540,14 +2540,14 @@ const RealTestManagement = () => {
                     />
                     <div className="flex-1 flex items-start gap-3">
                       <span className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-700 flex-shrink-0">
-                        {String.fromCharCode(65 + index)}
+                        {index + 1}
                       </span>
                       <div className="flex-1 min-w-0">
                         {currentSection.type === 'english' ? (
                           <SimpleRichTextEditor
                             value={typeof option === 'string' ? option : option.content}
                             onChange={(value) => handleOptionChange(index, value)}
-                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            placeholder={`Option ${index + 1}`}
                             rows={3}
                             sectionType={currentSection.type}
                           />
@@ -2555,7 +2555,7 @@ const RealTestManagement = () => {
                           <KaTeXEditor
                             value={typeof option === 'string' ? option : option.content}
                             onChange={(value) => handleOptionChange(index, value)}
-                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            placeholder={`Option ${index + 1}`}
                             rows={3}
                           />
                         )}
@@ -4113,7 +4113,7 @@ const MockTestManagement = () => {
                     }))}
                     className="mr-2"
                   />
-                  Multiple Choice (A, B, C, D)
+                  Multiple Choice (1, 2, 3, 4)
                 </label>
                 <label className="flex items-center">
                   <input
@@ -4232,14 +4232,14 @@ const MockTestManagement = () => {
                     />
                     <div className="flex-1 flex items-start gap-3">
                       <span className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-700 flex-shrink-0">
-                        {String.fromCharCode(65 + index)}
+                        {index + 1}
                       </span>
                       <div className="flex-1 min-w-0">
                         {currentSection.type === 'english' ? (
                           <SimpleRichTextEditor
                             value={option}
                             onChange={(value) => handleOptionChange(index, value)}
-                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            placeholder={`Option ${index + 1}`}
                             rows={3}
                             sectionType={currentSection.type}
                           />
@@ -4247,7 +4247,7 @@ const MockTestManagement = () => {
                           <KaTeXEditor
                             value={option}
                             onChange={(value) => handleOptionChange(index, value)}
-                            placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                            placeholder={`Option ${index + 1}`}
                             rows={3}
                           />
                         )}
