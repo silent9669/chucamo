@@ -321,6 +321,13 @@ const RichTextDocument = ({
     
     // Apply highlight mark
     if (segment.marks.includes('highlight') && segment.highlightData) {
+      // Debug logging to verify highlight data
+      console.log('Applying highlight with data:', {
+        highlightData: segment.highlightData,
+        colorValue: segment.highlightData.colorValue,
+        backgroundColor: segment.highlightData.colorValue
+      });
+      
       const highlightStyle = {
         backgroundColor: segment.highlightData.colorValue,
         padding: '1px 2px',

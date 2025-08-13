@@ -293,7 +293,6 @@
 
 /* Rich text highlighting styles */
 .rich-text-highlight {
-  background-color: var(--highlight-color, #ffeb3b) !important;
   color: inherit !important;
   font-weight: inherit !important;
   font-style: inherit !important;
@@ -434,7 +433,6 @@
 
 /* Ensure highlighting works properly with SimpleRichText */
 .simple-rich-text .custom-highlight {
-  background-color: var(--highlight-color, #ffeb3b) !important;
   color: inherit !important;
   font-weight: inherit !important;
   font-style: inherit !important;
@@ -769,7 +767,6 @@ text + .katex-inline {
 /* Ensure highlighting works within KaTeX elements */
 .katex-display .custom-highlight,
 .katex-inline .custom-highlight {
-  background-color: var(--highlight-color, #ffeb3b) !important;
   color: #000 !important;
   padding: 1px 2px !important;
   border-radius: 2px !important;
@@ -1053,7 +1050,6 @@ text + .katex-inline {
 /* Overlay-based highlighting for SimpleRichText - preserves formatting completely */
 .custom-highlight-overlay {
   position: absolute !important;
-  background-color: var(--highlight-color, #ffeb3b) !important;
   opacity: 0.3 !important;
   pointer-events: none !important;
   z-index: 1000 !important;

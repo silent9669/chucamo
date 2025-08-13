@@ -75,12 +75,23 @@ router.get('/:id', protect, async (req, res) => {
 // @access  Private
 router.post('/', protect, async (req, res) => {
   try {
+    console.log('=== STARTING TEST ===');
+    console.log('Request body:', req.body);
+    console.log('User ID:', req.user.id);
+    console.log('User object:', req.user);
+    
     const { testId } = req.body;
+
+    if (!testId) {
+      return res.status(400).json({ message: 'Test ID is required' });
+    }
 
     const test = await Test.findById(testId);
     if (!test) {
       return res.status(404).json({ message: 'Test not found' });
     }
+
+    console.log('Test found:', test._id);
 
     // Check if user can access this test
     if (!test.isPublic && test.createdBy.toString() !== req.user.id) {
@@ -95,11 +106,16 @@ router.post('/', protect, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    console.log('User account type:', user.accountType);
+    console.log('User role:', user.role);
+
     // Check if user has exceeded max attempts based on account type
     const existingAttempts = await Result.countDocuments({
       user: req.user.id,
       test: testId
     });
+
+    console.log('Existing attempts:', existingAttempts);
 
     // Set max attempts based on account type
     let maxAttempts;
@@ -110,6 +126,8 @@ router.post('/', protect, async (req, res) => {
     } else {
       maxAttempts = 3; // Student account: 3 test attempts
     }
+
+    console.log('Max attempts allowed:', maxAttempts);
 
     // Check if user has exceeded max attempts
     if (maxAttempts !== Infinity && existingAttempts >= maxAttempts) {
@@ -130,6 +148,7 @@ router.post('/', protect, async (req, res) => {
       }
     }
 
+    console.log('Creating result...');
     const result = await Result.create({
       user: req.user.id,
       test: testId,
@@ -138,6 +157,8 @@ router.post('/', protect, async (req, res) => {
       status: 'in-progress'
     });
 
+    console.log('Result created successfully:', result._id);
+
     res.status(201).json({
       success: true,
       message: 'Test started successfully',
@@ -145,7 +166,12 @@ router.post('/', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('Start test error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

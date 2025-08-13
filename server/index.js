@@ -80,8 +80,16 @@ if (isDevelopment) {
 }
 app.use(cors({
   origin: function (origin, callback) {
+    // Add CORS debugging
+    console.log('=== CORS REQUEST ===');
+    console.log('Request origin:', origin);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('No origin - allowing request');
+      return callback(null, true);
+    }
     
     const allowedOrigins = [
       'http://localhost:3000',
@@ -92,9 +100,19 @@ app.use(cors({
       'https://railway.com'
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    console.log('Allowed origins:', allowedOrigins);
+    console.log('Origin in allowed list:', allowedOrigins.indexOf(origin) !== -1);
+    
+    // Normalize origin by removing trailing slash for comparison
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const normalizedAllowedOrigins = allowedOrigins.map(origin => origin.replace(/\/$/, ''));
+    
+    if (normalizedAllowedOrigins.indexOf(normalizedOrigin) !== -1) {
+      console.log('CORS: Allowing request from', origin, '(normalized:', normalizedOrigin, ')');
       callback(null, true);
     } else {
+      console.log('CORS: Blocking request from', origin, '(normalized:', normalizedOrigin, ')');
+      console.log('Normalized allowed origins:', normalizedAllowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -212,6 +230,20 @@ logger.debug('Environment check:');
 logger.debug('- NODE_ENV:', process.env.NODE_ENV);
 logger.debug('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
 logger.debug('- MONGODB_URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
+
+// Add console logs for development debugging
+console.log('=== SERVER STARTUP DEBUG ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('isDevelopment:', process.env.NODE_ENV === 'development');
+console.log('CORS origins allowed:', [
+  'http://localhost:3000',
+  'http://localhost:3001', 
+  'http://localhost:5000',
+  'http://localhost:5173',
+  'https://chucamo-production.up.railway.app',
+  'https://railway.com'
+]);
+console.log('================================');
 
 // If no MONGODB_URI is set, use a fallback for development
 if (!MONGODB_URI) {

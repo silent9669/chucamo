@@ -16,6 +16,7 @@ import WrittenAnswerInput from '../../components/UI/WrittenAnswerInput';
 import CalculatorPopup from '../../components/UI/CalculatorPopup';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
 import RichTextDocument from '../../components/UI/RichTextDocument';
+import Watermark from '../../components/UI/Watermark';
 import { testsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import katex from 'katex';
@@ -45,7 +46,7 @@ const safeStringify = (obj) => {
 const TestTaker = () => {
   const navigate = useNavigate();
   const { id: testId } = useParams();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   
   // Test data state
   const [test, setTest] = useState(null);
@@ -651,6 +652,13 @@ const TestTaker = () => {
         text: text.trim(), // Ensure text is trimmed
         originalText: originalText.trim() // Ensure original text is trimmed
       };
+      
+      // Debug logging to verify color data
+      console.log('Creating highlight with color data:', {
+        colorName: color.name,
+        colorValue: color.value,
+        highlightData: newHighlight
+      });
       
       // Add to highlights state
       setHighlights(prev => [...prev, newHighlight]);
@@ -1827,12 +1835,21 @@ const TestTaker = () => {
           {/* Reading Passage - Display Below Images */}
           {currentQuestionData.passage && (
             <div className="mt-6 reading-passage-container">
+              {/* Watermark - Only for English section */}
+              {currentSectionData?.type === 'english' && (
+                <Watermark 
+                  userEmail={user?.email} 
+                  hasImages={currentQuestionData?.images && currentQuestionData.images.length > 0}
+                />
+              )}
+              
               <div 
                 key={`passage-${currentSection}-${currentQuestion}`}
                 className={`reading-passage ${isHighlightMode ? 'highlighter-cursor highlightable-area' : ''}`}
                 style={{ 
                   fontFamily: 'serif',
-                  fontSize: `${fontSize}px`
+                  fontSize: `${fontSize}px`,
+                  position: 'relative' // Ensure proper positioning context for watermark
                 }}
               >
                 {currentSectionData?.type === 'english' ? (
@@ -2279,7 +2296,6 @@ const TestTaker = () => {
           }
           
           .custom-highlight {
-            background-color: #fef08a !important;
             color: inherit !important;
             padding: 1px 2px !important;
             border-radius: 2px !important;
@@ -2310,6 +2326,24 @@ const TestTaker = () => {
           }
           
           .custom-highlight:hover {
+            opacity: 0.8 !important;
+          }
+          
+          /* Rich text highlight styles - allow inline background colors to work */
+          .rich-text-highlight {
+            padding: 1px 2px !important;
+            border-radius: 2px !important;
+            cursor: pointer !important;
+            display: inline !important;
+            position: relative !important;
+            z-index: 1000 !important;
+            transition: all 0.2s ease !important;
+            font-weight: normal !important;
+            border: none !important;
+            margin: 0 !important;
+          }
+          
+          .rich-text-highlight:hover {
             opacity: 0.8 !important;
           }
           
@@ -2397,7 +2431,6 @@ const TestTaker = () => {
           }
           
           span.custom-highlight {
-            background-color: inherit !important;
             color: inherit !important;
             padding: inherit !important;
             border-radius: inherit !important;
@@ -2562,6 +2595,72 @@ const TestTaker = () => {
         .math-section .katex-inline {
           font-size: 1.1em !important;
           font-family: serif !important;
+        }
+        
+        /* Watermark styles for English section */
+        .watermark-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 5;
+        }
+        
+        /* Email watermark line positioning */
+        .watermark-email-line {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+        
+        /* Email line overlay styling */
+        .email-line-overlay {
+          box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+          border-radius: 1px;
+        }
+        
+                        /* Email text overlay styling */
+        .email-text-overlay {
+          /* Plain text styling - no background */
+          background: none !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+          z-index: 1;
+        }
+        
+        .watermark-logo {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .watermark-email {
+          position: absolute;
+          top: 40px;
+          left: -200px;
+          transform: rotate(-45deg);
+          z-index: 2;
+        }
+        
+        .reading-passage-container {
+          position: relative;
+        }
+        
+        .reading-passage-container .watermark-container {
+          opacity: 0.45;
+          transition: opacity 0.3s ease;
+        }
+        
+        .reading-passage-container:hover .watermark-container {
+          opacity: 0.55;
         }
       `}</style>
     </div>
