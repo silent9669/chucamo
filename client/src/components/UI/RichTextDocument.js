@@ -136,18 +136,7 @@ const RichTextDocument = ({
     };
   }, [content]);
 
-  // Function to check if text should be highlighted
-  const shouldHighlightText = (text, startIndex) => {
-    if (!highlights || highlights.length === 0) return null;
-    
-    // Find a highlight that exactly matches this text segment
-    const highlight = highlights.find(h => {
-      // Only highlight if the text exactly matches the highlight text
-      return text === h.text;
-    });
-    
-    return highlight;
-  };
+
 
   // Function to split text into highlightable segments
   const splitTextForHighlights = (text) => {
