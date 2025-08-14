@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   FiBookmark, 
   FiX, 
-  FiChevronLeft,
-  FiChevronRight,
   FiCheck,
   FiEye,
   FiEyeOff,
@@ -168,7 +166,7 @@ const VocabQuizTaker = () => {
     }, 30000);
 
     return () => clearInterval(autoSaveInterval);
-  }, [quiz, questions, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, saveProgress]);
+  }, [quiz, questions, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, saveProgress, quizId]);
 
   // Save progress on page unload
   useEffect(() => {
@@ -293,11 +291,6 @@ const VocabQuizTaker = () => {
     setShowQuestionNav(false);
   };
 
-  // Toggle question navigation
-  const toggleQuestionNav = () => {
-    setShowQuestionNav(!showQuestionNav);
-  };
-
   // Handle save and exit
   const handleSaveAndExit = () => {
     // Save incomplete quiz data
@@ -307,7 +300,6 @@ const VocabQuizTaker = () => {
       completedAt: new Date().toISOString(),
       totalQuestions: getTotalQuestions(),
       answeredQuestions: Array.from(answeredQuestions.entries()),
-      timeSpent: (quiz.timeLimit * 60) - timeLeft,
       status: 'incomplete',
       quizData: {
         title: quiz.title,
@@ -346,7 +338,6 @@ const VocabQuizTaker = () => {
       answeredQuestions: Array.from(answeredQuestions.entries()),
       correctAnswers,
       score,
-      timeSpent: (quiz.timeLimit * 60) - timeLeft,
       status: 'completed'
     };
     
@@ -449,7 +440,6 @@ const VocabQuizTaker = () => {
       return false;
     }).length;
     const score = Math.round((correctCount / totalQuestions) * 100);
-    const timeSpent = (quiz.timeLimit * 60) - timeLeft;
 
     return (
       <div className="min-h-screen bg-gray-50 p-6 relative">
