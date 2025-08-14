@@ -160,10 +160,8 @@ const TestTaker = () => {
       const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${testId}`) || '0');
       
       let maxAttempts = 1;
-      if (user?.accountType === 'admin' || user?.accountType === 'teacher') {
+      if (user?.accountType === 'admin' || user?.accountType === 'teacher' || user?.accountType === 'student') {
         maxAttempts = Infinity;
-      } else if (user?.accountType === 'student') {
-        maxAttempts = 3;
       }
       
       if (maxAttempts !== Infinity && completedAttempts >= maxAttempts) {
@@ -1290,9 +1288,6 @@ const TestTaker = () => {
                 } else {
                   navigate('/dashboard');
                 }
-              } else if (errorText.includes('Student account type reached max attempt')) {
-                alert('⚠️ Student account type reached max attempt (3).');
-                navigate('/tests');
               } else {
                 alert('⚠️ Account type reached max attempt. Please contact support.');
                 navigate('/tests');

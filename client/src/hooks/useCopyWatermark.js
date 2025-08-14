@@ -38,13 +38,32 @@ export default function useCopyWatermark(protectedSelectors = []) {
           const watermark = config.watermarkText;
           const contentToCopy = watermark;
 
-          // Set clipboard content with enhanced formatting
-          e.clipboardData.setData("text/plain", contentToCopy);
-          e.clipboardData.setData("text/html", `
-            <div style="font-family: Arial, sans-serif; color: #333; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
-              <strong>${contentToCopy}</strong>
-            </div>
-          `);
+          // Set clipboard content with enhanced formatting - add null checks
+          if (e.clipboardData && e.clipboardData.setData) {
+            try {
+              e.clipboardData.setData("text/plain", contentToCopy);
+              e.clipboardData.setData("text/html", `
+                <div style="font-family: Arial, sans-serif; color: #333; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+                  <strong>${contentToCopy}</strong>
+                </div>
+              `);
+            } catch (setDataError) {
+              console.warn('Error setting clipboard data:', setDataError);
+              // Fallback: try to use clipboard API
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(contentToCopy).catch(console.warn);
+              }
+            }
+          } else {
+            // Fallback for browsers without clipboardData
+            try {
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(contentToCopy).catch(console.warn);
+              }
+            } catch (clipboardError) {
+              console.warn('Clipboard API fallback failed:', clipboardError);
+            }
+          }
           
           // Show notification
           showCopyNotification();
@@ -54,7 +73,15 @@ export default function useCopyWatermark(protectedSelectors = []) {
         console.warn('Error in copy watermark handler:', error);
         // If there's an error, still protect content
         e.preventDefault();
-        e.clipboardData.setData("text/plain", config.watermarkText);
+        try {
+          if (e.clipboardData && e.clipboardData.setData) {
+            e.clipboardData.setData("text/plain", config.watermarkText);
+          } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(config.watermarkText).catch(console.warn);
+          }
+        } catch (fallbackError) {
+          console.warn('Final clipboard protection failed:', fallbackError);
+        }
       }
     };
 
@@ -257,7 +284,15 @@ export default function useCopyWatermark(protectedSelectors = []) {
       if (selection && selection.toString().trim().length > 3) {
         // Force protection even if other handlers fail
         e.preventDefault();
-        e.clipboardData.setData("text/plain", config.watermarkText);
+        try {
+          if (e.clipboardData && e.clipboardData.setData) {
+            e.clipboardData.setData("text/plain", config.watermarkText);
+          } else if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(config.watermarkText).catch(console.warn);
+          }
+        } catch (backupError) {
+          console.warn('Backup copy protection failed:', backupError);
+        }
         if (config.debugMode) {
           console.log('Backup copy protection activated');
         }

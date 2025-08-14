@@ -146,10 +146,8 @@ async function testAttemptLogic() {
       
       // Determine max attempts
       let maxAttempts;
-      if (user.accountType === 'admin' || user.accountType === 'teacher') {
+      if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student') {
         maxAttempts = Infinity;
-      } else if (user.accountType === 'student') {
-        maxAttempts = 3;
       } else {
         maxAttempts = 1;
       }

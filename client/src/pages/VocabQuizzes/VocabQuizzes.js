@@ -182,7 +182,23 @@ const VocabQuizzes = () => {
 
                   {/* Action Button */}
                   <button 
-                    onClick={() => window.location.href = `/vocab-quizzes/${quiz._id}`}
+                    onClick={() => {
+                      // Clear any existing quiz data before starting
+                      try {
+                        // Clear all vocab quiz progress data
+                        const keys = Object.keys(localStorage);
+                        keys.forEach(key => {
+                          if (key.startsWith('vocab_quiz_progress_') || key.startsWith('vocab_quiz_completion_')) {
+                            localStorage.removeItem(key);
+                          }
+                        });
+                        console.log('Cleared existing vocab quiz data for fresh start');
+                      } catch (error) {
+                        console.error('Error clearing quiz data:', error);
+                      }
+                      // Navigate to quiz
+                      window.location.href = `/vocab-quizzes/${quiz._id}`;
+                    }}
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
                   >
                     Start Quiz

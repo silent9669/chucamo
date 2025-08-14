@@ -7,7 +7,10 @@ import {
   FiChevronRight,
   FiCheck,
   FiEye,
-  FiEyeOff
+  FiEyeOff,
+  FiChevronUp,
+  FiMapPin,
+  FiFlag
 } from 'react-icons/fi';
 import RichTextDocument from '../../components/UI/RichTextDocument';
 import Watermark from '../../components/UI/Watermark';
@@ -25,8 +28,7 @@ const VocabQuizTaker = () => {
   useCopyWatermark([
     '.reading-passage-container',
     '.question-content',
-    '.answer-options',
-    '.quiz-summary'
+    '.answer-options'
   ]);
   
   // Quiz data state
@@ -134,13 +136,26 @@ const VocabQuizTaker = () => {
 
   // Load quiz data on component mount
   useEffect(() => {
+    // Clear any existing progress when starting a new quiz
+    const clearExistingProgress = () => {
+      try {
+        localStorage.removeItem(`vocab_quiz_progress_${quizId}`);
+        localStorage.removeItem(`vocab_quiz_completion_${quizId}`);
+        logger.debug('Cleared existing quiz progress for fresh start');
+      } catch (error) {
+        logger.error('Error clearing existing progress:', error);
+      }
+    };
+    
+    clearExistingProgress();
     loadQuizData();
   }, [loadQuizData]);
 
   // Load saved progress when quiz data is available
   useEffect(() => {
     if (quiz && questions.length > 0) {
-      loadSavedProgress();
+      // Don't load saved progress on fresh start - let user start from beginning
+      // loadSavedProgress();
     }
   }, [quiz, questions, loadSavedProgress]);
 
@@ -276,6 +291,11 @@ const VocabQuizTaker = () => {
   const goToReviewPage = () => {
     setShowReviewPage(true);
     setShowQuestionNav(false);
+  };
+
+  // Toggle question navigation
+  const toggleQuestionNav = () => {
+    setShowQuestionNav(!showQuestionNav);
   };
 
   // Handle save and exit
@@ -671,7 +691,18 @@ const VocabQuizTaker = () => {
               Back to Quizzes
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                // Clear all quiz data and refresh for fresh start
+                try {
+                  localStorage.removeItem(`vocab_quiz_progress_${quizId}`);
+                  localStorage.removeItem(`vocab_quiz_completion_${quizId}`);
+                  logger.debug('Cleared quiz data for fresh start');
+                } catch (error) {
+                  logger.error('Error clearing quiz data:', error);
+                }
+                // Force a complete page refresh to start fresh
+                window.location.reload();
+              }}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Take Quiz Again
@@ -769,249 +800,298 @@ const VocabQuizTaker = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Subtle watermark text */}
+    <div className={`h-screen flex flex-col bg-white relative`}>
+      {/* Watermark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
         <div className="text-gray-100 text-6xl font-bold transform -rotate-45 opacity-5">
           chucamo
         </div>
       </div>
-      
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/vocab-quizzes')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <FiX className="w-6 h-6" />
-            </button>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">{quiz.title}</h1>
-              <p className="text-sm text-gray-600">Question {currentQuestion} of {getTotalQuestions()}</p>
-            </div>
+
+      {/* Top Header Bar */}
+      <div className="bg-gray-100 border-b border-gray-200 px-4 py-2 flex items-center justify-between relative z-10">
+        {/* Left - Quiz info */}
+        <div className="flex items-center">
+          <button
+            onClick={() => navigate('/vocab-quizzes')}
+            className="text-gray-600 hover:text-gray-900 mr-4"
+          >
+            <FiX className="w-6 h-6" />
+          </button>
+          <div className="text-lg font-bold text-gray-900">
+            {quiz.title}
           </div>
+        </div>
+
+        {/* Center - Timer */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+          <div className={`text-lg font-bold ${
+            timeLeft <= 60 ? 'text-red-600 animate-pulse' : 
+            timeLeft <= 300 ? 'text-orange-600' : 'text-gray-900'
+          }`}>
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+
+        {/* Right - Controls */}
+        <div className="flex items-center space-x-4">
           
-          <div className="flex items-center space-x-4">
-            {/* Timer */}
-            <div className="bg-red-100 text-red-800 px-3 py-2 rounded-lg font-mono">
-              {formatTime(timeLeft)}
-            </div>
-            
-            {/* Mark for Review */}
-            <button
-              onClick={handleMarkForReview}
-              className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                isMarkedForReview 
-                  ? 'bg-blue-100 text-blue-800' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <FiBookmark className={`w-4 h-4 mr-2 ${isMarkedForReview ? 'fill-current' : ''}`} />
-              Review
-            </button>
-            
-            {/* Question Navigation */}
-            <button
-              onClick={() => setShowQuestionNav(!showQuestionNav)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              {showQuestionNav ? 'Hide' : 'Show'} Navigation
-            </button>
-          </div>
+          {/* Save & Exit */}
+          <button 
+            onClick={handleSaveAndExit}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
+          >
+            Save & Exit
+          </button>
         </div>
       </div>
 
-      <div className="flex">
-        {/* Main Content */}
-        <div className="flex-1 p-6 relative">
-          <div className="max-w-4xl mx-auto relative z-10">
-            {/* Watermark */}
-            <Watermark 
-              userEmail={user?.email} 
-              hasImages={false}
-            />
-            
-            {/* Additional subtle watermark text */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-              <div className="text-gray-100 text-6xl font-bold transform -rotate-45 opacity-5">
-                chucamo
-              </div>
-            </div>
-            
-            {/* Reading Passage */}
-            {currentQuestionData.passage && (
-              <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200 reading-passage-container">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Reading Passage</h3>
-                <div className="prose max-w-none">
-                  <RichTextDocument
-                    content={currentQuestionData.passage}
-                    fontFamily="serif"
-                    fontSize={fontSize}
-                    className="rich-text-content"
-                    placeholder="Reading passage content will appear here..."
-                    autoScale={true}
-                  />
-                </div>
-              </div>
-            )}
-            
-            {/* Question */}
-            <div className="mb-8 p-6 bg-white rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Question {currentQuestion}</h3>
-              <div className="question-content text-gray-900 text-base leading-relaxed">
+      {/* Main Content Area */}
+      <div className="flex-1 flex relative z-10 min-h-0">
+        {/* Left Pane - Reading Passage */}
+        <div className="w-1/2 border-r border-gray-200 p-6 relative flex flex-col">
+          {/* Watermark */}
+          <Watermark 
+            userEmail={user?.email} 
+            hasImages={false}
+          />
+          
+          {/* Resize handle */}
+          <div className="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 z-20">
+            <div className="w-1 h-8 bg-gray-400 rounded-full"></div>
+          </div>
+
+          {/* Reading Passage */}
+          {currentQuestionData.passage && (
+            <div className="reading-passage-container flex-1 flex flex-col min-h-0 relative z-5">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Reading Passage</h3>
+              <div 
+                className={`reading-passage flex-1 overflow-y-auto`}
+                style={{ 
+                  fontFamily: 'serif',
+                  fontSize: `${fontSize}px`,
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  overflowX: 'hidden'
+                }}
+              >
                 <RichTextDocument
-                  content={currentQuestionData.question || currentQuestionData.content}
+                  content={currentQuestionData.passage}
                   fontFamily="serif"
                   fontSize={fontSize}
-                  className="rich-text-content"
-                  placeholder="Question text will appear here..."
+                  className="rich-text-content prose prose-sm max-w-none"
+                  placeholder="Reading passage content will appear here..."
                   autoScale={true}
                 />
               </div>
             </div>
-
-            {/* Answer Options */}
-            <div className="space-y-3 answer-options">
-              {currentQuestionData.options && currentQuestionData.options.map((option, index) => (
-                <div key={index} className="flex items-center">
-                  <button
-                    onClick={() => handleAnswerSelect(option.content || '')}
-                    className={`flex-1 flex items-center p-4 border rounded-lg text-left transition-colors ${
-                      selectedAnswer === (option.content || '')
-                        ? 'border-blue-500 bg-blue-50'
-                        : eliminatedAnswers.includes(option.content || '')
-                        ? 'border-red-300 bg-red-50 opacity-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
-                      selectedAnswer === (option.content || '')
-                        ? 'border-blue-500 bg-blue-500'
-                        : eliminatedAnswers.includes(option.content || '')
-                        ? 'border-red-300 bg-red-300'
-                        : 'border-gray-400'
-                    }`}>
-                      {selectedAnswer === (option.content || '') && (
-                        <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
-                      )}
-                      {eliminatedAnswers.includes(option.content || '') && (
-                        <FiX className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-gray-900 text-base ${
-                        eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
-                      }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                        {option.content || <span className="text-gray-400 italic">Option {index + 1} will appear here...</span>}
-                      </span>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleEliminateAnswer(option.content || '')}
-                    className="ml-3 p-3 text-gray-600 hover:text-red-600"
-                  >
-                    {eliminatedAnswers.includes(option.content || '') ? 'Undo' : '✕'}
-                  </button>
-                </div>
-              ))}
+          )}
+          
+          {/* If no passage, show placeholder */}
+          {!currentQuestionData.passage && (
+            <div className="flex-1 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📖</div>
+                <p className="text-lg">No reading passage for this question</p>
+              </div>
             </div>
+          )}
+        </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <button
-                onClick={handleBackQuestion}
-                disabled={currentQuestion === 1}
-                className={`px-6 py-3 rounded-lg ${
-                  currentQuestion === 1
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-gray-600 text-white hover:bg-gray-700'
-                }`}
-              >
-                <FiChevronLeft className="w-4 h-4 mr-2 inline" />
-                Previous
-              </button>
-              
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleSaveAndExit}
-                  className="px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-                >
-                  Save & Exit
-                </button>
+        {/* Right Pane - Question and Options */}
+        <div className="w-1/2 p-6 overflow-y-auto">
+          {/* Question Header */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-black text-white px-3 py-1 rounded text-base font-bold">
+                  {currentQuestion}
+                </div>
+                <div className="text-sm text-gray-600">
+                  Question {currentQuestion} of {getTotalQuestions()}
+                </div>
                 
-                <button
-                  onClick={currentQuestion === getTotalQuestions() ? goToReviewPage : handleNextQuestion}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                {/* Mark for Review Button - Left Side */}
+                <button 
+                  onClick={handleMarkForReview}
+                  className={`flex items-center text-sm font-medium transition-colors ${
+                    isMarkedForReview 
+                      ? 'text-blue-600 bg-blue-50 px-2 py-1 rounded' 
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50 px-2 py-1 rounded'
+                  }`}
                 >
-                  {currentQuestion === getTotalQuestions() ? 'Review' : 'Next'}
-                  {currentQuestion !== getTotalQuestions() && <FiChevronRight className="w-4 h-4 ml-2 inline" />}
+                  <FiBookmark className={`w-4 h-4 mr-1 ${isMarkedForReview ? 'text-blue-600 fill-current' : ''}`} />
+                  <span className={isMarkedForReview ? 'font-bold' : ''}>
+                    Mark for Review
+                  </span>
                 </button>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Question Navigation Sidebar */}
-        {showQuestionNav && (
-          <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto relative">
-            {/* Subtle watermark text */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-              <div className="text-gray-100 text-4xl font-bold transform -rotate-45 opacity-5">
-                chucamo
+          {/* Question */}
+          <div className="mb-6">
+            <div 
+              className={`question-content text-gray-900 text-base leading-relaxed`}
+            >
+              <RichTextDocument
+                content={currentQuestionData.question || currentQuestionData.content}
+                fontFamily="serif"
+                fontSize={fontSize}
+                className="rich-text-content"
+                placeholder="Question text will appear here..."
+                autoScale={true}
+              />
+            </div>
+          </div>
+
+          {/* Answer Options */}
+          <div className="space-y-3 answer-options">
+            {currentQuestionData.options && currentQuestionData.options.map((option, index) => (
+              <div key={index} className="flex items-center">
+                <button
+                  onClick={() => handleAnswerSelect(option.content || '')}
+                  className={`flex-1 flex items-center p-4 border rounded-lg text-left transition-colors ${
+                    selectedAnswer === (option.content || '')
+                      ? 'border-blue-500 bg-blue-50'
+                      : eliminatedAnswers.includes(option.content || '')
+                      ? 'border-red-300 bg-red-50 opacity-50'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center ${
+                    selectedAnswer === (option.content || '')
+                      ? 'border-blue-500 bg-blue-500'
+                      : eliminatedAnswers.includes(option.content || '')
+                      ? 'border-red-300 bg-red-300'
+                      : 'border-gray-400'
+                  }`}>
+                    {selectedAnswer === (option.content || '') && (
+                      <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                    )}
+                    {eliminatedAnswers.includes(option.content || '') && (
+                      <FiX className="w-4 h-4 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className={`text-gray-900 text-base ${
+                      eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
+                    }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
+                      {option.content || <span className="text-gray-400 italic">Option {index + 1} will appear here...</span>}
+                    </span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleEliminateAnswer(option.content || '')}
+                  className="ml-3 p-3 text-gray-600 hover:text-red-600"
+                >
+                  {eliminatedAnswers.includes(option.content || '') ? 'Undo' : '✕'}
+                </button>
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Footer Bar */}
+      <div className="bg-gray-100 border-t border-gray-200 px-4 py-3 flex items-center justify-between relative z-10">
+        <div></div>
+        <button 
+          onClick={() => setShowQuestionNav(!showQuestionNav)}
+          className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-2 bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
+        >
+          <span>Question {currentQuestion} of {getTotalQuestions()}</span>
+          <FiChevronUp className="w-4 h-4" />
+        </button>
+        <div className="flex space-x-2">
+          {currentQuestion > 1 && (
+            <button 
+              onClick={handleBackQuestion}
+              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
+            >
+              Back
+            </button>
+          )}
+          <button 
+            onClick={currentQuestion === getTotalQuestions() ? goToReviewPage : handleNextQuestion}
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium"
+          >
+            {currentQuestion === getTotalQuestions() ? 'Review' : 'Next'}
+          </button>
+        </div>
+      </div>
+
+      {/* Question Navigation Popup */}
+      {showQuestionNav && (
+        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-white border border-gray-300 rounded-lg shadow-lg p-6 min-w-96 z-20">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-base font-bold text-gray-900">
+              Question Navigation
+            </h3>
+            <button 
+              onClick={() => setShowQuestionNav(false)}
+              className="text-gray-600 hover:text-gray-800"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+          </div>
+          
+          {/* Legend */}
+          <div className="flex space-x-6 mb-6 text-sm text-gray-600">
+            <div className="flex items-center">
+              <FiMapPin className="w-4 h-4 mr-2" />
+              Current
             </div>
-            
-            <div className="relative z-10">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Question Navigation</h3>
-            <div className="grid grid-cols-5 gap-2">
-              {questions.map((_, index) => {
-                const questionNum = index + 1;
-                const isAnswered = answeredQuestions.has(questionNum);
-                const isMarked = markedForReviewQuestions.has(questionNum);
-                const isCurrent = questionNum === currentQuestion;
-                
-                return (
-                  <button
-                    key={questionNum}
-                    onClick={() => handleQuestionChange(questionNum)}
-                    className={`p-3 rounded-lg text-sm font-medium transition-colors ${
-                      isCurrent
-                        ? 'bg-blue-600 text-white'
-                        : isAnswered
-                        ? 'bg-green-100 text-green-800'
-                        : isMarked
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {questionNum}
-                  </button>
-                );
-              })}
+            <div className="flex items-center">
+              <div className="w-4 h-4 border-2 border-dashed border-gray-400 mr-2"></div>
+              Unanswered
             </div>
-            
-                         <div className="mt-6 space-y-2">
-               <div className="flex items-center text-sm">
-                 <div className="w-4 h-4 bg-green-100 rounded mr-2"></div>
-                 <span className="text-gray-600">Answered</span>
-               </div>
-               <div className="flex items-center text-sm">
-                 <div className="w-4 h-4 bg-blue-100 rounded mr-2"></div>
-                 <span className="text-gray-600">Marked for Review</span>
-               </div>
-               <div className="flex items-center text-sm">
-                 <div className="w-4 h-4 bg-gray-100 rounded mr-2"></div>
-                 <span className="text-gray-600">Not Answered</span>
-               </div>
-             </div>
-           </div>
-         </div>
-         )}
-       </div>
-     </div>
-   );
- };
+            <div className="flex items-center">
+              <FiFlag className="w-4 h-4 text-red-500 mr-2 fill-current" />
+              For Review
+            </div>
+          </div>
+
+          {/* Question Grid */}
+          <div className="grid grid-cols-10 gap-2 mb-6">
+            {questions.map((_, index) => {
+              const questionNum = index + 1;
+              const isAnswered = answeredQuestions.has(questionNum);
+              const isMarked = markedForReviewQuestions.has(questionNum);
+              const isCurrent = questionNum === currentQuestion;
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => handleQuestionChange(questionNum)}
+                  className={`w-10 h-10 text-sm border-2 border-dashed border-gray-400 rounded flex items-center justify-center relative ${
+                    isAnswered
+                      ? 'bg-blue-500 text-white border-blue-500 border-solid'
+                      : 'bg-white text-blue-600'
+                  }`}
+                >
+                  {questionNum}
+                  {isCurrent && (
+                    <FiMapPin className="absolute -top-2 -left-2 w-4 h-4 text-blue-500 bg-white rounded-full z-10" />
+                  )}
+                  {isMarked && (
+                    <FiFlag className="absolute -top-1 -right-1 w-3 h-3 text-red-500 fill-current z-10" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <button 
+            onClick={goToReviewPage}
+            className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 font-medium"
+          >
+            Go to Review
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default VocabQuizTaker;

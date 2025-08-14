@@ -124,15 +124,12 @@ router.post('/', protect, async (req, res) => {
     // Set max attempts based on account type
     let maxAttempts;
     let accountTypeLabel;
-    if (user.accountType === 'admin' || user.accountType === 'teacher') {
-      maxAttempts = Infinity; // Unlimited attempts for admin and teacher
-      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : 'Teacher';
+    if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student') {
+      maxAttempts = Infinity; // Unlimited attempts for admin, teacher, and student
+      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : 'Student';
     } else if (user.accountType === 'free') {
       maxAttempts = 1; // Free account: 1 test attempt
       accountTypeLabel = 'Free';
-    } else if (user.accountType === 'student') {
-      maxAttempts = 3; // Student account: 3 test attempts
-      accountTypeLabel = 'Student';
     } else {
       maxAttempts = 1; // Default to 1 attempt for unknown account types
       accountTypeLabel = 'Free';
@@ -151,13 +148,6 @@ router.post('/', protect, async (req, res) => {
           maxAttempts: maxAttempts,
           currentAttempts: existingCompletedAttempts,
           upgradeRequired: true
-        });
-      } else if (user.accountType === 'student') {
-        return res.status(400).json({ 
-          message: `Student account type reached max attempt (${maxAttempts}).`,
-          accountType: 'student',
-          maxAttempts: maxAttempts,
-          currentAttempts: existingCompletedAttempts
         });
       } else {
         return res.status(400).json({ 
@@ -466,15 +456,12 @@ router.get('/attempt-status/:testId', protect, async (req, res) => {
     // Set max attempts based on account type
     let maxAttempts;
     let accountTypeLabel;
-    if (user.accountType === 'admin' || user.accountType === 'teacher') {
+    if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student') {
       maxAttempts = Infinity;
-      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : 'Teacher';
+      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : 'Student';
     } else if (user.accountType === 'free') {
       maxAttempts = 1;
       accountTypeLabel = 'Free';
-    } else if (user.accountType === 'student') {
-      maxAttempts = 3;
-      accountTypeLabel = 'Student';
     } else {
       maxAttempts = 1;
       accountTypeLabel = 'Free';

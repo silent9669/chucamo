@@ -175,6 +175,14 @@ const VocabQuizManagement = () => {
 
   const handleEditQuestion = (question, index) => {
     setEditingQuestion({ question, index });
+    
+    // Find the correct answer index from the options
+    let correctAnswerIndex = 0;
+    if (question.options && Array.isArray(question.options)) {
+      const correctOptionIndex = question.options.findIndex(opt => opt.isCorrect === true);
+      correctAnswerIndex = correctOptionIndex !== -1 ? correctOptionIndex : 0;
+    }
+    
     setCurrentQuestion({
       question: question.question || question.content || '',
       content: question.content || question.question || '',
@@ -187,8 +195,7 @@ const VocabQuizManagement = () => {
         { content: '', isCorrect: false },
         { content: '', isCorrect: false }
       ],
-      correctAnswer: question.correctAnswer !== undefined ? question.correctAnswer : 
-                    question.options ? question.options.findIndex(opt => opt.isCorrect) : 0
+      correctAnswer: correctAnswerIndex
     });
     setShowQuestionModal(true);
   };

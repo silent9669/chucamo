@@ -24,7 +24,9 @@ const RichTextDocument = ({
   fontSize = 16,
   className = '',
   style = {},
-  onHighlightClick = null
+  onHighlightClick = null,
+  autoScale = false,
+  placeholder = ''
 }) => {
   // Parse markdown-like content into structured JSON format
   const documentStructure = useMemo(() => {
@@ -103,7 +105,7 @@ const RichTextDocument = ({
         currentIndex = match.end;
       });
       
-      // Add remaining text
+      // Add remaining text after last match
       if (currentIndex < text.length) {
         const remainingText = text.slice(currentIndex);
         if (remainingText.trim() || remainingText.includes('\n')) {
@@ -115,288 +117,113 @@ const RichTextDocument = ({
         }
       }
       
-      // If no formatting found, return single text segment
-      if (segments.length === 0) {
-        return [{
-          type: 'text',
-          text: text,
-          marks: []
-        }];
-      }
-      
       return segments;
     };
-    
-    // Split content into paragraphs and process each, preserving empty lines
-    const paragraphs = content.split('\n');
-    
-    if (paragraphs.length === 0) {
-      return {
-        type: 'doc',
-        content: [{
+
+    // Split content into paragraphs and process each
+    const paragraphs = content.split('\n\n');
+    const processedParagraphs = paragraphs.map(paragraph => {
+      if (!paragraph.trim()) {
+        return {
           type: 'paragraph',
-          content: [{
-            type: 'text',
-            text: content || '',
-            marks: []
-          }]
-        }]
+          content: [{ type: 'text', text: '\n', marks: [] }]
+        };
+      }
+      
+      const segments = parseMarkdown(paragraph.trim());
+      return {
+        type: 'paragraph',
+        content: segments.length > 0 ? segments : [{ type: 'text', text: paragraph.trim(), marks: [] }]
       };
-    }
-    
+    });
+
     return {
       type: 'doc',
-      content: paragraphs.map(paragraph => ({
-        type: 'paragraph',
-        content: paragraph.trim() ? parseMarkdown(paragraph) : [{
-          type: 'text',
-          text: paragraph,
-          marks: []
-        }]
-      }))
+      content: processedParagraphs
     };
   }, [content]);
-  
-  // Apply highlights to the document structure
-  const highlightedDocument = useMemo(() => {
-    if (!highlights || highlights.length === 0) {
-      return documentStructure;
-    }
+
+  // Render text segment with formatting
+  const renderTextSegment = (segment, key) => {
+    const { text, marks = [] } = segment;
     
-    try {
-      // Deep clone the document structure
-      const clone = JSON.parse(JSON.stringify(documentStructure));
-      
-      highlights.forEach(highlight => {
-        // Validate highlight data before processing
-        if (!highlight || !highlight.text || typeof highlight.text !== 'string') {
-          console.warn('Invalid highlight data:', highlight);
-          return; // Skip invalid highlights
-        }
-        
-        // Find text segments that contain the highlighted text
-        clone.content.forEach(paragraph => {
-          if (!paragraph || !paragraph.content || !Array.isArray(paragraph.content)) {
-            return; // Skip invalid paragraphs
-          }
-          
-          paragraph.content.forEach(segment => {
-            if (segment && segment.type === 'text' && segment.text) {
-              // Use more precise text matching for word-level selection
-              const segmentText = segment.text;
-              const highlightText = highlight.text;
-              
-              // Normalize both texts for better matching - word-level approach
-              const normalizeText = (text) => {
-                if (!text || typeof text !== 'string') {
-                  return '';
-                }
-                return text
-                  .toLowerCase()
-                  .replace(/\s+/g, ' ') // normalize whitespace
-                  .trim();
-              };
-              
-              const normalizedSegment = normalizeText(segmentText);
-              const normalizedHighlight = normalizeText(highlightText);
-              
-              // Check if the normalized highlight text is contained in the normalized segment
-              if (normalizedSegment.includes(normalizedHighlight)) {
-                // Find the actual position in the original text using word boundary matching
-                const findHighlightPosition = (text, highlight) => {
-                  if (!text || !highlight) return -1;
-                  
-                  // Try exact match first (case-insensitive)
-                  let index = text.toLowerCase().indexOf(highlight.toLowerCase());
-                  if (index !== -1) return index;
-                  
-                  // Try word boundary matching for more precise selection
-                  const words = text.toLowerCase().split(/\b/);
-                  const highlightWords = highlight.toLowerCase().split(/\b/);
-                  
-                  for (let i = 0; i <= words.length - highlightWords.length; i++) {
-                    let match = true;
-                    for (let j = 0; j < highlightWords.length; j++) {
-                      const word = words[i + j];
-                      const highlightWord = highlightWords[j];
-                      
-                      // Check if words match (allowing for partial matches at boundaries)
-                      if (!word.includes(highlightWord) && 
-                          !highlightWord.includes(word) &&
-                          !/^\s*$/.test(word) && 
-                          !/^\s*$/.test(highlightWord)) {
-                        match = false;
-                        break;
-                      }
-                    }
-                    if (match) {
-                      // Find the actual position in the original text
-                      const beforeWords = words.slice(0, i).join('');
-                      return beforeWords.length;
-                    }
-                  }
-                  
-                  return -1;
-                };
-                
-                const highlightIndex = findHighlightPosition(segmentText, highlightText);
-                
-                if (highlightIndex !== -1) {
-                  // Split the segment into three parts: before, highlighted, after
-                  const beforeText = segmentText.slice(0, highlightIndex);
-                  const highlightedText = segmentText.slice(highlightIndex, highlightIndex + highlightText.length);
-                  const afterText = segmentText.slice(highlightIndex + highlightText.length);
-                  
-                  const newSegments = [];
-                  
-                  // Add text before highlight
-                  if (beforeText) {
-                    newSegments.push({
-                      type: 'text',
-                      text: beforeText,
-                      marks: [...(segment.marks || [])] // Preserve all existing marks with null check
-                    });
-                  }
-                  
-                  // Add highlighted text with all existing marks plus highlight
-                  newSegments.push({
-                    type: 'text',
-                    text: highlightedText,
-                    marks: [...(segment.marks || []), 'highlight'], // Preserve existing formatting with null check
-                    highlightData: {
-                      id: highlight.id,
-                      color: highlight.color,
-                      colorValue: highlight.colorValue
-                    }
-                  });
-                  
-                  // Add text after highlight
-                  if (afterText) {
-                    newSegments.push({
-                      type: 'text',
-                      text: afterText,
-                      marks: [...(segment.marks || [])] // Preserve all existing marks with null check
-                    });
-                  }
-                  
-                  // Replace the original segment with new segments
-                  const segmentIndex = paragraph.content.indexOf(segment);
-                  if (segmentIndex !== -1) {
-                    paragraph.content.splice(segmentIndex, 1, ...newSegments);
-                  }
-                  
-                  // Break out of the inner loop since we've processed this highlight
-                  return;
-                }
-              }
-            }
-          });
-        });
-      });
-      
-      return clone;
-    } catch (error) {
-      console.error('Error processing highlights:', error);
-      // Return original document structure if highlighting fails
-      return documentStructure;
-    }
-  }, [documentStructure, highlights]);
-  
-  // Render a text segment with marks
-  const renderTextSegment = (segment, index) => {
-    if (segment.type !== 'text') return null;
+    let element = text;
     
-    let element = <span key={index}>{segment.text}</span>;
-    
-    // Apply formatting marks
-    if (segment.marks.includes('bold')) {
-      element = <strong key={index}>{element}</strong>;
+    // Apply formatting based on marks
+    if (marks.includes('bold')) {
+      element = <strong key={key}>{element}</strong>;
     }
-    if (segment.marks.includes('italic')) {
-      element = <em key={index}>{element}</em>;
+    if (marks.includes('italic')) {
+      element = <em key={key}>{element}</em>;
     }
-    if (segment.marks.includes('underline')) {
-      element = <u key={index}>{element}</u>;
-    }
-    
-    // Apply highlight mark
-    if (segment.marks.includes('highlight') && segment.highlightData) {
-      // Debug logging to verify highlight data
-      console.log('Applying highlight with data:', {
-        highlightData: segment.highlightData,
-        colorValue: segment.highlightData.colorValue,
-        backgroundColor: segment.highlightData.colorValue
-      });
-      
-      const highlightStyle = {
-        backgroundColor: segment.highlightData.colorValue,
-        padding: '1px 2px',
-        borderRadius: '2px',
-        cursor: 'pointer',
-        transition: 'opacity 0.2s ease'
-      };
-      
-      element = (
-        <span
-          key={index}
-          style={highlightStyle}
-          className="rich-text-highlight"
-          data-highlight-id={segment.highlightData.id}
-          onClick={() => onHighlightClick && onHighlightClick(segment.highlightData.id)}
-          onMouseEnter={(e) => {
-            e.target.style.opacity = '0.8';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.opacity = '1';
-          }}
-        >
-          {element}
-        </span>
-      );
+    if (marks.includes('underline')) {
+      element = <u key={key}>{element}</u>;
     }
     
     return element;
   };
-  
-  // Render a paragraph
-  const renderParagraph = (paragraph, paragraphIndex) => (
-    <p
-      key={paragraphIndex}
-      className="mb-4 leading-relaxed"
-      style={{
-        fontFamily,
-        fontSize: `${fontSize}px`,
-        lineHeight: fontSize <= 16 ? '1.5' : fontSize <= 18 ? '1.6' : fontSize <= 20 ? '1.7' : fontSize <= 22 ? '1.8' : '1.9'
-      }}
-    >
-      {paragraph.content.map((segment, segmentIndex) => 
-        renderTextSegment(segment, `${paragraphIndex}-${segmentIndex}`)
-      )}
-    </p>
-  );
-  
-  // Render the document
-  const renderDocument = () => {
-    if (!highlightedDocument || !highlightedDocument.content) {
-      return <div>No content</div>;
+
+  // Render paragraph
+  const renderParagraph = (paragraph, pIndex) => {
+    if (!paragraph.content || paragraph.content.length === 0) {
+      return <p key={pIndex} className="mb-2">&nbsp;</p>;
     }
     
-    return highlightedDocument.content.map((paragraph, index) => 
-      renderParagraph(paragraph, index)
+    return (
+      <p key={pIndex} className="mb-2">
+        {paragraph.content.map((segment, sIndex) => 
+          renderTextSegment(segment, `${pIndex}-${sIndex}`)
+        )}
+      </p>
     );
   };
-  
+
+  // If no content and autoScale is enabled, show placeholder
+  if (!content && autoScale) {
+    return (
+      <div 
+        className={`rich-text-content ${className}`}
+        style={{
+          fontFamily,
+          fontSize: `${fontSize}px`,
+          minHeight: 'auto',
+          height: 'auto',
+          ...style
+        }}
+      >
+        <p className="text-gray-400 italic">{placeholder}</p>
+      </div>
+    );
+  }
+
+  // If no content, return empty div
+  if (!content) {
+    return (
+      <div 
+        className={`rich-text-content ${className}`}
+        style={{
+          fontFamily,
+          fontSize: `${fontSize}px`,
+          ...style
+        }}
+      />
+    );
+  }
+
   return (
-    <div
-      className={`rich-text-document ${className}`}
+    <div 
+      className={`rich-text-content ${className}`}
       style={{
         fontFamily,
         fontSize: `${fontSize}px`,
+        minHeight: autoScale ? 'auto' : '100px',
+        height: autoScale ? 'auto' : 'auto',
         ...style
       }}
-      data-content-type="rich-text-document"
     >
-      {renderDocument()}
+      {documentStructure.content.map((paragraph, index) => 
+        renderParagraph(paragraph, index)
+      )}
     </div>
   );
 };
