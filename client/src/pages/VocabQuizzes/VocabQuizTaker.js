@@ -147,7 +147,7 @@ const VocabQuizTaker = () => {
     
     clearExistingProgress();
     loadQuizData();
-  }, [loadQuizData]);
+  }, [loadQuizData, quizId]);
 
   // Load saved progress when quiz data is available
   useEffect(() => {
