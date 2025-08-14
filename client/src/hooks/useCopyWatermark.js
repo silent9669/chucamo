@@ -1,7 +1,13 @@
 import { useEffect } from "react";
+import { getEnvironmentConfig, logEnvironmentInfo } from "../utils/ipUtils";
 
 export default function useCopyWatermark(protectedSelectors = []) {
   useEffect(() => {
+    // Log environment information for debugging
+    logEnvironmentInfo();
+    
+    const config = getEnvironmentConfig();
+    
     const handleCopy = (e) => {
       try {
         // Check if there's a selection
@@ -39,7 +45,8 @@ export default function useCopyWatermark(protectedSelectors = []) {
           // Prevent normal copy behavior
           e.preventDefault();
 
-          const watermark = "ChuCaMo ©";
+          // Use environment-specific watermark text
+          const watermark = config.watermarkText;
           const contentToCopy = watermark;
 
           // Set clipboard content with enhanced formatting
@@ -122,11 +129,57 @@ export default function useCopyWatermark(protectedSelectors = []) {
       }
     };
 
+    // Enhanced clipboard API support for better cross-browser compatibility
+    const handleClipboardWrite = async (e) => {
+      try {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          return;
+        }
+
+        let isProtectedContent = false;
+        
+        if (protectedSelectors.length > 0) {
+          const range = selection.getRangeAt(0);
+          const container = range.commonAncestorContainer;
+          
+          isProtectedContent = protectedSelectors.some(selector => {
+            try {
+              const element = container.nodeType === Node.TEXT_NODE 
+                ? container.parentElement 
+                : container;
+              return element && element.closest(selector);
+            } catch (error) {
+              return false;
+            }
+          });
+        } else {
+          isProtectedContent = true;
+        }
+
+        if (isProtectedContent && navigator.clipboard && navigator.clipboard.writeText) {
+          e.preventDefault();
+          
+          try {
+            await navigator.clipboard.writeText(config.watermarkText);
+            showCopyNotification();
+          } catch (clipboardError) {
+            console.warn('Clipboard API failed, falling back to event method:', clipboardError);
+            // Fall back to the event-based method
+            const copyEvent = new Event('copy', { bubbles: true, cancelable: true });
+            document.dispatchEvent(copyEvent);
+          }
+        }
+      } catch (error) {
+        console.warn('Error in clipboard write handler:', error);
+      }
+    };
+
     // Helper function to show copy notification
     const showCopyNotification = () => {
       // Create a temporary notification
       const notification = document.createElement('div');
-      notification.textContent = 'Content protected with ChuCaMo ©';
+      notification.textContent = `Content protected with ${config.watermarkText}`;
       notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -207,15 +260,32 @@ export default function useCopyWatermark(protectedSelectors = []) {
       }, 100);
     };
 
-    // Add event listeners
+    // Add event listeners with enhanced support
     document.addEventListener("copy", handleCopy);
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
+    
+    // Add clipboard API event listener for better compatibility
+    if (navigator.clipboard) {
+      document.addEventListener("copy", handleClipboardWrite);
+    }
+    
+    // Debug logging for development
+    if (config.debugMode) {
+      console.log('Copy watermark hook initialized with:', {
+        protectedSelectors,
+        config,
+        timestamp: new Date().toISOString()
+      });
+    }
     
     return () => {
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("contextmenu", handleContextMenu);
       document.removeEventListener("keydown", handleKeyDown);
+      if (navigator.clipboard) {
+        document.removeEventListener("copy", handleClipboardWrite);
+      }
     };
   }, [protectedSelectors]);
 }
