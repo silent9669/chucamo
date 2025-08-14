@@ -589,7 +589,7 @@ const TestDetails = () => {
                       </div>
                     )}
 
-                                         {/* Question */}
+                     {/* Question */}
                      <div className="mb-6">
                        <h4 className="font-medium text-gray-900 mb-3">Question</h4>
                        <div className="text-gray-700 leading-relaxed" style={{ fontFamily: 'serif' }}>
@@ -867,6 +867,108 @@ const TestDetails = () => {
           </div>
         </div>
       </div>
+      
+      {/* Main Watermarks - One email and one image watermark in the middle */}
+      <div className="fixed inset-0 pointer-events-none z-10">
+        {/* Image Watermark - Centered */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="watermark-logo" style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            zIndex: 1
+          }}>
+            <img 
+              src="/apple.png" 
+              alt="Watermark" 
+              className="w-80 h-80 object-contain rounded-xl opacity-25"
+            />
+          </div>
+        </div>
+        
+        {/* Email Watermark - Positioned closer to the image */}
+        {user?.email && (
+          <div className="watermark-email-line">
+            <div 
+              className="email-text-overlay"
+              style={{
+                position: 'absolute',
+                top: '45%',
+                left: '45%',
+                transform: 'rotate(-15deg)',
+                transformOrigin: 'left center',
+                zIndex: 11,
+                fontSize: '24px',
+                color: 'rgba(0, 0, 0, 0.25)',
+                fontFamily: 'monospace',
+                fontWeight: '500',
+                whiteSpace: 'nowrap',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                background: 'transparent',
+                padding: '0',
+                margin: '0',
+                border: 'none',
+                boxShadow: 'none',
+                borderRadius: '0'
+              }}
+            >
+              {user.email}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Watermark Styles */}
+      <style jsx>{`
+        /* Main watermark positioning */
+        .fixed.inset-0 .watermark-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 10;
+        }
+        
+        /* Email watermark line positioning - closer to image */
+        .watermark-email-line {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+        }
+        
+        /* Email text overlay styling */
+        .email-text-overlay {
+          background: none !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        
+        .watermark-logo {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        /* Ensure email watermark is positioned near the image */
+        .watermark-email-line .email-text-overlay {
+          position: absolute !important;
+          top: 45% !important;
+          left: 45% !important;
+          transform: rotate(-15deg) !important;
+          z-index: 11 !important;
+        }
+      `}</style>
     </div>
   );
 };
