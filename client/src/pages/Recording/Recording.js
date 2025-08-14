@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, BookOpen } from 'lucide-react';
+import { Search, Filter, BookOpen, Youtube, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
+import lessonAPI from '../../services/lessonAPI';
+import LessonViewer from '../../components/UI/LessonViewer';
 
 const Recording = () => {
   const [recordings, setRecordings] = useState([]);
@@ -9,12 +11,14 @@ const Recording = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [showLessonViewer, setShowLessonViewer] = useState(false);
 
   const loadRecordings = useCallback(async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setRecordings([]);
+      setLoading(true);
+      const response = await lessonAPI.getLessons({ limit: 50 });
+      setRecordings(response.data.docs || []);
       setLoading(false);
     } catch (error) {
       logger.error('Error loading recordings:', error);
@@ -35,8 +39,7 @@ const Recording = () => {
     if (searchTerm.trim()) {
       filtered = filtered.filter(recording =>
         recording.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recording.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recording.instructor.toLowerCase().includes(searchTerm.toLowerCase())
+        recording.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -50,6 +53,16 @@ const Recording = () => {
   useEffect(() => {
     filterRecordings();
   }, [filterRecordings]);
+
+  const handleStartLearning = (lesson) => {
+    setSelectedLesson(lesson);
+    setShowLessonViewer(true);
+  };
+
+  const handleCloseLessonViewer = () => {
+    setShowLessonViewer(false);
+    setSelectedLesson(null);
+  };
 
 
 
@@ -103,6 +116,7 @@ const Recording = () => {
                 <option value="all">All Records</option>
                 <option value="reading-writing">Reading & Writing</option>
                 <option value="math">Math</option>
+                <option value="instruction">Instruction</option>
               </select>
             </div>
           </div>
@@ -115,33 +129,111 @@ const Recording = () => {
           </p>
         </div>
 
-        {/* Empty State */}
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <BookOpen className="w-12 h-12 text-gray-400" />
+        {/* Lessons Display */}
+        {filteredRecordings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRecordings.map((lesson) => (
+              <div
+                key={lesson._id}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {/* Lesson Header */}
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="text-3xl">{lesson.thumbnail}</div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 text-lg mb-1">
+                        {lesson.title}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${
+                          lesson.type === 'reading-writing' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                          lesson.type === 'math' ? 'bg-green-100 text-green-800 border-green-200' :
+                          lesson.type === 'instruction' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                          'bg-gray-100 text-gray-800 border-gray-200'
+                        }`}>
+                          {lesson.type === 'reading-writing' ? 'Reading & Writing' :
+                           lesson.type === 'math' ? 'Math' :
+                           lesson.type === 'instruction' ? 'Instruction' : 'General'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {lesson.description}
+                  </p>
+                  
+                  {/* Media Indicators */}
+                  <div className="flex items-center gap-3">
+                    {lesson.youtubeUrl && (
+                      <div className="flex items-center gap-1 text-red-600 text-sm">
+                        <Youtube className="w-4 h-4" />
+                        <span>Video</span>
+                      </div>
+                    )}
+                    {lesson.pdfUrl && (
+                      <div className="flex items-center gap-1 text-blue-600 text-sm">
+                        <FileText className="w-4 h-4" />
+                        <span>PDF</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Lesson Footer */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">
+                      {new Date(lesson.createdAt).toLocaleDateString()}
+                    </span>
+                    <button 
+                      onClick={() => handleStartLearning(lesson)}
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline"
+                    >
+                      Start Learning →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No recordings available</h3>
-          <p className="text-gray-600 mb-6">
-            {searchTerm || selectedType !== 'all' 
-              ? 'Try adjusting your search or filters'
-              : 'No recordings available at the moment'
-            }
-          </p>
-          {searchTerm || selectedType !== 'all' ? (
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedType('all');
-              }}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Clear Filters
-            </button>
-          ) : (
-            <p className="text-gray-500">Check back later for new content</p>
-          )}
-        </div>
+        ) : (
+          /* Empty State */
+          <div className="text-center py-12">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <BookOpen className="w-12 h-12 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No recordings available</h3>
+            <p className="text-gray-600 mb-6">
+              {searchTerm || selectedType !== 'all' 
+                ? 'Try adjusting your search or filters'
+                : 'No recordings available at the moment'
+              }
+            </p>
+            {searchTerm || selectedType !== 'all' ? (
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedType('all');
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            ) : (
+              <p className="text-gray-500">Check back later for new content</p>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Lesson Viewer Modal */}
+      <LessonViewer
+        isOpen={showLessonViewer}
+        onClose={handleCloseLessonViewer}
+        lesson={selectedLesson}
+      />
     </div>
   );
 };

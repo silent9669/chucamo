@@ -64,6 +64,8 @@ const StudyPlan = () => {
     }
   ];
 
+
+
   const handleCategoryClick = (option) => {
     if (option.href) {
       // Navigate to the specified route using React Router
@@ -170,6 +172,8 @@ const StudyPlan = () => {
             );
           })}
         </div>
+
+
 
         {/* Footer */}
         <div className="text-center mt-16">

@@ -17,6 +17,7 @@ const uploadRoutes = require('./routes/upload');
 const articleRoutes = require('./routes/articles');
 const vocabularyRoutes = require('./routes/vocabulary');
 const vocabQuizRoutes = require('./routes/vocabQuizzes');
+const lessonRoutes = require('./routes/lessons');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -74,7 +75,11 @@ if (isDevelopment) {
         frameSrc: [
           "'self'",
           "https://www.desmos.com",
-          "https://*.railway.app"
+          "https://*.railway.app",
+          "https://www.youtube.com",
+          "https://youtube.com",
+          "https://drive.google.com",
+          "https://docs.google.com"
         ]
       }
     }
@@ -164,6 +169,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
 app.use('/api/vocab-quizzes', vocabQuizRoutes);
+app.use('/api/lessons', lessonRoutes);
 
 // Health check endpoints
 app.get('/health', (req, res) => {
