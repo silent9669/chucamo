@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiEdit, FiTrash2, FiSave, FiX, FiCopy, FiPlay, FiPause, FiCheck, FiX as FiXIcon } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiSave, FiX } from 'react-icons/fi';
+import RichTextEditor from '../../components/UI/RichTextEditor';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
-
+import vocabQuizAPI from '../../services/vocabQuizAPI';
 
 const VocabQuizManagement = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -14,55 +15,43 @@ const VocabQuizManagement = () => {
     description: '',
     difficulty: 'medium',
     timeLimit: 30,
-    isActive: false,
-    questions: []
-  });
-  const [currentQuestion, setCurrentQuestion] = useState({
-    word: '',
-    definition: '',
-    options: ['', '', '', ''],
-    correctAnswer: 0,
-    explanation: ''
+    sections: []
   });
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
-  const [questionIndex, setQuestionIndex] = useState(-1);
+  const [currentQuestion, setCurrentQuestion] = useState({
+    question: '',
+    content: '',
+    topic: 'vocabulary',
+    explanation: '',
+    passage: '',
+    options: [
+      { content: '', isCorrect: false },
+      { content: '', isCorrect: false },
+      { content: '', isCorrect: false },
+      { content: '', isCorrect: false }
+    ],
+    correctAnswer: 0
+  });
+
+  useEffect(() => {
+    loadQuizzes();
+  }, []);
 
   const loadQuizzes = async () => {
-    setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await vocabQuizAPI.getAll();
-      // setQuizzes(response.data.quizzes);
-      
-      // Mock data for now
-      setQuizzes([
-        {
-          _id: '1',
-          title: 'Basic Vocabulary Quiz',
-          description: 'Test your knowledge of common English words',
-          difficulty: 'medium',
-          timeLimit: 30,
-          isActive: true,
-          questionCount: 10,
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-15T10:00:00Z'
-        },
-        {
-          _id: '2',
-          title: 'Advanced Academic Words',
-          description: 'Challenge yourself with complex vocabulary',
-          difficulty: 'hard',
-          timeLimit: 45,
-          isActive: false,
-          questionCount: 15,
-          createdAt: '2024-01-16T14:30:00Z',
-          updatedAt: '2024-01-16T14:30:00Z'
-        }
-      ]);
+      setLoading(true);
+      const response = await vocabQuizAPI.getAllForAdmin();
+      const adminQuizzes = response.data.quizzes.map(quiz => ({
+        ...quiz,
+        id: quiz._id || quiz.id,
+        visible: quiz.isPublic !== undefined ? quiz.isPublic : true,
+        created: quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : new Date().toLocaleDateString()
+      }));
+      setQuizzes(adminQuizzes);
     } catch (error) {
-      logger.error('Error loading vocab quizzes:', error);
-      toast.error('Failed to load vocabulary quizzes');
+      logger.error('Error loading vocabulary quizzes:', error);
+      setQuizzes([]);
     } finally {
       setLoading(false);
     }
@@ -75,8 +64,7 @@ const VocabQuizManagement = () => {
       description: '',
       difficulty: 'medium',
       timeLimit: 30,
-      isActive: false,
-      questions: []
+      sections: []
     });
     setShowModal(true);
   };
@@ -88,68 +76,27 @@ const VocabQuizManagement = () => {
       description: quiz.description,
       difficulty: quiz.difficulty,
       timeLimit: quiz.timeLimit,
-      isActive: quiz.isActive,
-      questions: quiz.questions || []
+      sections: quiz.sections || []
     });
     setShowModal(true);
   };
 
-  const handleDuplicate = async (quiz) => {
-    try {
-      const duplicatedQuiz = {
-        ...quiz,
-        _id: Date.now().toString(),
-        title: `${quiz.title} (Copy)`,
-        isActive: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // TODO: Replace with actual API call
-      // const response = await vocabQuizAPI.create(duplicatedQuiz);
-      // setQuizzes(prev => [...prev, response.data.quiz]);
-      
-      setQuizzes(prev => [...prev, duplicatedQuiz]);
-      toast.success('Quiz duplicated successfully');
-    } catch (error) {
-      logger.error('Error duplicating quiz:', error);
-      toast.error('Failed to duplicate quiz');
-    }
-  };
 
-  const handleDelete = async (quizId) => {
-    if (window.confirm('Are you sure you want to delete this vocabulary quiz? This action cannot be undone.')) {
+
+  const deleteQuiz = async (quizId) => {
+    if (window.confirm('Are you sure you want to delete this vocabulary quiz?')) {
       try {
-        // TODO: Replace with actual API call
-        // await vocabQuizAPI.delete(quizId);
-        
-        setQuizzes(prev => prev.filter(quiz => quiz._id !== quizId));
+        await vocabQuizAPI.delete(quizId);
+        setQuizzes(prev => prev.filter(quiz => quiz.id !== quizId));
         toast.success('Vocabulary quiz deleted successfully');
       } catch (error) {
-        logger.error('Error deleting vocab quiz:', error);
+        logger.error('Error deleting vocabulary quiz:', error);
         toast.error('Failed to delete vocabulary quiz');
       }
     }
   };
 
-  const handleToggleActive = async (quizId) => {
-    try {
-      const quiz = quizzes.find(q => q._id === quizId);
-      const newActiveState = !quiz.isActive;
-      
-      // TODO: Replace with actual API call
-      // await vocabQuizAPI.update(quizId, { isActive: newActiveState });
-      
-      setQuizzes(prev => prev.map(q => 
-        q._id === quizId ? { ...q, isActive: newActiveState } : q
-      ));
-      
-      toast.success(`Quiz ${newActiveState ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
-      logger.error('Error toggling quiz active state:', error);
-      toast.error('Failed to update quiz status');
-    }
-  };
+
 
   const handleSave = async () => {
     try {
@@ -158,96 +105,42 @@ const VocabQuizManagement = () => {
         return;
       }
 
+      const quizData = {
+        title: currentQuiz.title.trim(),
+        description: currentQuiz.description,
+        difficulty: currentQuiz.difficulty,
+        timeLimit: currentQuiz.timeLimit,
+        sections: currentQuiz.sections || []
+      };
+
+      let response;
       if (editingQuiz) {
-        // TODO: Replace with actual API call
-        // const response = await vocabQuizAPI.update(editingQuiz._id, currentQuiz);
-        // setQuizzes(prev => prev.map(quiz => 
-        //   quiz._id === editingQuiz._id ? response.data.quiz : quiz
-        // ));
-        
-        setQuizzes(prev => prev.map(quiz => 
-          quiz._id === editingQuiz._id ? { ...quiz, ...currentQuiz, updatedAt: new Date().toISOString() } : quiz
-        ));
-        toast.success('Vocabulary quiz updated successfully');
+        response = await vocabQuizAPI.update(editingQuiz.id, quizData);
+        const updatedQuiz = {
+          ...response.data.quiz,
+          id: response.data.quiz._id || response.data.quiz.id,
+          visible: response.data.quiz.isPublic !== undefined ? response.data.quiz.isPublic : true,
+          created: response.data.quiz.createdAt ? new Date(response.data.quiz.createdAt).toLocaleDateString() : new Date().toLocaleDateString()
+        };
+        setQuizzes(prev => prev.map(quiz => quiz.id === editingQuiz.id ? updatedQuiz : quiz));
+        toast.success('Quiz updated successfully!');
       } else {
-        // TODO: Replace with actual API call
-        // const response = await vocabQuizAPI.create(currentQuiz);
-        // setQuizzes(prev => [...prev, response.data.quiz]);
-        
+        response = await vocabQuizAPI.create(quizData);
         const newQuiz = {
-          _id: Date.now().toString(),
-          ...currentQuiz,
-          questionCount: currentQuiz.questions.length,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          ...response.data.quiz,
+          id: response.data.quiz._id || response.data.quiz.id,
+          visible: response.data.quiz.isPublic !== undefined ? response.data.quiz.isPublic : true,
+          created: response.data.quiz.createdAt ? new Date(response.data.quiz.createdAt).toLocaleDateString() : new Date().toLocaleDateString()
         };
         setQuizzes(prev => [...prev, newQuiz]);
-        toast.success('Vocabulary quiz created successfully');
+        toast.success('Quiz created successfully!');
       }
       
       setShowModal(false);
     } catch (error) {
-      logger.error('Error saving vocab quiz:', error);
-      toast.error('Failed to save vocabulary quiz');
+      logger.error('Error saving vocabulary quiz:', error);
+      toast.error('Failed to save vocabulary quiz. Please try again.');
     }
-  };
-
-  const handleAddQuestion = () => {
-    setEditingQuestion(null);
-    setQuestionIndex(-1);
-    setCurrentQuestion({
-      word: '',
-      definition: '',
-      options: ['', '', '', ''],
-      correctAnswer: 0,
-      explanation: ''
-    });
-    setShowQuestionModal(true);
-  };
-
-  const handleEditQuestion = (question, index) => {
-    setEditingQuestion(question);
-    setQuestionIndex(index);
-    setCurrentQuestion({
-      word: question.word,
-      definition: question.definition,
-      options: [...question.options],
-      correctAnswer: question.correctAnswer,
-      explanation: question.explanation || ''
-    });
-    setShowQuestionModal(true);
-  };
-
-  const handleDeleteQuestion = (index) => {
-    const updatedQuestions = currentQuiz.questions.filter((_, i) => i !== index);
-    setCurrentQuiz(prev => ({ ...prev, questions: updatedQuestions }));
-    toast.success('Question deleted successfully');
-  };
-
-  const handleSaveQuestion = () => {
-    if (!currentQuestion.word || !currentQuestion.definition) {
-      toast.error('Word and definition are required');
-      return;
-    }
-
-    if (currentQuestion.options.some(option => !option.trim())) {
-      toast.error('All answer options are required');
-      return;
-    }
-
-    const updatedQuestions = [...currentQuiz.questions];
-    
-    if (editingQuestion !== null && questionIndex >= 0) {
-      // Editing existing question
-      updatedQuestions[questionIndex] = { ...currentQuestion };
-    } else {
-      // Adding new question
-      updatedQuestions.push({ ...currentQuestion });
-    }
-
-    setCurrentQuiz(prev => ({ ...prev, questions: updatedQuestions }));
-    setShowQuestionModal(false);
-    toast.success(editingQuestion ? 'Question updated successfully' : 'Question added successfully');
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -259,13 +152,324 @@ const VocabQuizManagement = () => {
     }
   };
 
-  const getStatusColor = (isActive) => {
-    return isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+
+
+  const handleAddQuestion = () => {
+    setEditingQuestion(null);
+    setCurrentQuestion({
+      question: '',
+      content: '',
+      topic: 'vocabulary',
+      explanation: '',
+      passage: '',
+      options: [
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false }
+      ],
+      correctAnswer: 0
+    });
+    setShowQuestionModal(true);
   };
 
-  useEffect(() => {
-    loadQuizzes();
-  }, []);
+  const handleEditQuestion = (question, index) => {
+    setEditingQuestion({ question, index });
+    setCurrentQuestion({
+      question: question.question || question.content || '',
+      content: question.content || question.question || '',
+      topic: question.topic || 'vocabulary',
+      explanation: question.explanation || '',
+      passage: question.passage || '',
+      options: question.options || [
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false }
+      ],
+      correctAnswer: question.correctAnswer || 0
+    });
+    setShowQuestionModal(true);
+  };
+
+  const handleQuestionSave = async () => {
+    try {
+      if (!currentQuestion.question && !currentQuestion.content) {
+        toast.error('Question text is required');
+      return;
+    }
+
+      if (!currentQuestion.options.some(opt => opt.content.trim())) {
+        toast.error('At least one option is required');
+        return;
+      }
+      if (currentQuestion.correctAnswer === null || currentQuestion.correctAnswer === undefined) {
+        toast.error('Please select a correct answer');
+      return;
+    }
+
+      const questionData = {
+        ...currentQuestion,
+        id: editingQuestion ? editingQuestion.question.id : Date.now(),
+        question: currentQuestion.question || currentQuestion.content,
+        content: currentQuestion.content || currentQuestion.question,
+        // Ensure correct answer is properly set
+        correctAnswer: currentQuestion.correctAnswer,
+        options: currentQuestion.options.map((opt, index) => ({
+          ...opt,
+          isCorrect: index === currentQuestion.correctAnswer
+        }))
+      };
+
+      let updatedQuiz = { ...currentQuiz };
+      
+      if (editingQuestion) {
+        // Update existing question
+        updatedQuiz.sections = updatedQuiz.sections.map((section, sIndex) => {
+          if (sIndex === 0) { // We only have one section for vocab quizzes
+            return {
+              ...section,
+              questions: section.questions.map((q, qIndex) => 
+                qIndex === editingQuestion.index ? questionData : q
+              )
+            };
+          }
+          return section;
+        });
+    } else {
+        // Add new question
+        if (!updatedQuiz.sections.length) {
+          updatedQuiz.sections = [{
+            name: 'Vocabulary Questions',
+            type: 'reading',
+            timeLimit: currentQuiz.timeLimit,
+            questionCount: 0,
+            questions: []
+          }];
+        }
+        updatedQuiz.sections[0].questions.push(questionData);
+        updatedQuiz.sections[0].questionCount = updatedQuiz.sections[0].questions.length;
+      }
+
+      // Update total questions count
+      updatedQuiz.totalQuestions = updatedQuiz.sections.reduce((total, section) => total + section.questions.length, 0);
+
+      setCurrentQuiz(updatedQuiz);
+    setShowQuestionModal(false);
+      toast.success(editingQuestion ? 'Question updated successfully!' : 'Question added successfully!');
+    } catch (error) {
+      logger.error('Error saving question:', error);
+      toast.error('Failed to save question. Please try again.');
+    }
+  };
+
+  const deleteQuestion = (questionId) => {
+    if (window.confirm('Are you sure you want to delete this question?')) {
+      const updatedQuiz = { ...currentQuiz };
+      updatedQuiz.sections = updatedQuiz.sections.map(section => ({
+        ...section,
+        questions: section.questions.filter(q => q.id !== questionId),
+        questionCount: section.questions.filter(q => q.id !== questionId).length
+      }));
+      updatedQuiz.totalQuestions = updatedQuiz.sections.reduce((total, section) => total + section.questions.length, 0);
+      setCurrentQuiz(updatedQuiz);
+      toast.success('Question deleted successfully');
+    }
+  };
+
+  const handleOptionChange = (index, value) => {
+    setCurrentQuestion(prev => ({
+      ...prev,
+      options: prev.options.map((opt, i) => 
+        i === index ? { ...opt, content: value } : opt
+      )
+    }));
+    
+    // Also update the current quiz state to ensure changes are saved
+    setCurrentQuiz(prev => {
+      if (!prev.sections || !prev.sections[0]) return prev;
+      
+      const updatedSections = [...prev.sections];
+      if (updatedSections[0].questions) {
+        updatedSections[0].questions = updatedSections[0].questions.map((q, qIndex) => {
+          // Find the question by ID if editing, or by position if adding new
+          if (editingQuestion) {
+            if (q.id === editingQuestion.question.id) {
+              return {
+                ...q,
+                options: q.options.map((opt, optIndex) => 
+                  optIndex === index ? { ...opt, content: value } : opt
+                )
+              };
+            }
+          } else {
+            // For new questions, update the last question
+            if (qIndex === updatedSections[0].questions.length - 1) {
+              return {
+                ...q,
+                options: q.options.map((opt, optIndex) => 
+                  optIndex === index ? { ...opt, content: value } : opt
+                )
+              };
+            }
+          }
+          return q;
+        });
+      }
+      
+      return {
+        ...prev,
+        sections: updatedSections
+      };
+    });
+  };
+
+  const handleCorrectAnswerChange = (index) => {
+    setCurrentQuestion(prev => ({
+      ...prev,
+      correctAnswer: index,
+      options: prev.options.map((opt, i) => ({
+        ...opt,
+        isCorrect: i === index
+      }))
+    }));
+    
+    // Also update the current quiz state to ensure changes are saved
+    setCurrentQuiz(prev => {
+      if (!prev.sections || !prev.sections[0]) return prev;
+      
+      const updatedSections = [...prev.sections];
+      if (updatedSections[0].questions) {
+        updatedSections[0].questions = updatedSections[0].questions.map((q, qIndex) => {
+          // Find the question by ID if editing, or by position if adding new
+          if (editingQuestion) {
+            if (q.id === editingQuestion.question.id) {
+              return {
+                ...q,
+                correctAnswer: index,
+                options: q.options.map((opt, optIndex) => ({
+                  ...opt,
+                  isCorrect: optIndex === index
+                }))
+              };
+            }
+          } else {
+            // For new questions, update the last question
+            if (qIndex === updatedSections[0].questions.length - 1) {
+              return {
+                ...q,
+                correctAnswer: index,
+                options: q.options.map((opt, optIndex) => ({
+                  ...opt,
+                  isCorrect: optIndex === index
+                }))
+              };
+            }
+          }
+          return q;
+        });
+      }
+      
+      return {
+        ...prev,
+        sections: updatedSections
+      };
+    });
+  };
+
+  const addOption = () => {
+    if (currentQuestion.options.length < 6) {
+      const newOption = { content: '', isCorrect: false };
+      
+      setCurrentQuestion(prev => ({
+        ...prev,
+        options: [...prev.options, newOption]
+      }));
+      
+      // Also update the current quiz state
+      setCurrentQuiz(prev => {
+        if (!prev.sections || !prev.sections[0]) return prev;
+        
+        const updatedSections = [...prev.sections];
+        if (updatedSections[0].questions) {
+          updatedSections[0].questions = updatedSections[0].questions.map((q, qIndex) => {
+            // Find the question by ID if editing, or by position if adding new
+            if (editingQuestion) {
+              if (q.id === editingQuestion.question.id) {
+                return {
+                  ...q,
+                  options: [...q.options, newOption]
+                };
+              }
+            } else {
+              // For new questions, update the last question
+              if (qIndex === updatedSections[0].questions.length - 1) {
+                return {
+                  ...q,
+                  options: [...q.options, newOption]
+                };
+              }
+            }
+            return q;
+          });
+        }
+        
+        return {
+          ...prev,
+          sections: updatedSections
+        };
+      });
+    }
+  };
+
+  const removeOption = (index) => {
+    if (currentQuestion.options.length > 2) {
+      const newCorrectAnswer = currentQuestion.correctAnswer === index ? 0 : 
+                              currentQuestion.correctAnswer > index ? currentQuestion.correctAnswer - 1 : currentQuestion.correctAnswer;
+      
+      setCurrentQuestion(prev => ({
+        ...prev,
+        options: prev.options.filter((_, i) => i !== index),
+        correctAnswer: newCorrectAnswer
+      }));
+      
+      // Also update the current quiz state
+      setCurrentQuiz(prev => {
+        if (!prev.sections || !prev.sections[0]) return prev;
+        
+        const updatedSections = [...prev.sections];
+        if (updatedSections[0].questions) {
+          updatedSections[0].questions = updatedSections[0].questions.map((q, qIndex) => {
+            // Find the question by ID if editing, or by position if adding new
+            if (editingQuestion) {
+              if (q.id === editingQuestion.question.id) {
+                return {
+                  ...q,
+                  options: q.options.filter((_, i) => i !== index),
+                  correctAnswer: newCorrectAnswer
+                };
+              }
+            } else {
+              // For new questions, update the last question
+              if (qIndex === updatedSections[0].questions.length - 1) {
+                return {
+                  ...q,
+                  options: q.options.filter((_, i) => i !== index),
+                  correctAnswer: newCorrectAnswer
+                };
+              }
+            }
+            return q;
+          });
+        }
+        
+        return {
+          ...prev,
+          sections: updatedSections
+        };
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -309,9 +513,7 @@ const VocabQuizManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Time Limit
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -319,13 +521,13 @@ const VocabQuizManagement = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {quizzes.map((quiz) => (
-                <tr key={quiz._id} className="hover:bg-gray-50">
+                <tr key={quiz.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{quiz.title}</div>
                       <div className="text-sm text-gray-500 max-w-xs truncate">{quiz.description}</div>
                       <div className="text-xs text-gray-400 mt-1">
-                        Updated: {new Date(quiz.updatedAt).toLocaleDateString()}
+                        Created: {quiz.created}
                       </div>
                     </div>
                   </td>
@@ -335,16 +537,12 @@ const VocabQuizManagement = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{quiz.questionCount} questions</div>
+                    <div className="text-sm text-gray-900">{quiz.totalQuestions || quiz.questionCount || 0} questions</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{quiz.timeLimit} minutes</div>
+                    <div className="text-sm text-gray-900">{quiz.totalTime || quiz.timeLimit || 0} minutes</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(quiz.isActive)}`}>
-                      {quiz.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
@@ -354,22 +552,9 @@ const VocabQuizManagement = () => {
                       >
                         <FiEdit className="h-4 w-4" />
                       </button>
+                      
                       <button
-                        onClick={() => handleDuplicate(quiz)}
-                        className="text-gray-600 hover:text-gray-900"
-                        title="Duplicate Quiz"
-                      >
-                        <FiCopy className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleToggleActive(quiz._id)}
-                        className={`${quiz.isActive ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}
-                        title={quiz.isActive ? 'Deactivate Quiz' : 'Activate Quiz'}
-                      >
-                        {quiz.isActive ? <FiPause className="h-4 w-4" /> : <FiPlay className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(quiz._id)}
+                        onClick={() => deleteQuiz(quiz.id)}
                         className="text-red-600 hover:text-red-900"
                         title="Delete Quiz"
                       >
@@ -387,7 +572,7 @@ const VocabQuizManagement = () => {
       {/* Create/Edit Quiz Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -401,8 +586,6 @@ const VocabQuizManagement = () => {
                 </button>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Quiz Details */}
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -459,25 +642,12 @@ const VocabQuizManagement = () => {
                     />
                   </div>
                   
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="isActive"
-                      checked={currentQuiz.isActive}
-                      onChange={(e) => setCurrentQuiz(prev => ({ ...prev, isActive: e.target.checked }))}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                      Active (available to students)
-                    </label>
-                  </div>
-                </div>
-
-                {/* Questions Management */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                 {/* Questions Section */}
+                 <div className="border-t pt-4 mt-4">
+                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-md font-medium text-gray-900">Questions</h4>
                     <button
+                       type="button"
                       onClick={handleAddQuestion}
                       className="flex items-center px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
                     >
@@ -486,57 +656,42 @@ const VocabQuizManagement = () => {
                     </button>
                   </div>
                   
-                  <div className="border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
-                    {currentQuiz.questions.length === 0 ? (
-                      <div className="text-center text-gray-500 py-8">
-                        <p>No questions added yet.</p>
-                        <p className="text-sm">Click "Add Question" to get started.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {currentQuiz.questions.map((question, index) => (
-                          <div key={index} className="border border-gray-200 rounded p-3 bg-gray-50">
-                            <div className="flex items-start justify-between mb-2">
+                   {currentQuiz.sections && currentQuiz.sections[0] && currentQuiz.sections[0].questions && currentQuiz.sections[0].questions.length > 0 ? (
+                     <div className="space-y-2 max-h-40 overflow-y-auto">
+                       {currentQuiz.sections[0].questions.map((question, index) => (
+                         <div key={question.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                               <div className="flex-1">
-                                <div className="font-medium text-gray-900">{question.word}</div>
-                                <div className="text-sm text-gray-600">{question.definition}</div>
+                             <p className="text-sm text-gray-900 truncate">
+                               {index + 1}. {question.question || question.content || 'Question text'}
+                             </p>
+                             <p className="text-xs text-gray-500">
+                               {question.answerType === 'written' ? 'Written Answer' : 'Multiple Choice'}
+                             </p>
                               </div>
                               <div className="flex items-center gap-1 ml-2">
                                 <button
+                               type="button"
                                   onClick={() => handleEditQuestion(question, index)}
-                                  className="p-1 text-gray-400 hover:text-blue-600"
+                               className="p-1 text-blue-600 hover:text-blue-800"
                                   title="Edit Question"
                                 >
                                   <FiEdit className="h-3 w-3" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteQuestion(index)}
-                                  className="p-1 text-gray-400 hover:text-red-600"
+                               type="button"
+                               onClick={() => deleteQuestion(question.id)}
+                               className="p-1 text-red-600 hover:text-red-800"
                                   title="Delete Question"
                                 >
                                   <FiTrash2 className="h-3 w-3" />
                                 </button>
                               </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              {question.options.map((option, optIndex) => (
-                                <div key={optIndex} className="flex items-center gap-1">
-                                  {optIndex === question.correctAnswer ? (
-                                    <FiCheck className="h-3 w-3 text-green-600" />
-                                  ) : (
-                                    <FiXIcon className="h-3 w-3 text-gray-400" />
-                                  )}
-                                  <span className={`${optIndex === question.correctAnswer ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
-                                    {option}
-                                  </span>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                   ) : (
+                     <p className="text-sm text-gray-500 text-center py-2">No questions added yet. Click "Add Question" to get started.</p>
                     )}
-                  </div>
                 </div>
               </div>
               
@@ -560,10 +715,10 @@ const VocabQuizManagement = () => {
         </div>
       )}
 
-      {/* Create/Edit Question Modal */}
+       {/* Question Modal */}
       {showQuestionModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+           <div className="relative top-10 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
@@ -577,74 +732,97 @@ const VocabQuizManagement = () => {
                 </button>
               </div>
               
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 {/* Question Details */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    English Word *
+                        Question Text *
                   </label>
-                  <input
-                    type="text"
-                    value={currentQuestion.word}
-                    onChange={(e) => setCurrentQuestion(prev => ({ ...prev, word: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter the English word"
+                      <RichTextEditor
+                        value={currentQuestion.question}
+                        onChange={(value) => setCurrentQuestion(prev => ({ ...prev, question: value }))}
+                        placeholder="Enter your question here..."
+                        rows={4}
+                        sectionType="english"
                   />
                 </div>
+                   
+                   
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Definition *
+                        Reading Passage (Optional)
                   </label>
-                  <textarea
-                    value={currentQuestion.definition}
-                    onChange={(e) => setCurrentQuestion(prev => ({ ...prev, definition: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter the definition"
-                  />
+                      <RichTextEditor
+                        value={currentQuestion.passage}
+                        onChange={(value) => setCurrentQuestion(prev => ({ ...prev, passage: value }))}
+                        placeholder="Enter reading passage if applicable..."
+                        rows={4}
+                        sectionType="english"
+                      />
+                    </div>
                 </div>
                 
+                                   {/* Answer Options */}
+                  <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Answer Options *
-                  </label>
-                  <div className="space-y-2">
+                      <h4 className="text-md font-medium text-gray-900 mb-3">Multiple Choice Options</h4>
+                      
+                      <div className="space-y-3">
                     {currentQuestion.options.map((option, index) => (
-                      <div key={index} className="flex items-center gap-2">
+                          <div key={index} className="flex items-center gap-3">
                         <input
                           type="radio"
                           name="correctAnswer"
                           checked={currentQuestion.correctAnswer === index}
-                          onChange={() => setCurrentQuestion(prev => ({ ...prev, correctAnswer: index }))}
+                              onChange={() => handleCorrectAnswerChange(index)}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                         />
+                            <div className="flex-1">
                         <input
                           type="text"
-                          value={option}
-                          onChange={(e) => {
-                            const newOptions = [...currentQuestion.options];
-                            newOptions[index] = e.target.value;
-                            setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
-                          }}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value={option.content}
+                                onChange={(e) => handleOptionChange(index, e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder={`Option ${index + 1}`}
                         />
+                            </div>
+                            {currentQuestion.options.length > 2 && (
+                              <button
+                                onClick={() => removeOption(index)}
+                                className="p-2 text-red-600 hover:text-red-800"
+                                title="Remove Option"
+                              >
+                                <FiTrash2 className="h-4 w-4" />
+                              </button>
+                            )}
                       </div>
                     ))}
+                        
+                        <button
+                          onClick={addOption}
+                          className="flex items-center px-3 py-2 text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition:border-blue-500"
+                        >
+                          <FiPlus className="mr-2" />
+                          Add Option
+                        </button>
                   </div>
                 </div>
                 
+                   {/* Explanation */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Explanation
+                       Explanation (Optional)
                   </label>
                   <textarea
                     value={currentQuestion.explanation}
                     onChange={(e) => setCurrentQuestion(prev => ({ ...prev, explanation: e.target.value }))}
-                    rows={2}
+                       rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Optional explanation for the correct answer"
+                       placeholder="Explain why this answer is correct..."
                   />
+                   </div>
                 </div>
               </div>
               
@@ -656,8 +834,8 @@ const VocabQuizManagement = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveQuestion}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                   onClick={handleQuestionSave}
+                   className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <FiSave className="mr-2" />
                   {editingQuestion ? 'Update Question' : 'Add Question'}

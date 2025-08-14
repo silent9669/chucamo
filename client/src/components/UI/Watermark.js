@@ -16,7 +16,7 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
           <img 
             src="/apple.png" 
             alt="Watermark" 
-            className="w-80 h-80 object-contain rounded-xl opacity-25"
+            className="w-80 h-80 object-contain rounded-xl opacity-10"
           />
         </div>
       )}
@@ -34,7 +34,7 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
           <img 
             src="/apple.png" 
             alt="Watermark" 
-            className="w-64 h-64 object-contain rounded-xl opacity-25"
+            className="w-64 h-64 object-contain rounded-xl opacity-10"
           />
         </div>
       )}
@@ -52,7 +52,7 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
               transformOrigin: 'left center',
               zIndex: 11,
               fontSize: isMathSection ? '20px' : '32px',
-              color: 'rgba(0, 0, 0, 0.25)',
+              color: 'rgba(0, 0, 0, 0.08)',
               fontFamily: 'monospace',
               fontWeight: '500',
               whiteSpace: 'nowrap',

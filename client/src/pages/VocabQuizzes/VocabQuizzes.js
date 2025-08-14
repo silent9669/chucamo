@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Play } from 'lucide-react';
+import { Search, Play, Clock, BookOpen, Users } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
+import vocabQuizAPI from '../../services/vocabQuizAPI';
 
 const VocabQuizzes = () => {
   const [quizzes, setQuizzes] = useState([]);
@@ -9,20 +10,18 @@ const VocabQuizzes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
 
   const loadQuizzes = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await vocabQuizAPI.getQuizzes();
-      
-      // No sample data - empty array
-      setQuizzes([]);
-      setFilteredQuizzes([]);
+      const response = await vocabQuizAPI.getAll();
+      setQuizzes(response.data.quizzes || []);
+      setFilteredQuizzes(response.data.quizzes || []);
     } catch (error) {
       logger.error('Error loading quizzes:', error);
       toast.error('Failed to load vocabulary quizzes');
+      setQuizzes([]);
+      setFilteredQuizzes([]);
     } finally {
       setLoading(false);
     }
@@ -36,7 +35,7 @@ const VocabQuizzes = () => {
       filtered = filtered.filter(quiz => 
         quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         quiz.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quiz.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+        (quiz.tags && quiz.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
       );
     }
 
@@ -45,13 +44,8 @@ const VocabQuizzes = () => {
       filtered = filtered.filter(quiz => quiz.difficulty === selectedDifficulty);
     }
 
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(quiz => quiz.status === selectedStatus);
-    }
-
     setFilteredQuizzes(filtered);
-  }, [quizzes, searchTerm, selectedDifficulty, selectedStatus]);
+  }, [quizzes, searchTerm, selectedDifficulty]);
 
   useEffect(() => {
     loadQuizzes();
@@ -60,6 +54,24 @@ const VocabQuizzes = () => {
   useEffect(() => {
     filterQuizzes();
   }, [filterQuizzes]);
+
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'hard': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getDifficultyIcon = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return '🌱';
+      case 'medium': return '🌿';
+      case 'hard': return '🌳';
+      default: return '📚';
+    }
+  };
 
   if (loading) {
     return (
@@ -113,20 +125,6 @@ const VocabQuizzes = () => {
                 <option value="hard">Hard</option>
               </select>
             </div>
-
-            {/* Status Filter */}
-            <div className="lg:w-40">
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="draft">Draft</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -137,14 +135,77 @@ const VocabQuizzes = () => {
           </p>
         </div>
 
-        {/* Empty State */}
-        <div className="text-center py-12">
-          <Play size={64} className="text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-slate-600 mb-2">No vocabulary quizzes available</h3>
-          <p className="text-slate-500">
-            Check back later for new vocabulary quizzes
-          </p>
-        </div>
+        {/* Quizzes Grid */}
+        {filteredQuizzes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuizzes.map((quiz) => (
+              <div key={quiz._id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div className="p-6">
+                  {/* Quiz Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-slate-800 mb-2 line-clamp-2">
+                        {quiz.title}
+                      </h3>
+                      <p className="text-slate-600 text-sm line-clamp-3">
+                        {quiz.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Quiz Stats */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(quiz.difficulty)}`}>
+                      <span className="mr-1">{getDifficultyIcon(quiz.difficulty)}</span>
+                      {quiz.difficulty}
+                    </span>
+                    <div className="flex items-center text-slate-500 text-sm">
+                      <Clock className="w-4 h-4 mr-1" />
+                      {quiz.timeLimit || quiz.totalTime || 0}m
+                    </div>
+                  </div>
+
+                  {/* Quiz Details */}
+                  <div className="space-y-2 mb-6">
+                    <div className="flex items-center text-slate-600 text-sm">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      {quiz.totalQuestions || quiz.questionCount || 0} questions
+                    </div>
+                    {quiz.tags && quiz.tags.length > 0 && (
+                      <div className="flex items-center text-slate-600 text-sm">
+                        <Users className="w-4 h-4 mr-2" />
+                        {quiz.tags.slice(0, 3).join(', ')}
+                        {quiz.tags.length > 3 && ` +${quiz.tags.length - 3} more`}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Button */}
+                  <button 
+                    onClick={() => window.location.href = `/vocab-quizzes/${quiz._id}`}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 transform hover:scale-105"
+                  >
+                    Start Quiz
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="text-center py-12">
+            <Play size={64} className="text-slate-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-slate-600 mb-2">
+              {quizzes.length === 0 ? 'No vocabulary quizzes available' : 'No quizzes match your search'}
+            </h3>
+            <p className="text-slate-500">
+              {quizzes.length === 0 
+                ? 'Check back later for new vocabulary quizzes'
+                : 'Try adjusting your search terms or filters'
+              }
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

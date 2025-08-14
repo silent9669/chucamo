@@ -900,7 +900,7 @@ const TestDetails = () => {
             <img 
               src="/apple.png" 
               alt="Watermark" 
-              className="w-80 h-80 object-contain rounded-xl opacity-25"
+              className="w-80 h-80 object-contain rounded-xl opacity-10"
             />
           </div>
         </div>
@@ -918,7 +918,7 @@ const TestDetails = () => {
                 transformOrigin: 'left center',
                 zIndex: 11,
                 fontSize: '24px',
-                color: 'rgba(0, 0, 0, 0.25)',
+                color: 'rgba(0, 0, 0, 0.08)',
                 fontFamily: 'monospace',
                 fontWeight: '500',
                 whiteSpace: 'nowrap',
