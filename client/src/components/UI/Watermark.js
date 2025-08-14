@@ -1,13 +1,13 @@
 import React from 'react';
 
-const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection = false }) => {
+const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection = false, isEnglishSection = false }) => {
   return (
     <div className={`watermark-container ${className}`}>
-      {/* Apple logo watermark - only show when no images in questions */}
-      {!hasImages && (
+      {/* Apple logo watermark - show for English section regardless of images, but not for math */}
+      {isEnglishSection && (
         <div className="watermark-logo" style={{
           position: 'absolute',
-          top: isMathSection ? '50%' : '35%',
+          top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           pointerEvents: 'none',
@@ -16,7 +16,25 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
           <img 
             src="/apple.png" 
             alt="Watermark" 
-            className={isMathSection ? "w-64 h-64 object-contain rounded-xl opacity-25" : "w-80 h-80 object-contain rounded-xl opacity-25"}
+            className="w-80 h-80 object-contain rounded-xl opacity-25"
+          />
+        </div>
+      )}
+      
+      {/* Apple logo watermark for Math section - only when no images */}
+      {isMathSection && !hasImages && (
+        <div className="watermark-logo" style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }}>
+          <img 
+            src="/apple.png" 
+            alt="Watermark" 
+            className="w-64 h-64 object-contain rounded-xl opacity-25"
           />
         </div>
       )}
@@ -28,8 +46,8 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
             className="email-text-overlay"
             style={{
               position: 'absolute',
-              top: isMathSection ? '32%' : '22%',
-              left: isMathSection ? '8%' : '0%',
+              top: isMathSection ? '32%' : '25%',
+              left: isMathSection ? '8%' : '5%',
               transform: 'rotate(-15deg)',
               transformOrigin: 'left center',
               zIndex: 11,
@@ -38,7 +56,7 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
               fontFamily: 'monospace',
               fontWeight: '500',
               whiteSpace: 'nowrap',
-              maxWidth: isMathSection ? '80%' : '100%',
+              maxWidth: isMathSection ? '80%' : '90%',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               background: 'transparent',

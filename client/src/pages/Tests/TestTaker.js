@@ -22,6 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import logger from '../../utils/logger';
+import useCopyWatermark from '../../hooks/useCopyWatermark';
 
 // Utility function to safely serialize objects and prevent circular references
 const safeStringify = (obj) => {
@@ -47,6 +48,14 @@ const TestTaker = () => {
   const navigate = useNavigate();
   const { id: testId } = useParams();
   const { refreshUser, user } = useAuth();
+  
+  // Apply copy watermark protection to specific content areas
+  useCopyWatermark([
+    '.reading-passage-container',  // Reading passages
+    '.question-content',           // Question text
+    '.answer-options',             // Multiple choice options
+    '.written-answer-input'        // Written answer areas
+  ]);
   
   // Test data state
   const [test, setTest] = useState(null);
@@ -1813,76 +1822,80 @@ const TestTaker = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex relative z-10">
+      <div className="flex-1 flex relative z-10 min-h-0">
         {currentSectionData?.type === 'english' ? (
           // English Section Layout - Two Panes
           <>
             {/* Left Pane - Reading Passage */}
-            <div className="w-1/2 border-r border-gray-200 p-6 relative overflow-y-auto">
-          {/* Resize handle */}
-          <div className="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2">
-            <div className="w-1 h-8 bg-gray-400 rounded-full"></div>
-          </div>
-
-          {/* Images - Display First */}
-          {currentQuestionData.images && currentQuestionData.images.length > 0 && (
-            <div className="mb-6">
-              {currentQuestionData.images.map((image, index) => (
-                <img 
-                  key={index}
-                                        src={image.url || `${window.location.origin}/uploads/${image.name}`}
-                  alt={image.name}
-                  className="max-w-lg h-auto mb-4 rounded-lg shadow-sm border border-gray-200 mx-auto"
-                  onError={(e) => {
-                    logger.error('Image failed to load:', image);
-                    e.target.style.display = 'none';
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Reading Passage - Display Below Images */}
-          {currentQuestionData.passage && (
-            <div className="mt-6 reading-passage-container">
-              {/* Watermark - Only for English section */}
+            <div className="w-1/2 border-r border-gray-200 p-6 relative flex flex-col">
+              {/* Watermark - Cover entire left pane for English section */}
               {currentSectionData?.type === 'english' && (
                 <Watermark 
                   userEmail={user?.email} 
                   hasImages={currentQuestionData?.images && currentQuestionData.images.length > 0}
+                  isEnglishSection={true}
                 />
               )}
               
-              <div 
-                key={`passage-${currentSection}-${currentQuestion}`}
-                className={`reading-passage ${isHighlightMode ? 'highlighter-cursor highlightable-area' : ''}`}
-                style={{ 
-                  fontFamily: 'serif',
-                  fontSize: `${fontSize}px`,
-                  position: 'relative' // Ensure proper positioning context for watermark
-                }}
-              >
-                {currentSectionData?.type === 'english' ? (
-                  <RichTextDocument
-                    content={currentQuestionData.passage}
-                    highlights={highlights}
-                    fontFamily="serif"
-                    fontSize={fontSize}
-                    className="reading-passage-content prose prose-sm max-w-none"
-                    onHighlightClick={removeHighlight}
-                  />
-                ) : (
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: renderPassageWithKaTeX(currentQuestionData.passage) }} 
-                    className="reading-passage-content prose prose-sm max-w-none"
-                    style={{ fontSize: `${fontSize}px`, lineHeight: '1.6', fontFamily: 'serif' }}
-                    suppressContentEditableWarning={true}
-                    contentEditable={false}
-                  />
-                )}
+              {/* Resize handle */}
+              <div className="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 z-20">
+                <div className="w-1 h-8 bg-gray-400 rounded-full"></div>
               </div>
-            </div>
-          )}
+
+              {/* Images - Display First (Fixed Position) */}
+              {currentQuestionData.images && currentQuestionData.images.length > 0 && (
+                <div className="mb-6 flex-shrink-0 relative z-5">
+                  {currentQuestionData.images.map((image, index) => (
+                    <img 
+                      key={index}
+                      src={image.url || `${window.location.origin}/uploads/${image.name}`}
+                      alt={image.name}
+                      className="max-w-lg h-auto mb-4 rounded-lg shadow-sm border border-gray-200 mx-auto"
+                      onError={(e) => {
+                        logger.error('Image failed to load:', image);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Reading Passage - Scrollable Container */}
+              {currentQuestionData.passage && (
+                <div className="reading-passage-container flex-1 flex flex-col min-h-0 relative z-5">
+                  <div 
+                    key={`passage-${currentSection}-${currentQuestion}`}
+                    className={`reading-passage ${isHighlightMode ? 'highlighter-cursor highlightable-area' : ''}`}
+                    style={{ 
+                      fontFamily: 'serif',
+                      fontSize: `${fontSize}px`,
+                      position: 'relative', // Ensure proper positioning context for watermark
+                      maxHeight: '400px', // Maximum height for very long passages
+                      overflowY: 'auto', // Enable vertical scrolling only when needed
+                      overflowX: 'hidden' // Hide horizontal scrollbar
+                    }}
+                  >
+                    {currentSectionData?.type === 'english' ? (
+                      <RichTextDocument
+                        content={currentQuestionData.passage}
+                        highlights={highlights}
+                        fontFamily="serif"
+                        fontSize={fontSize}
+                        className="reading-passage-content prose prose-sm max-w-none"
+                        onHighlightClick={removeHighlight}
+                      />
+                    ) : (
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: renderPassageWithKaTeX(currentQuestionData.passage) }} 
+                        className="reading-passage-content prose prose-sm max-w-none"
+                        style={{ fontSize: `${fontSize}px`, lineHeight: '1.6', fontFamily: 'serif' }}
+                        suppressContentEditableWarning={true}
+                        contentEditable={false}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
 
 
         </div>
@@ -1940,7 +1953,7 @@ const TestTaker = () => {
               </div>
 
               {/* Answer Options - English Section */}
-              <div className="space-y-3">
+              <div className="space-y-3 answer-options">
                 {currentQuestionData.answerType === 'written' ? (
                   // Written Answer Input
                   <WrittenAnswerInput
@@ -2500,11 +2513,55 @@ const TestTaker = () => {
         /* Ensure reading passage text is selectable */
         .reading-passage-container {
           position: relative;
+          height: 100%;
         }
         
         .reading-passage-content {
           position: relative;
           z-index: 2;
+        }
+        
+        /* Reading passage auto-scaling and scrolling styles */
+        .reading-passage {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e0 #f7fafc;
+          border-right: 2px solid #e2e8f0; /* Visual separator at middle line */
+          min-height: fit-content; /* Auto-scale to content */
+          height: auto; /* Allow natural height */
+        }
+        
+        .reading-passage::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .reading-passage::-webkit-scrollbar-track {
+          background: #f7fafc;
+          border-radius: 4px;
+        }
+        
+        .reading-passage::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 4px;
+        }
+        
+        .reading-passage::-webkit-scrollbar-thumb:hover {
+          background: #a0aec0;
+        }
+        
+        /* Ensure proper flexbox behavior for reading passage */
+        .reading-passage-container.flex-1 {
+          min-height: 0;
+        }
+        
+        /* Auto-scaling behavior for reading passage container */
+        .reading-passage-container {
+          height: auto;
+          min-height: fit-content;
+        }
+        
+        /* Fixed height for images to prevent layout shift */
+        .reading-passage-container .flex-shrink-0 {
+          flex-shrink: 0;
         }
         
         /* Highlight mode cursor and text selection */
@@ -2622,7 +2679,7 @@ const TestTaker = () => {
           width: 100%;
           height: 100%;
           pointer-events: none;
-          z-index: 5;
+          z-index: 3;
         }
         
         /* Math section specific watermark positioning */
@@ -2689,6 +2746,54 @@ const TestTaker = () => {
         
         .reading-passage-container:hover .watermark-container {
           opacity: 0.55;
+        }
+        
+        /* Ensure reading passage maintains proper spacing with scrollbar */
+        .reading-passage-container {
+          margin-bottom: 1rem;
+        }
+        
+        /* Prevent watermark from interfering with scrolling */
+        .reading-passage-container .watermark-container {
+          pointer-events: none;
+        }
+        
+        /* Ensure content inside scrollable area is properly spaced */
+        .reading-passage .reading-passage-content {
+          padding-right: 8px; /* Space for scrollbar */
+          width: 100%;
+          height: auto;
+        }
+        
+        /* Auto-scaling content behavior */
+        .reading-passage .prose {
+          height: auto;
+          min-height: fit-content;
+        }
+        
+        /* Main content area height constraints */
+        .flex-1.min-h-0 {
+          min-height: 0;
+          overflow: hidden;
+        }
+        
+        /* Ensure left pane maintains proper height */
+        .w-1\/2.flex.flex-col {
+          height: 100%;
+          overflow: hidden;
+        }
+        
+        /* English section watermark layering */
+        .w-1\/2.flex.flex-col .watermark-container {
+          z-index: 3;
+        }
+        
+        .w-1\/2.flex.flex-col .z-5 {
+          z-index: 5;
+        }
+        
+        .w-1\/2.flex.flex-col .z-20 {
+          z-index: 20;
         }
       `}</style>
     </div>

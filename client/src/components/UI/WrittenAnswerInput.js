@@ -27,7 +27,7 @@ const WrittenAnswerInput = ({
   const answerStatus = getAnswerStatus();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 written-answer-input">
       {/* Answer Input */}
       <div>
         <label className="block text-sm font-medium text-gray-700">

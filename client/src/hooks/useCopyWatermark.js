@@ -1,0 +1,221 @@
+import { useEffect } from "react";
+
+export default function useCopyWatermark(protectedSelectors = []) {
+  useEffect(() => {
+    const handleCopy = (e) => {
+      try {
+        // Check if there's a selection
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) {
+          return; // No selection, allow normal copy
+        }
+
+        // Check if selection is within protected content areas
+        let isProtectedContent = false;
+        
+        if (protectedSelectors.length > 0) {
+          const range = selection.getRangeAt(0);
+          const container = range.commonAncestorContainer;
+          
+          // Check if selection is within any protected selector
+          isProtectedContent = protectedSelectors.some(selector => {
+            try {
+              const element = container.nodeType === Node.TEXT_NODE 
+                ? container.parentElement 
+                : container;
+              return element && element.closest(selector);
+            } catch (error) {
+              console.warn('Error checking selector:', selector, error);
+              return false;
+            }
+          });
+        } else {
+          // If no selectors specified, protect all content
+          isProtectedContent = true;
+        }
+
+        // Only apply watermark to protected content
+        if (isProtectedContent) {
+          // Prevent normal copy behavior
+          e.preventDefault();
+
+          const watermark = "ChuCaMo ©";
+          const contentToCopy = watermark;
+
+          // Set clipboard content with enhanced formatting
+          e.clipboardData.setData("text/plain", contentToCopy);
+          e.clipboardData.setData("text/html", `
+            <div style="font-family: Arial, sans-serif; color: #333; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+              <strong>${contentToCopy}</strong>
+            </div>
+          `);
+          
+          // Optional: Show a brief notification
+          showCopyNotification();
+        }
+        // If not protected content, allow normal copy behavior
+      } catch (error) {
+        console.warn('Error in copy watermark handler:', error);
+        // If there's an error, allow normal copy behavior
+      }
+    };
+
+    // Enhanced right-click context menu prevention
+    const handleContextMenu = (e) => {
+      // Check if right-click is on protected content
+      let isProtectedContent = false;
+      
+      if (protectedSelectors.length > 0) {
+        isProtectedContent = protectedSelectors.some(selector => {
+          try {
+            return e.target.closest(selector);
+          } catch (error) {
+            return false;
+          }
+        });
+      } else {
+        isProtectedContent = true;
+      }
+
+      if (isProtectedContent) {
+        // Show custom context menu or prevent default
+        e.preventDefault();
+        showCustomContextMenu(e);
+      }
+    };
+
+    // Prevent keyboard shortcuts for copy in protected areas
+    const handleKeyDown = (e) => {
+      // Check if Ctrl+C or Cmd+C is pressed
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const container = range.commonAncestorContainer;
+          
+          let isProtectedContent = false;
+          
+          if (protectedSelectors.length > 0) {
+            isProtectedContent = protectedSelectors.some(selector => {
+              try {
+                const element = container.nodeType === Node.TEXT_NODE 
+                  ? container.parentElement 
+                  : container;
+                return element && element.closest(selector);
+              } catch (error) {
+                return false;
+              }
+            });
+          } else {
+            isProtectedContent = true;
+          }
+
+          if (isProtectedContent) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Trigger our custom copy handler
+            const copyEvent = new Event('copy', { bubbles: true, cancelable: true });
+            document.dispatchEvent(copyEvent);
+          }
+        }
+      }
+    };
+
+    // Helper function to show copy notification
+    const showCopyNotification = () => {
+      // Create a temporary notification
+      const notification = document.createElement('div');
+      notification.textContent = 'Content protected with ChuCaMo ©';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 4px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        z-index: 10000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      // Add animation CSS
+      if (!document.getElementById('copy-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'copy-notification-styles';
+        style.textContent = `
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(notification);
+      
+      // Remove notification after 3 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
+    };
+
+    // Helper function to show custom context menu
+    const showCustomContextMenu = (e) => {
+      // Create custom context menu
+      const menu = document.createElement('div');
+      menu.innerHTML = `
+        <div style="
+          position: fixed;
+          left: ${e.pageX}px;
+          top: ${e.pageY}px;
+          background: white;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+          z-index: 10000;
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          min-width: 150px;
+        ">
+          <div style="padding: 8px 12px; border-bottom: 1px solid #eee; color: #666;">
+            Content Protected
+          </div>
+          <div style="padding: 8px 12px; color: #999; font-size: 12px;">
+            Copying is disabled for this content
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(menu);
+      
+      // Remove menu when clicking elsewhere
+      const removeMenu = () => {
+        if (menu.parentNode) {
+          menu.parentNode.removeChild(menu);
+        }
+        document.removeEventListener('click', removeMenu);
+      };
+      
+      setTimeout(() => {
+        document.addEventListener('click', removeMenu);
+      }, 100);
+    };
+
+    // Add event listeners
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+    
+    return () => {
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [protectedSelectors]);
+}

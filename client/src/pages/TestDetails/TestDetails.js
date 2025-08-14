@@ -6,11 +6,21 @@ import RichTextDisplay from '../../components/UI/RichTextDisplay';
 import { testsAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import useCopyWatermark from '../../hooks/useCopyWatermark';
 
 const TestDetails = () => {
   const { id: testId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Apply copy watermark protection to test content areas
+  useCopyWatermark([
+    '.reading-passage-container',    // Reading passages
+    '.question-content',             // Question text
+    '.answer-options-container',     // Multiple choice options
+    '.written-answer-container',     // Written answer areas
+    '.test-review-content'           // Main test review content
+  ]);
   
   const [test, setTest] = useState(null);
   const [testResults, setTestResults] = useState(null);
@@ -512,10 +522,10 @@ const TestDetails = () => {
           {/* Question Content and Navigation */}
           <div className="lg:col-span-3">
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-              {/* Question Content */}
-              <div className="xl:col-span-3">
-                {currentQuestionData ? (
-                  <div className={`bg-white rounded-lg shadow p-6 ${getQuestionBoxColor(`${currentSection}-${currentQuestion}`)}`}>
+                        {/* Question Content */}
+          <div className="xl:col-span-3">
+            {currentQuestionData ? (
+              <div className={`bg-white rounded-lg shadow p-6 test-review-content ${getQuestionBoxColor(`${currentSection}-${currentQuestion}`)}`}>
                     {/* Question Header */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-4">
@@ -555,9 +565,16 @@ const TestDetails = () => {
 
                     {/* Reading Passage */}
                     {currentQuestionData.passage && (
-                      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                      <div className={`${getCurrentSectionData()?.type === 'english' ? 'mb-3' : 'mb-6'} ${getCurrentSectionData()?.type === 'english' ? 'p-2' : 'p-4'} bg-gray-50 rounded-lg reading-passage-container`}>
                         <h4 className="font-medium text-gray-900 mb-2">Reading Passage</h4>
-                        <div className="text-gray-700 leading-relaxed">
+                        <div 
+                          className={`text-gray-700 leading-relaxed reading-passage-content ${getCurrentSectionData()?.type === 'english' ? 'english-passage' : ''}`}
+                          style={{
+                            maxHeight: getCurrentSectionData()?.type === 'english' ? 'none' : '400px',
+                            overflowY: getCurrentSectionData()?.type === 'english' ? 'visible' : 'auto',
+                            overflowX: 'hidden'
+                          }}
+                        >
                           {getCurrentSectionData()?.type === 'english' ? (
                             <RichTextDisplay 
                               content={currentQuestionData.passage} 
@@ -590,7 +607,7 @@ const TestDetails = () => {
                     )}
 
                      {/* Question */}
-                     <div className="mb-6">
+                     <div className={`${getCurrentSectionData()?.type === 'english' ? 'mb-3' : 'mb-6'} question-content`}>
                        <h4 className="font-medium text-gray-900 mb-3">Question</h4>
                        <div className="text-gray-700 leading-relaxed" style={{ fontFamily: 'serif' }}>
                          {getCurrentSectionData()?.type === 'english' ? (
@@ -607,7 +624,7 @@ const TestDetails = () => {
 
                     {/* Answer Options */}
                     {currentQuestionData.options && currentQuestionData.options.length > 0 && (
-                      <div className="mb-6">
+                      <div className={`${getCurrentSectionData()?.type === 'english' ? 'mb-3' : 'mb-6'} answer-options-container`}>
                         <h4 className="font-medium text-gray-900 mb-3">Answer Options</h4>
                         <div className="space-y-3">
                           {currentQuestionData.options.map((option, index) => {
@@ -694,7 +711,7 @@ const TestDetails = () => {
 
                     {/* Written Answer */}
                     {(currentQuestionData.answerType === 'written' || currentQuestionData.type === 'grid-in') && testResults && (
-                      <div className="mb-6">
+                      <div className="mb-6 written-answer-container">
                         <h4 className="font-medium text-gray-900 mb-3">Your Answer</h4>
                         {getQuestionResult(`${currentSection}-${currentQuestion}`) ? (
                           <div className={`p-4 rounded-lg border-2 ${
@@ -967,6 +984,81 @@ const TestDetails = () => {
           left: 45% !important;
           transform: rotate(-15deg) !important;
           z-index: 11 !important;
+        }
+        
+        /* Reading passage auto-scaling and scrolling styles */
+        .reading-passage-content {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e0 #f7fafc;
+          min-height: fit-content;
+          height: auto;
+        }
+        
+        .reading-passage-content::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .reading-passage-content::-webkit-scrollbar-track {
+          background: #f7fafc;
+          border-radius: 4px;
+        }
+        
+        .reading-passage-content::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 4px;
+        }
+        
+        .reading-passage-content::-webkit-scrollbar-thumb:hover {
+          background: #a0aec0;
+        }
+        
+        /* Auto-scaling behavior for reading passage container */
+        .reading-passage-container {
+          height: auto;
+          min-height: fit-content;
+        }
+        
+        /* English section specific styling - tighter spacing and auto-scaling */
+        .english-passage {
+          height: auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow: visible !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        
+        /* Reduce spacing for English section reading passages */
+        .reading-passage-container:has(.english-passage) {
+          margin-bottom: 0.00005rem !important;
+          padding: 0.5rem !important;
+          height: auto !important;
+          min-height: fit-content !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        
+        /* Ensure English passages don't have unnecessary height */
+        .reading-passage-container:has(.english-passage) .reading-passage-content {
+          height: auto !important;
+          min-height: 0 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        
+        /* Tighter spacing for English section elements */
+        .question-content:has(+ .answer-options-container) {
+          margin-bottom: 0.00005rem !important;
+        }
+        
+        /* Ensure proper content flow in English sections */
+        .english-passage + .question-content {
+          margin-top: 0.25rem !important;
+        }
+        
+        /* Remove extra spacing from English passage heading */
+        .reading-passage-container:has(.english-passage) h4 {
+          margin-bottom: 0.5rem !important;
         }
       `}</style>
     </div>
