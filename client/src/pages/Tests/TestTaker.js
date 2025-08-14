@@ -1249,7 +1249,11 @@ const TestTaker = () => {
               if (errorData.message && errorData.message.includes('reached max attempt')) {
                 if (errorData.upgradeRequired) {
                   alert(`⚠️ ${errorData.message}`);
-                  navigate('/upgrade-plan');
+                  if (user?.role === 'admin') {
+                    navigate('/upgrade-plan');
+                  } else {
+                    navigate('/dashboard');
+                  }
                   return;
                 } else {
                   alert(`⚠️ ${errorData.message}`);
@@ -1260,7 +1264,11 @@ const TestTaker = () => {
                          errorData.message === 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.' ||
                          errorData.upgradeRequired) {
                 alert('⚠️ Free accounts can only attempt each test once. Upgrade to student account for more attempts.');
-                navigate('/upgrade-plan');
+                if (user?.role === 'admin') {
+                  navigate('/upgrade-plan');
+                } else {
+                  navigate('/dashboard');
+                }
                 return;
               } else if (errorData.message === 'Maximum attempts reached for this test') {
                 alert('⚠️ Maximum attempts reached for this test');
@@ -1277,7 +1285,11 @@ const TestTaker = () => {
                 errorText.includes('reached max attempt')) {
               if (errorText.includes('Free account type reached max attempt')) {
                 alert('⚠️ Free account type reached max attempt (1). Upgrade to student account for more attempts.');
-                navigate('/upgrade-plan');
+                if (user?.role === 'admin') {
+                  navigate('/upgrade-plan');
+                } else {
+                  navigate('/dashboard');
+                }
               } else if (errorText.includes('Student account type reached max attempt')) {
                 alert('⚠️ Student account type reached max attempt (3).');
                 navigate('/tests');
@@ -1558,12 +1570,21 @@ const TestTaker = () => {
           <p className="text-red-600 mb-4">{error}</p>
           
           <div className="flex flex-col gap-2">
-            {isAttemptLimitError && isFreeUser && (
+            {isAttemptLimitError && isFreeUser && user?.role === 'admin' && (
               <button 
                 onClick={() => navigate('/upgrade-plan')}
                 className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors"
               >
                 Upgrade to Student Account
+              </button>
+            )}
+            
+            {isAttemptLimitError && isFreeUser && user?.role !== 'admin' && (
+              <button 
+                onClick={() => navigate('/dashboard')}
+                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+              >
+                Go to Dashboard
               </button>
             )}
             
