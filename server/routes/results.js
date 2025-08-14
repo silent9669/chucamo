@@ -110,50 +110,87 @@ router.post('/', protect, async (req, res) => {
     console.log('User role:', user.role);
 
     // Check if user has exceeded max attempts based on account type
-    const existingAttempts = await Result.countDocuments({
+    // Only count COMPLETED tests, not incomplete ones
+    const existingCompletedAttempts = await Result.countDocuments({
       user: req.user.id,
-      test: testId
+      test: testId,
+      status: 'completed' // Only count completed tests as attempts
     });
 
-    console.log('Existing attempts:', existingAttempts);
+    console.log('Existing completed attempts:', existingCompletedAttempts);
+    console.log('User account type:', user.accountType);
+    console.log('User role:', user.role);
 
     // Set max attempts based on account type
     let maxAttempts;
+    let accountTypeLabel;
     if (user.accountType === 'admin' || user.accountType === 'teacher') {
       maxAttempts = Infinity; // Unlimited attempts for admin and teacher
+      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : 'Teacher';
     } else if (user.accountType === 'free') {
       maxAttempts = 1; // Free account: 1 test attempt
-    } else {
+      accountTypeLabel = 'Free';
+    } else if (user.accountType === 'student') {
       maxAttempts = 3; // Student account: 3 test attempts
+      accountTypeLabel = 'Student';
+    } else {
+      maxAttempts = 1; // Default to 1 attempt for unknown account types
+      accountTypeLabel = 'Free';
     }
 
     console.log('Max attempts allowed:', maxAttempts);
+    console.log('Account type label:', accountTypeLabel);
+    console.log('Attempt check result:', maxAttempts !== Infinity && existingCompletedAttempts >= maxAttempts);
 
     // Check if user has exceeded max attempts
-    if (maxAttempts !== Infinity && existingAttempts >= maxAttempts) {
+    if (maxAttempts !== Infinity && existingCompletedAttempts >= maxAttempts) {
       if (user.accountType === 'free') {
         return res.status(400).json({ 
-          message: 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.',
+          message: `Free account type reached max attempt (${maxAttempts}). Upgrade to student account for more attempts.`,
           accountType: 'free',
           maxAttempts: maxAttempts,
-          currentAttempts: existingAttempts,
+          currentAttempts: existingCompletedAttempts,
           upgradeRequired: true
+        });
+      } else if (user.accountType === 'student') {
+        return res.status(400).json({ 
+          message: `Student account type reached max attempt (${maxAttempts}).`,
+          accountType: 'student',
+          maxAttempts: maxAttempts,
+          currentAttempts: existingCompletedAttempts
         });
       } else {
         return res.status(400).json({ 
-          message: 'Maximum attempts reached for this test',
+          message: `${accountTypeLabel} account type reached max attempt (${maxAttempts}).`,
           accountType: user.accountType,
           maxAttempts: maxAttempts,
-          currentAttempts: existingAttempts
+          currentAttempts: existingCompletedAttempts
         });
       }
     }
 
-    console.log('Creating result...');
+    // Check if there's an existing incomplete result that can be resumed
+    const existingIncompleteResult = await Result.findOne({
+      user: req.user.id,
+      test: testId,
+      status: 'in-progress'
+    });
+
+    if (existingIncompleteResult) {
+      console.log('Resuming existing incomplete test:', existingIncompleteResult._id);
+      return res.status(200).json({
+        success: true,
+        message: 'Resuming existing test',
+        result: existingIncompleteResult,
+        resumed: true
+      });
+    }
+
+    console.log('Creating new result...');
     const result = await Result.create({
       user: req.user.id,
       test: testId,
-      attemptNumber: existingAttempts + 1,
+      attemptNumber: existingCompletedAttempts + 1,
       startTime: new Date(),
       status: 'in-progress'
     });
@@ -203,6 +240,24 @@ router.put('/:id', protect, async (req, res) => {
     result.status = status;
 
     await result.save();
+
+    // Log test completion for attempt tracking
+    if (status === 'completed') {
+      console.log('=== TEST COMPLETED ===');
+      console.log('User ID:', req.user.id);
+      console.log('Test ID:', result.test);
+      console.log('Result ID:', result._id);
+      console.log('Attempt number:', result.attemptNumber);
+      console.log('Status:', result.status);
+      
+      // Count total completed attempts for this user and test
+      const totalCompletedAttempts = await Result.countDocuments({
+        user: req.user.id,
+        test: result.test,
+        status: 'completed'
+      });
+      console.log('Total completed attempts for this test:', totalCompletedAttempts);
+    }
 
     // Update user statistics if test is completed
     if (status === 'completed') {
@@ -375,6 +430,76 @@ router.get('/analytics/overview', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('Get analytics error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/results/attempt-status/:testId
+// @desc    Get user's attempt status for a specific test
+// @access  Private
+router.get('/attempt-status/:testId', protect, async (req, res) => {
+  try {
+    const { testId } = req.params;
+    
+    // Get user to check account type
+    const User = require('../models/User');
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Count completed attempts for this test
+    const completedAttempts = await Result.countDocuments({
+      user: req.user.id,
+      test: testId,
+      status: 'completed'
+    });
+
+    // Count incomplete attempts for this test
+    const incompleteAttempts = await Result.countDocuments({
+      user: req.user.id,
+      test: testId,
+      status: 'in-progress'
+    });
+
+    // Set max attempts based on account type
+    let maxAttempts;
+    let accountTypeLabel;
+    if (user.accountType === 'admin' || user.accountType === 'teacher') {
+      maxAttempts = Infinity;
+      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : 'Teacher';
+    } else if (user.accountType === 'free') {
+      maxAttempts = 1;
+      accountTypeLabel = 'Free';
+    } else if (user.accountType === 'student') {
+      maxAttempts = 3;
+      accountTypeLabel = 'Student';
+    } else {
+      maxAttempts = 1;
+      accountTypeLabel = 'Free';
+    }
+
+    // Check if user can attempt more
+    const canAttempt = maxAttempts === Infinity || completedAttempts < maxAttempts;
+    const attemptsRemaining = maxAttempts === Infinity ? '∞' : Math.max(0, maxAttempts - completedAttempts);
+
+    res.json({
+      success: true,
+      data: {
+        testId,
+        userAccountType: user.accountType,
+        accountTypeLabel,
+        completedAttempts,
+        incompleteAttempts,
+        maxAttempts,
+        attemptsRemaining,
+        canAttempt,
+        hasIncompleteAttempt: incompleteAttempts > 0
+      }
+    });
+  } catch (error) {
+    console.error('Get attempt status error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

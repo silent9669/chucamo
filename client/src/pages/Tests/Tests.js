@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { FiBookOpen, FiClock, FiPlay, FiFilter, FiSearch } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
 import logger from '../../utils/logger';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Tests = () => {
+  const { user } = useAuth();
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [testTypeFilter, setTestTypeFilter] = useState('all'); // Filter by test type: 'all', 'practice', or 'study-plan'
@@ -251,13 +253,46 @@ const Tests = () => {
         </div>
         
         {test.status === 'published' && (
-          <Link
-            to={`/tests/${test.id}`}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
-          >
-            <FiPlay size={14} />
-            {localStorage.getItem(`test_progress_${test.id}`) ? 'Continue Test' : 'Start Test'}
-          </Link>
+          <div className="flex flex-col gap-2">
+            {/* Show attempt information and determine button text */}
+            {(() => {
+              const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${test.id}`) || '0');
+              const hasProgress = localStorage.getItem(`test_progress_${test.id}`);
+              let maxAttempts = 1;
+              let accountType = 'Free';
+              
+              if (user?.accountType === 'admin' || user?.accountType === 'teacher') {
+                maxAttempts = '∞';
+                accountType = user.accountType === 'admin' ? 'Admin' : 'Teacher';
+              } else if (user?.accountType === 'student') {
+                maxAttempts = 3;
+                accountType = 'Student';
+              } else {
+                maxAttempts = 1;
+                accountType = 'Free';
+              }
+              
+              return (
+                <>
+                  <div className="text-xs text-gray-500 mb-1">
+                    {maxAttempts === '∞' ? (
+                      <span>Unlimited attempts ({accountType})</span>
+                    ) : (
+                      <span>{completedAttempts}/{maxAttempts} attempts ({accountType})</span>
+                    )}
+                  </div>
+                  
+                  <Link
+                    to={`/tests/${test.id}`}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                  >
+                    <FiPlay size={14} />
+                    {hasProgress ? 'Continue Test' : 'Start Test'}
+                  </Link>
+                </>
+              );
+            })()}
+          </div>
         )}
       </div>
     </div>

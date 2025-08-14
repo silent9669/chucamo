@@ -156,6 +156,23 @@ const TestTaker = () => {
       setLoading(true);
       setError(null);
       
+      // Check attempt limits before loading test
+      const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${testId}`) || '0');
+      
+      let maxAttempts = 1;
+      if (user?.accountType === 'admin' || user?.accountType === 'teacher') {
+        maxAttempts = Infinity;
+      } else if (user?.accountType === 'student') {
+        maxAttempts = 3;
+      }
+      
+      if (maxAttempts !== Infinity && completedAttempts >= maxAttempts) {
+        const accountTypeLabel = user?.accountType === 'free' ? 'Free' : 'Student';
+        setError(`${accountTypeLabel} account type reached max attempt (${maxAttempts}). ${user?.accountType === 'free' ? 'Upgrade to student account for more attempts.' : ''}`);
+        setLoading(false);
+        return;
+      }
+      
       // Fetch test details
       const testResponse = await testsAPI.getById(testId);
       const testData = testResponse.data.test;
@@ -201,7 +218,7 @@ const TestTaker = () => {
     } finally {
       setLoading(false);
     }
-  }, [testId]);
+  }, [testId, user?.accountType]);
 
   const loadSavedProgress = useCallback(() => {
     const savedProgress = localStorage.getItem(`test_progress_${testId}`);
@@ -1227,11 +1244,23 @@ const TestTaker = () => {
             
             try {
               const errorData = JSON.parse(errorText);
-              if (errorData.message === 'Upgrade to student account to re-do test' || 
-                  errorData.message === 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.' ||
-                  errorData.upgradeRequired) {
+              
+              // Handle attempt limit errors with specific messages
+              if (errorData.message && errorData.message.includes('reached max attempt')) {
+                if (errorData.upgradeRequired) {
+                  alert(`⚠️ ${errorData.message}`);
+                  navigate('/upgrade-plan');
+                  return;
+                } else {
+                  alert(`⚠️ ${errorData.message}`);
+                  navigate('/tests');
+                  return;
+                }
+              } else if (errorData.message === 'Upgrade to student account to re-do test' || 
+                         errorData.message === 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.' ||
+                         errorData.upgradeRequired) {
                 alert('⚠️ Free accounts can only attempt each test once. Upgrade to student account for more attempts.');
-                navigate('/tests');
+                navigate('/upgrade-plan');
                 return;
               } else if (errorData.message === 'Maximum attempts reached for this test') {
                 alert('⚠️ Maximum attempts reached for this test');
@@ -1244,9 +1273,18 @@ const TestTaker = () => {
             
             // Check if it's a free account limitation error (fallback for unparseable responses)
             if (errorText.includes('Free accounts can only attempt each test once') || 
-                errorText.includes('Upgrade to student account')) {
-              alert('⚠️ Free accounts can only attempt each test once. Upgrade to student account for more attempts.');
-              navigate('/tests');
+                errorText.includes('Upgrade to student account') ||
+                errorText.includes('reached max attempt')) {
+              if (errorText.includes('Free account type reached max attempt')) {
+                alert('⚠️ Free account type reached max attempt (1). Upgrade to student account for more attempts.');
+                navigate('/upgrade-plan');
+              } else if (errorText.includes('Student account type reached max attempt')) {
+                alert('⚠️ Student account type reached max attempt (3).');
+                navigate('/tests');
+              } else {
+                alert('⚠️ Account type reached max attempt. Please contact support.');
+                navigate('/tests');
+              }
               return;
             }
             
@@ -1338,6 +1376,10 @@ const TestTaker = () => {
         
         if (completeResponse.ok) {
           const result = await completeResponse.json();
+          
+          // Track completed attempts in localStorage
+          const currentCompletedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${testId}`) || '0');
+          localStorage.setItem(`test_completed_attempts_${testId}`, (currentCompletedAttempts + 1).toString());
           
           if (result.coinsEarned > 0) {
             // Show coins earned notification
@@ -1503,16 +1545,44 @@ const TestTaker = () => {
 
   // Error state
   if (error) {
+    const isAttemptLimitError = error.includes('reached max attempt');
+    const isFreeUser = user?.accountType === 'free';
+    
     return (
       <div className="h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
+        <div className="text-center max-w-md">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">
+            {isAttemptLimitError ? 'Attempt Limit Reached' : 'Error Loading Test'}
+          </h1>
           <p className="text-red-600 mb-4">{error}</p>
-          <button 
-            onClick={loadTestData}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
+          
+          <div className="flex flex-col gap-2">
+            {isAttemptLimitError && isFreeUser && (
+              <button 
+                onClick={() => navigate('/upgrade-plan')}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors"
+              >
+                Upgrade to Student Account
+              </button>
+            )}
+            
+            {!isAttemptLimitError && (
+              <button 
+                onClick={loadTestData}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Retry
+              </button>
+            )}
+            
+            <button 
+              onClick={() => navigate('/tests')}
+              className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
+            >
+              Back to Tests
+            </button>
+          </div>
         </div>
       </div>
     );
