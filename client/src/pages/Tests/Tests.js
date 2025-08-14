@@ -284,9 +284,9 @@ const Tests = () => {
                   
                   <Link
                     to={`/tests/${test.id}`}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-w-[120px]"
                   >
-                    <FiPlay size={14} />
+                    <FiPlay size={16} />
                     {hasProgress ? 'Continue Test' : 'Start Test'}
                   </Link>
                 </>
