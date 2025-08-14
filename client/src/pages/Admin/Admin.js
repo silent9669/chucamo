@@ -422,13 +422,15 @@ const UserManagement = () => {
                           <div className="flex items-center">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               user.status === 'locked' ? 'bg-red-100 text-red-800' :
-                              user.deviceCount >= 2 ? 'bg-red-100 text-red-800' : 
-                              user.deviceCount === 1 ? 'bg-yellow-100 text-yellow-800' : 
-                              'bg-green-100 text-green-800'
+                              user.accountType === 'student' && user.deviceCount >= 2 ? 'bg-red-100 text-red-800' : 
+                              user.accountType === 'student' && user.deviceCount === 1 ? 'bg-yellow-100 text-yellow-800' : 
+                              user.accountType === 'student' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                             }`}>
-                              {user.status === 'locked' ? 'Disabled' : `${user.deviceCount || 0} devices`}
+                              {user.status === 'locked' ? 'Disabled' : 
+                               user.accountType === 'student' ? `${user.deviceCount || 0} devices` : 'N/A'
+                              }
                             </span>
-                            {user.deviceCount >= 2 && user.status !== 'locked' && (
+                            {user.accountType === 'student' && user.deviceCount >= 2 && user.status !== 'locked' && (
                               <span className="ml-2 text-xs text-red-600 font-medium">
                                 Limit reached - Reactivate needed
                               </span>
@@ -439,14 +441,16 @@ const UserManagement = () => {
                               </span>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleViewSessions(user._id)}
-                            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
-                            title="View device sessions"
-                          >
-                            <FiEye className="w-3 h-3" />
-                            Show
-                          </button>
+                          {user.accountType === 'student' && (
+                            <button
+                              onClick={() => handleViewSessions(user._id)}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
+                              title="View device sessions"
+                            >
+                              <FiEye className="w-3 h-3" />
+                              Show
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -471,7 +475,7 @@ const UserManagement = () => {
                               Unlock
                             </button>
                           )}
-                          {user.accountType !== 'admin' && (user.status === 'locked' || user.deviceCount >= 2) && (
+                          {user.accountType === 'student' && (user.status === 'locked' || user.deviceCount >= 2) && (
                             <button
                               onClick={() => handleReactivateUser(user._id)}
                               className="text-blue-600 hover:text-blue-900 font-medium flex items-center gap-1"

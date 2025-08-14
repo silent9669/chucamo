@@ -166,14 +166,16 @@ router.post('/login', [
     
     logger.info('✅ Password verified for user:', user.username);
 
-    // Count active sessions
-    const activeSessions = await Session.find({ userId: user._id });
-    if (activeSessions.length >= 2) {
-      // Lock account
-      user.status = "locked";
-      await user.save();
-      return res.status(403).json({ message: "Account locked due to multiple devices" });
-    }
+          // Count active sessions (only for student accounts)
+      if (user.accountType === 'student') {
+        const activeSessions = await Session.find({ userId: user._id });
+        if (activeSessions.length >= 2) {
+          // Lock account
+          user.status = "locked";
+          await user.save();
+          return res.status(403).json({ message: "Account locked due to multiple devices" });
+        }
+      }
 
     // Create new session
     const sessionId = uuidv4();

@@ -149,8 +149,8 @@ router.get('/', protect, async (req, res) => {
     const usersWithStats = await Promise.all(users.map(async (user) => {
       const testCount = await Result.countDocuments({ user: user._id, status: 'completed' });
       
-      // Get device count from sessions
-      const deviceCount = await Session.countDocuments({ userId: user._id });
+      // Get device count from sessions (only for student accounts)
+      const deviceCount = user.accountType === 'student' ? await Session.countDocuments({ userId: user._id }) : 0;
       
       // Calculate activity status
       let activityStatus = 'Never logged in';
@@ -260,6 +260,10 @@ router.post('/:id/unlock', protect, authorize('admin'), async (req, res) => {
       return res.status(400).json({ message: 'Admin accounts cannot be unlocked' });
     }
 
+    if (user.accountType !== 'student') {
+      return res.status(400).json({ message: 'Only student accounts can be unlocked' });
+    }
+
     // Unlock the account
     user.status = 'active';
     await user.save();
@@ -295,6 +299,10 @@ router.post('/:id/reactivate', protect, authorize('admin'), async (req, res) => 
       return res.status(400).json({ message: 'Admin accounts cannot be reactivated' });
     }
 
+    if (user.accountType !== 'student') {
+      return res.status(400).json({ message: 'Only student accounts can be reactivated' });
+    }
+
     // Reactivate the account
     user.status = 'active';
     await user.save();
@@ -327,6 +335,10 @@ router.get('/:id/sessions', protect, authorize('admin'), async (req, res) => {
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.accountType !== 'student') {
+      return res.status(400).json({ message: 'Only student accounts have device sessions' });
     }
 
     // Get all sessions for this user
