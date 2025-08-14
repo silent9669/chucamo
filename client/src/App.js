@@ -34,7 +34,7 @@ import UpgradePlan from './pages/UpgradePlan/UpgradePlan';
 import HighlightingTest from './components/UI/HighlightingTest';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles = [] }) => {
+const ProtectedRoute = ({ children, roles = [], restrictedAccountTypes = [] }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -51,6 +51,11 @@ const ProtectedRoute = ({ children, roles = [] }) => {
 
   if (roles.length > 0 && !roles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Check if user's account type is restricted
+  if (restrictedAccountTypes.length > 0 && user.accountType && restrictedAccountTypes.includes(user.accountType)) {
+    return <Navigate to="/upgrade-plan" replace />;
   }
 
   return children;
@@ -112,7 +117,7 @@ function AppRoutes() {
       <Route
         path="/study-plan"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute restrictedAccountTypes={['free']}>
             <Layout>
               <StudyPlan />
             </Layout>

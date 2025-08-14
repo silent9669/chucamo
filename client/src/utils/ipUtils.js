@@ -48,7 +48,9 @@ export const getEnvironmentConfig = () => {
     isProd,
     copyPasteEnabled: shouldEnableCopyPaste(),
     watermarkText: "ChuCaMo©",
-    debugMode: !isProd
+    debugMode: !isProd,
+    // Force universal protection regardless of environment
+    universalProtection: true
   };
 };
 
@@ -70,4 +72,9 @@ export const hasEnvironmentRestrictions = () => {
   // No restrictions based on IP or environment
   // Copy-paste functionality works everywhere
   return false;
+};
+
+// Force universal copy-paste protection
+export const forceUniversalProtection = () => {
+  return true;
 };

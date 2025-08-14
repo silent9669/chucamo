@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { getEnvironmentConfig, logEnvironmentInfo } from "../utils/ipUtils";
+import { getEnvironmentConfig, logEnvironmentInfo, forceUniversalProtection } from "../utils/ipUtils";
 
 export default function useCopyWatermark(protectedSelectors = []) {
   useEffect(() => {
@@ -7,6 +7,9 @@ export default function useCopyWatermark(protectedSelectors = []) {
     logEnvironmentInfo();
     
     const config = getEnvironmentConfig();
+    
+    // Force universal protection
+    const isUniversalProtection = forceUniversalProtection();
     
     const handleCopy = (e) => {
       try {
@@ -38,6 +41,23 @@ export default function useCopyWatermark(protectedSelectors = []) {
         } else {
           // If no selectors specified, protect all content
           isProtectedContent = true;
+        }
+
+        // Enhanced protection: Also check if selection contains substantial text content
+        if (!isProtectedContent) {
+          const selectedText = selection.toString().trim();
+          // If selection has substantial content (more than 10 characters), protect it
+          if (selectedText.length > 10) {
+            isProtectedContent = true;
+          }
+        }
+
+        // Universal protection: If enabled, protect all substantial text selections
+        if (isUniversalProtection && !isProtectedContent) {
+          const selectedText = selection.toString().trim();
+          if (selectedText.length > 5) { // Lower threshold for universal protection
+            isProtectedContent = true;
+          }
         }
 
         // Only apply watermark to protected content
@@ -84,6 +104,28 @@ export default function useCopyWatermark(protectedSelectors = []) {
         isProtectedContent = true;
       }
 
+      // Enhanced protection: Check if right-click is on text content
+      if (!isProtectedContent) {
+        const target = e.target;
+        if (target && (target.textContent || target.innerText)) {
+          const textContent = (target.textContent || target.innerText).trim();
+          if (textContent.length > 10) {
+            isProtectedContent = true;
+          }
+        }
+      }
+
+      // Universal protection: If enabled, protect all text content
+      if (isUniversalProtection && !isProtectedContent) {
+        const target = e.target;
+        if (target && (target.textContent || target.innerText)) {
+          const textContent = (target.textContent || target.innerText).trim();
+          if (textContent.length > 5) { // Lower threshold for universal protection
+            isProtectedContent = true;
+          }
+        }
+      }
+
       if (isProtectedContent) {
         // Show custom context menu or prevent default
         e.preventDefault();
@@ -115,6 +157,22 @@ export default function useCopyWatermark(protectedSelectors = []) {
             });
           } else {
             isProtectedContent = true;
+          }
+
+          // Enhanced protection: Check if selection has substantial content
+          if (!isProtectedContent) {
+            const selectedText = selection.toString().trim();
+            if (selectedText.length > 10) {
+              isProtectedContent = true;
+            }
+          }
+
+          // Universal protection: If enabled, protect all substantial text selections
+          if (isUniversalProtection && !isProtectedContent) {
+            const selectedText = selection.toString().trim();
+            if (selectedText.length > 5) { // Lower threshold for universal protection
+              isProtectedContent = true;
+            }
           }
 
           if (isProtectedContent) {
@@ -155,6 +213,22 @@ export default function useCopyWatermark(protectedSelectors = []) {
           });
         } else {
           isProtectedContent = true;
+        }
+
+        // Enhanced protection: Check if selection has substantial content
+        if (!isProtectedContent) {
+          const selectedText = selection.toString().trim();
+          if (selectedText.length > 10) {
+            isProtectedContent = true;
+          }
+        }
+
+        // Universal protection: If enabled, protect all substantial text selections
+        if (isUniversalProtection && !isProtectedContent) {
+          const selectedText = selection.toString().trim();
+          if (selectedText.length > 5) { // Lower threshold for universal protection
+            isProtectedContent = true;
+          }
         }
 
         if (isProtectedContent && navigator.clipboard && navigator.clipboard.writeText) {
@@ -275,6 +349,7 @@ export default function useCopyWatermark(protectedSelectors = []) {
       console.log('Copy watermark hook initialized with:', {
         protectedSelectors,
         config,
+        isUniversalProtection,
         timestamp: new Date().toISOString()
       });
     }
