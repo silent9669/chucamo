@@ -25,7 +25,8 @@ const VocabQuizTaker = () => {
   useCopyWatermark([
     '.reading-passage-container',
     '.question-content',
-    '.answer-options'
+    '.answer-options',
+    '.quiz-summary'
   ]);
   
   // Quiz data state
@@ -439,7 +440,7 @@ const VocabQuizTaker = () => {
           </div>
         </div>
         
-        <div className="max-w-6xl mx-auto relative z-10">
+        <div className="max-w-6xl mx-auto relative z-10 quiz-summary">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">Quiz Summary Report</h1>
@@ -448,7 +449,7 @@ const VocabQuizTaker = () => {
 
           {/* Score Overview */}
           <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
               <div>
                 <div className="text-3xl font-bold text-blue-600">{score}%</div>
                 <div className="text-gray-600">Score</div>
@@ -460,10 +461,6 @@ const VocabQuizTaker = () => {
               <div>
                 <div className="text-3xl font-bold text-red-600">{totalQuestions - correctCount}</div>
                 <div className="text-gray-600">Incorrect</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-purple-600">{formatTime(timeSpent)}</div>
-                <div className="text-gray-600">Time Used</div>
               </div>
             </div>
           </div>
@@ -853,6 +850,8 @@ const VocabQuizTaker = () => {
                     fontFamily="serif"
                     fontSize={fontSize}
                     className="rich-text-content"
+                    placeholder="Reading passage content will appear here..."
+                    autoScale={true}
                   />
                 </div>
               </div>
@@ -867,6 +866,8 @@ const VocabQuizTaker = () => {
                   fontFamily="serif"
                   fontSize={fontSize}
                   className="rich-text-content"
+                  placeholder="Question text will appear here..."
+                  autoScale={true}
                 />
               </div>
             </div>
@@ -903,7 +904,7 @@ const VocabQuizTaker = () => {
                       <span className={`text-gray-900 text-base ${
                         eliminatedAnswers.includes(option.content || '') ? 'line-through' : ''
                       }`} style={{ fontFamily: 'serif', fontSize: `${fontSize}px` }}>
-                        {option.content || ''}
+                        {option.content || <span className="text-gray-400 italic">Option {index + 1} will appear here...</span>}
                       </span>
                     </div>
                   </button>
