@@ -156,6 +156,9 @@ export const usersAPI = {
   getProfile: () => api.get('/users/profile'),
   updateUser: (id, userData) => api.put(`/users/${id}`, userData),
   deleteUser: (id) => api.delete(`/users/${id}`),
+  unlockUser: (id) => api.post(`/users/${id}/unlock`),
+  reactivateUser: (id) => api.post(`/users/${id}/reactivate`),
+  getUserSessions: (id) => api.get(`/users/${id}/sessions`),
 };
 
 // Upload API

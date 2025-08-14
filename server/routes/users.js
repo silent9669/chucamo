@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const Session = require('../models/Session');
 const Result = require('../models/Result');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -144,9 +145,12 @@ router.get('/', protect, async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    // Add test statistics and activity status for each user
+    // Add test statistics, activity status, and device count for each user
     const usersWithStats = await Promise.all(users.map(async (user) => {
       const testCount = await Result.countDocuments({ user: user._id, status: 'completed' });
+      
+      // Get device count from sessions
+      const deviceCount = await Session.countDocuments({ userId: user._id });
       
       // Calculate activity status
       let activityStatus = 'Never logged in';
@@ -180,6 +184,7 @@ router.get('/', protect, async (req, res) => {
       return {
         ...user,
         testCount,
+        deviceCount,
         activityStatus,
         lastActiveHours,
         isActive
@@ -236,6 +241,119 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
     });
   } catch (error) {
     console.error('Update user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/users/:id/unlock
+// @desc    Unlock user account (admin only)
+// @access  Private
+router.post('/:id/unlock', protect, authorize('admin'), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.accountType === 'admin') {
+      return res.status(400).json({ message: 'Admin accounts cannot be unlocked' });
+    }
+
+    // Unlock the account
+    user.status = 'active';
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'User account unlocked successfully',
+      user: {
+        _id: user._id,
+        status: user.status,
+        email: user.email,
+        username: user.username
+      }
+    });
+  } catch (error) {
+    console.error('Unlock user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/users/:id/reactivate
+// @desc    Reactivate user account and reset sessions (admin only)
+// @access  Private
+router.post('/:id/reactivate', protect, authorize('admin'), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.accountType === 'admin') {
+      return res.status(400).json({ message: 'Admin accounts cannot be reactivated' });
+    }
+
+    // Reactivate the account
+    user.status = 'active';
+    await user.save();
+
+    // Reset all sessions for this user
+    await Session.deleteMany({ userId: user._id });
+
+    res.json({
+      success: true,
+      message: 'User account reactivated and sessions reset successfully',
+      user: {
+        _id: user._id,
+        status: user.status,
+        email: user.email,
+        username: user.username
+      }
+    });
+  } catch (error) {
+    console.error('Reactivate user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/sessions
+// @desc    Get user sessions with device info (admin only)
+// @access  Private
+router.get('/:id/sessions', protect, authorize('admin'), async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get all sessions for this user
+    const sessions = await Session.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      user: {
+        _id: user._id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        status: user.status
+      },
+      sessions: sessions.map(session => ({
+        sessionId: session.sessionId,
+        deviceInfo: session.deviceInfo,
+        ip: session.ip,
+        createdAt: session.createdAt,
+        lastActivity: session.lastActivity || session.createdAt
+      }))
+    });
+  } catch (error) {
+    console.error('Get user sessions error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

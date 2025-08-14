@@ -2,9 +2,12 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const Session = require('../models/Session');
 const { protect } = require('../middleware/auth');
+const checkSession = require('../middleware/checkSession');
 const mongoose = require('mongoose'); // Added for database connection status
 const logger = require('../utils/logger');
+const { v4: uuidv4 } = require('uuid');
 // Removed updateLoginStreak and checkAndResetStreakIfNoCoins since streak is now only updated on test completion
 
 const router = express.Router();
@@ -149,6 +152,11 @@ router.post('/login', [
       return res.status(401).json({ message: 'Account is deactivated' });
     }
 
+    // Check if account is locked
+    if (user.status === "locked") {
+      return res.status(403).json({ message: "Account locked. Contact admin." });
+    }
+
     // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
@@ -158,12 +166,37 @@ router.post('/login', [
     
     logger.info('✅ Password verified for user:', user.username);
 
+    // Count active sessions
+    const activeSessions = await Session.find({ userId: user._id });
+    if (activeSessions.length >= 2) {
+      // Lock account
+      user.status = "locked";
+      await user.save();
+      return res.status(403).json({ message: "Account locked due to multiple devices" });
+    }
+
+    // Create new session
+    const sessionId = uuidv4();
+    const deviceInfo = req.headers["user-agent"] || "Unknown";
+    const ip = req.ip || req.connection.remoteAddress;
+
+    await Session.create({
+      userId: user._id,
+      sessionId,
+      deviceInfo,
+      ip
+    });
+
     // Update last login (streak is now only updated on test completion)
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate token
-    const token = generateToken(user._id);
+    // Generate token with session ID
+    const token = jwt.sign(
+      { id: user._id, sessionId },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    );
 
     res.json({
       success: true,
@@ -336,6 +369,24 @@ router.post('/change-password', protect, [
   } catch (error) {
     console.error('Password change error:', error);
     res.status(500).json({ message: 'Server error during password change' });
+  }
+});
+
+// @route   POST /api/auth/logout
+// @desc    Logout user and remove session
+// @access  Private
+router.post('/logout', checkSession, async (req, res) => {
+  try {
+    if (req.session && req.session.sessionId) {
+      await Session.deleteOne({ sessionId: req.session.sessionId });
+    }
+    res.json({ 
+      success: true,
+      message: 'Logged out successfully' 
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Server error during logout' });
   }
 });
 

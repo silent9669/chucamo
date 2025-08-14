@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo, FiEyeOff, FiImage, FiBookmark } from 'react-icons/fi';
+import { FiSettings, FiUsers, FiBarChart2, FiBookOpen, FiPlus, FiSave, FiEye, FiClock, FiUpload, FiX, FiEdit, FiTrash2, FiTarget, FiSearch, FiInfo, FiEyeOff, FiImage, FiBookmark, FiSmartphone, FiRefreshCw } from 'react-icons/fi';
 import { testsAPI, usersAPI } from '../../services/api';
 import KaTeXEditor from '../../components/UI/KaTeXEditor';
 import MultipleAnswersEditor from '../../components/UI/MultipleAnswersEditor';
@@ -111,6 +111,8 @@ const UserManagement = () => {
   });
   const [editingUser, setEditingUser] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [sessionDetails, setSessionDetails] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -175,6 +177,49 @@ const UserManagement = () => {
     } catch (error) {
       logger.error('Error deleting user:', error);
       toast.error('Failed to delete user');
+    }
+  };
+
+  const handleUnlockUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to unlock this user account?')) {
+      return;
+    }
+
+    try {
+      await usersAPI.unlockUser(userId);
+      toast.success('User account unlocked successfully');
+      fetchUsers();
+    } catch (error) {
+      logger.error('Error unlocking user:', error);
+      toast.error('Failed to unlock user account');
+    }
+  };
+
+  const handleReactivateUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to reactivate this user account? This will reset all their login sessions to zero.')) {
+      return;
+    }
+
+    try {
+      await usersAPI.reactivateUser(userId);
+      toast.success('User account reactivated and sessions reset successfully');
+      fetchUsers();
+    } catch (error) {
+      logger.error('Error reactivating user:', error);
+      toast.error('Failed to reactivate user account');
+    }
+  };
+
+  const handleViewSessions = async (userId) => {
+    try {
+      setSessionLoading(true);
+      const response = await usersAPI.getUserSessions(userId);
+      setSessionDetails(response.data);
+    } catch (error) {
+      logger.error('Error fetching user sessions:', error);
+      toast.error('Failed to fetch user sessions');
+    } finally {
+      setSessionLoading(false);
     }
   };
 
@@ -300,6 +345,9 @@ const UserManagement = () => {
                       Tests Taken
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Devices
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -348,19 +396,58 @@ const UserManagement = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
                           <div className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${
-                            user.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
+                            user.status === 'locked' 
+                              ? 'bg-red-100 text-red-800' 
+                              : user.isActive 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {user.isActive ? 'Active' : 'Inactive'}
+                            {user.status === 'locked' ? 'Locked' : user.isActive ? 'Active' : 'Inactive'}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
                             {user.activityStatus}
                           </div>
+                          {user.status === 'locked' && (
+                            <div className="text-xs text-red-600 font-medium mt-1">
+                              Device limit exceeded
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {user.testCount || 0} tests
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              user.status === 'locked' ? 'bg-red-100 text-red-800' :
+                              user.deviceCount >= 2 ? 'bg-red-100 text-red-800' : 
+                              user.deviceCount === 1 ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {user.status === 'locked' ? 'Disabled' : `${user.deviceCount || 0} devices`}
+                            </span>
+                            {user.deviceCount >= 2 && user.status !== 'locked' && (
+                              <span className="ml-2 text-xs text-red-600 font-medium">
+                                Limit reached - Reactivate needed
+                              </span>
+                            )}
+                            {user.status === 'locked' && (
+                              <span className="ml-2 text-xs text-red-600 font-medium">
+                                Account disabled - Reactivate needed
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleViewSessions(user._id)}
+                            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
+                            title="View device sessions"
+                          >
+                            <FiEye className="w-3 h-3" />
+                            Show
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -375,6 +462,25 @@ const UserManagement = () => {
                           >
                             Edit
                           </button>
+                          {user.accountType !== 'admin' && user.status === 'locked' && (
+                            <button
+                              onClick={() => handleUnlockUser(user._id)}
+                              className="text-green-600 hover:text-green-900 font-medium"
+                              title="Unlock user account"
+                            >
+                              Unlock
+                            </button>
+                          )}
+                          {user.accountType !== 'admin' && (user.status === 'locked' || user.deviceCount >= 2) && (
+                            <button
+                              onClick={() => handleReactivateUser(user._id)}
+                              className="text-blue-600 hover:text-blue-900 font-medium flex items-center gap-1"
+                              title="Reactivate user account and reset sessions"
+                            >
+                              <FiRefreshCw className="w-3 h-3" />
+                              Reactivate
+                            </button>
+                          )}
                           {user.accountType !== 'admin' && (
                             <button
                               onClick={() => handleDeleteUser(user._id)}
@@ -470,6 +576,115 @@ const UserManagement = () => {
                   }`}
                 >
                   Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Details Modal */}
+      {sessionDetails && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Device Sessions - {sessionDetails.user.firstName} {sessionDetails.user.lastName}
+                </h3>
+                <button
+                  onClick={() => setSessionDetails(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Email:</span>
+                    <p className="text-gray-900">{sessionDetails.user.email}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Username:</span>
+                    <p className="text-gray-900">@{sessionDetails.user.username}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Status:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      sessionDetails.user.status === 'locked' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {sessionDetails.user.status === 'locked' ? 'Disabled' : 'Active'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Total Sessions:</span>
+                    <p className="text-gray-900">{sessionDetails.sessions.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {sessionLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                </div>
+              ) : sessionDetails.sessions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FiSmartphone className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>No active sessions found</p>
+                  <p className="text-sm">This user has no devices currently logged in</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Device Info
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          IP Address
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Login Time
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Session ID
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {sessionDetails.sessions.map((session, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div className="flex items-center">
+                              <FiSmartphone className="w-4 h-4 text-gray-400 mr-2" />
+                              {session.deviceInfo || 'Unknown Device'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {session.ip || 'Unknown IP'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(session.createdAt).toLocaleString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 font-mono">
+                            {session.sessionId.substring(0, 8)}...
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setSessionDetails(null)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                >
+                  Close
                 </button>
               </div>
             </div>
