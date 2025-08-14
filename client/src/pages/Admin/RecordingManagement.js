@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Filter, Clock, BookOpen, Edit, Trash2, Eye, Play, Youtube, FileText } from 'lucide-react';
+import { Plus, Search, Filter, BookOpen, Edit, Trash2, Youtube, FileText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import lessonAPI from '../../services/lessonAPI';
@@ -9,7 +9,6 @@ import LessonCreator from '../../components/UI/LessonCreator';
 
 const RecordingManagement = () => {
   const [lessons, setLessons] = useState([]);
-  const [filteredLessons, setFilteredLessons] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
