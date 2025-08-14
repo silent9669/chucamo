@@ -117,19 +117,12 @@ const RichTextDocument = ({
         }
       }
       
-      return segments;
+      return segments.length > 0 ? segments : [{ type: 'text', text: text.trim(), marks: [] }];
     };
 
     // Split content into paragraphs and process each
-    const paragraphs = content.split('\n\n');
+    const paragraphs = content.split('\n').filter(p => p.trim() || p.includes('\n'));
     const processedParagraphs = paragraphs.map(paragraph => {
-      if (!paragraph.trim()) {
-        return {
-          type: 'paragraph',
-          content: [{ type: 'text', text: '\n', marks: [] }]
-        };
-      }
-      
       const segments = parseMarkdown(paragraph.trim());
       return {
         type: 'paragraph',
@@ -143,24 +136,125 @@ const RichTextDocument = ({
     };
   }, [content]);
 
-  // Render text segment with formatting
-  const renderTextSegment = (segment, key) => {
+  // Function to check if text should be highlighted
+  const shouldHighlightText = (text, startIndex) => {
+    if (!highlights || highlights.length === 0) return null;
+    
+    // Find a highlight that exactly matches this text segment
+    const highlight = highlights.find(h => {
+      // Only highlight if the text exactly matches the highlight text
+      return text === h.text;
+    });
+    
+    return highlight;
+  };
+
+  // Function to split text into highlightable segments
+  const splitTextForHighlights = (text) => {
+    if (!highlights || highlights.length === 0) {
+      return [{ text, isHighlighted: false }];
+    }
+    
+    const segments = [];
+    let currentIndex = 0;
+    
+    // Sort highlights by start position in the text
+    const sortedHighlights = highlights
+      .filter(h => text.includes(h.text))
+      .sort((a, b) => text.indexOf(a.text) - text.indexOf(b.text));
+    
+    sortedHighlights.forEach(highlight => {
+      const highlightStart = text.indexOf(highlight.text, currentIndex);
+      
+      // Add text before highlight
+      if (highlightStart > currentIndex) {
+        segments.push({
+          text: text.slice(currentIndex, highlightStart),
+          isHighlighted: false
+        });
+      }
+      
+      // Add highlighted text
+      segments.push({
+        text: highlight.text,
+        isHighlighted: true,
+        highlight: highlight
+      });
+      
+      currentIndex = highlightStart + highlight.text.length;
+    });
+    
+    // Add remaining text after last highlight
+    if (currentIndex < text.length) {
+      segments.push({
+        text: text.slice(currentIndex),
+        isHighlighted: false
+      });
+    }
+    
+    return segments.length > 0 ? segments : [{ text, isHighlighted: false }];
+  };
+
+  // Render text segment with formatting and highlights
+  const renderTextSegment = (segment, key, paragraphIndex, segmentIndex) => {
     const { text, marks = [] } = segment;
     
-    let element = text;
+    // Split text into highlightable segments
+    const highlightSegments = splitTextForHighlights(text);
     
-    // Apply formatting based on marks
-    if (marks.includes('bold')) {
-      element = <strong key={key}>{element}</strong>;
+    if (highlightSegments.length === 1 && !highlightSegments[0].isHighlighted) {
+      // No highlights, render normally
+      let element = text;
+      
+      // Apply formatting based on marks
+      if (marks.includes('bold')) {
+        element = <strong key={key}>{element}</strong>;
+      }
+      if (marks.includes('italic')) {
+        element = <em key={key}>{element}</em>;
+      }
+      if (marks.includes('underline')) {
+        element = <u key={key}>{element}</u>;
+      }
+      
+      return element;
+    } else {
+      // Has highlights, render each segment
+      return highlightSegments.map((seg, segIndex) => {
+        let element = seg.text;
+        
+        // Apply formatting based on marks
+        if (marks.includes('bold')) {
+          element = <strong key={`${key}-seg-${segIndex}`}>{element}</strong>;
+        }
+        if (marks.includes('italic')) {
+          element = <em key={`${key}-seg-${segIndex}`}>{element}</em>;
+        }
+        if (marks.includes('underline')) {
+          element = <u key={`${key}-seg-${segIndex}`}>{element}</u>;
+        }
+        
+        // Apply highlight if needed
+        if (seg.isHighlighted) {
+          element = (
+            <span
+              key={`${key}-seg-${segIndex}`}
+              className="highlighted-text"
+              style={{
+                backgroundColor: seg.highlight.colorValue || '#ffeb3b',
+                cursor: onHighlightClick ? 'pointer' : 'default'
+              }}
+              onClick={() => onHighlightClick && onHighlightClick(seg.highlight.id)}
+              title={`Highlighted with ${seg.highlight.color}`}
+            >
+              {element}
+            </span>
+          );
+        }
+        
+        return element;
+      });
     }
-    if (marks.includes('italic')) {
-      element = <em key={key}>{element}</em>;
-    }
-    if (marks.includes('underline')) {
-      element = <u key={key}>{element}</u>;
-    }
-    
-    return element;
   };
 
   // Render paragraph
@@ -172,7 +266,7 @@ const RichTextDocument = ({
     return (
       <p key={pIndex} className="mb-2">
         {paragraph.content.map((segment, sIndex) => 
-          renderTextSegment(segment, `${pIndex}-${sIndex}`)
+          renderTextSegment(segment, `${pIndex}-${sIndex}`, pIndex, sIndex)
         )}
       </p>
     );

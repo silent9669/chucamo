@@ -902,7 +902,7 @@ const TestTaker = () => {
       if (!selectedText) return;
       
       // Check if selection is within our rich text content area
-      const richTextElements = document.querySelectorAll('.rich-text-document');
+      const richTextElements = document.querySelectorAll('.rich-text-content');
       let isWithinReadingPassage = false;
       
       const range = selection.getRangeAt(0);
@@ -2279,23 +2279,23 @@ const TestTaker = () => {
               {/* Color Picker */}
               {showColorPicker && pickerPosition && (
                 <div 
-                  className="fixed z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-2"
+                  className="fixed z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-1"
                   style={{
-                    left: pickerPosition.x - 100, // Center the smaller picker
+                    left: pickerPosition.x - 60, // Center the smaller picker
                     top: pickerPosition.y,
-                    minWidth: '160px', // Smaller width
-                    maxWidth: '160px'
+                    minWidth: '120px', // Smaller width
+                    maxWidth: '120px'
                   }}
                 >
-                  <div className="text-xs text-gray-600 mb-2 text-center font-medium">
-                    {selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}
+                  <div className="text-xs text-gray-600 mb-1 text-center font-medium truncate px-1">
+                    {selectedText.length > 15 ? selectedText.substring(0, 15) + '...' : selectedText}
                   </div>
                   <div className="grid grid-cols-4 gap-1">
                     {highlightColors.map((color) => (
                       <button
                         key={color.name}
                         onClick={() => applyHighlight(color)}
-                        className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-6 h-6 rounded-full border-2 border-gray-300 hover:border-gray-400 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500"
                         style={{ backgroundColor: color.value }}
                         title={color.name}
                       />
@@ -2664,14 +2664,14 @@ const TestTaker = () => {
         }
         
         /* Normal text selection behavior in highlight mode */
-        .highlighter-cursor .rich-text-document {
+        .highlighter-cursor .rich-text-content {
           user-select: text !important;
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
           -ms-user-select: text !important;
         }
         
-        .highlighter-cursor .rich-text-document * {
+        .highlighter-cursor .rich-text-content * {
           user-select: text !important;
           -webkit-user-select: text !important;
           -moz-user-select: text !important;
