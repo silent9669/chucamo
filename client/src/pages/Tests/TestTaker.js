@@ -2778,21 +2778,21 @@ const TestTaker = () => {
         }
         
         /* Ensure left pane maintains proper height */
-        .w-1\/2.flex.flex-col {
+        .w-1/2.flex.flex-col {
           height: 100%;
           overflow: hidden;
         }
         
         /* English section watermark layering */
-        .w-1\/2.flex.flex-col .watermark-container {
+        .w-1/2.flex.flex-col .watermark-container {
           z-index: 3;
         }
         
-        .w-1\/2.flex.flex-col .z-5 {
+        .w-1/2.flex.flex-col .z-5 {
           z-index: 5;
         }
         
-        .w-1\/2.flex.flex-col .z-20 {
+        .w-1/2.flex.flex-col .z-20 {
           z-index: 20;
         }
       `}</style>
