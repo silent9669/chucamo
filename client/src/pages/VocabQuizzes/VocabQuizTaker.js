@@ -144,7 +144,6 @@ const VocabQuizTaker = () => {
   }, [quiz, questions, loadSavedProgress]);
 
   // Auto-save progress every 30 seconds
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!quiz || questions.length === 0) return;
     
@@ -153,10 +152,9 @@ const VocabQuizTaker = () => {
     }, 30000);
 
     return () => clearInterval(autoSaveInterval);
-  }, [quiz, questions, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions]);
+  }, [quiz, questions, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, saveProgress]);
 
   // Save progress on page unload
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (quiz && questions.length > 0) {
@@ -166,7 +164,7 @@ const VocabQuizTaker = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [quiz, questions, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions]);
+  }, [quiz, questions, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, saveProgress]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -360,7 +358,6 @@ const VocabQuizTaker = () => {
   // Get question status
   const getQuestionStatus = (questionNum) => {
     const isAnswered = answeredQuestions.has(questionNum);
-    const isMarked = markedForReviewQuestions.has(questionNum);
     const answer = answeredQuestions.get(questionNum);
     
     if (!isAnswered) return { status: 'unanswered', color: 'gray' };
