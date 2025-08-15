@@ -31,11 +31,11 @@ const DeepSeaSATUpgrade = () => {
       id: `welcome-${i}`,
       x: Math.random() * 100,
       y: 110,
-      size: Math.random() * 50 + 20,
       speed: Math.random() * 5 + 6,
       opacity: Math.random() * 0.8 + 0.4,
       delay: Math.random() * 2
     }));
+    let observedContentRef = contentRef.current; // Store contentRef.current in a variable for cleanup
     setInitialBubbles(welcomeBubbles);
     
     // Animate elements in sequence
@@ -159,7 +159,7 @@ const DeepSeaSATUpgrade = () => {
     const [hasAnimated, setHasAnimated] = useState(false);
 
     useEffect(() => {
-      if (animatedElements.statistics && !hasAnimated) {
+      if (!hasAnimated) {
         setHasAnimated(true);
         let startTime = null;
         
@@ -180,7 +180,7 @@ const DeepSeaSATUpgrade = () => {
         
         requestAnimationFrame(animate);
       }
-    }, [animatedElements.statistics, target, duration, hasAnimated]);
+    }, [target, duration, hasAnimated]); // Removed animatedElements.statistics from dependencies
 
     return <span>{count}{suffix}</span>;
   };
@@ -246,6 +246,7 @@ const DeepSeaSATUpgrade = () => {
         }
 
         /* Smoother content appear */
+        let observedContentRef = contentRef.current; // Store contentRef.current in a variable for cleanup
         .content {
           transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms ease;
           opacity: ${showIntro ? 0 : 1};
