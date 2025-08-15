@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Youtube, FileText, Play, Download } from 'lucide-react';
+import { X, Youtube, FileText, Download } from 'lucide-react';
 
 const LessonViewer = ({ isOpen, onClose, lesson }) => {
   if (!isOpen || !lesson) return null;
