@@ -158,115 +158,123 @@ const RichTextDocument = ({
       }))
     });
     
+    // Create a map of all highlight positions in the text
+    const highlightPositions = [];
+    
+    // Find all valid highlights for this text block
+    const validHighlights = highlights.filter(h => {
+      // Check if this highlight should apply to this text block
+      if (h.selectionContext && h.domPath) {
+        // Use selection context to find the exact match
+        // This prevents highlighting all instances of the same word
+        const hasText = text.includes(h.text);
+        
+        // More flexible context matching - check if the text appears in the context
+        // but don't require exact context match to prevent losing highlights
+        const hasContext = h.selectionContext && h.selectionContext.includes(h.text);
+        
+        console.log('Filtering highlight:', {
+          highlightId: h.id,
+          highlightText: h.text,
+          hasText,
+          hasContext,
+          textInContext: h.selectionContext.includes(h.text)
+        });
+        
+        // Apply highlight if text is found and we have context info
+        // This prevents highlighting all instances while being more flexible
+        return hasText && hasContext;
+      }
+      // Fallback for old highlights without context
+      const hasText = text.includes(h.text);
+      console.log('Fallback highlight filtering:', {
+        highlightId: h.id,
+        highlightText: h.text,
+        hasText
+      });
+      return hasText;
+    });
+    
+    console.log('Valid highlights found:', validHighlights.length);
+    
+    // Find all positions where highlights should be applied
+    validHighlights.forEach(highlight => {
+      let searchIndex = 0;
+      while (true) {
+        const highlightStart = text.indexOf(highlight.text, searchIndex);
+        if (highlightStart === -1) break;
+        
+        // Additional context validation for this specific position
+        if (highlight.selectionContext) {
+          const contextStart = Math.max(0, highlightStart - 50);
+          const contextEnd = Math.min(text.length, highlightStart + highlight.text.length + 50);
+          const localContext = text.slice(contextStart, contextEnd);
+          
+          // More flexible context matching - check if the highlight text appears in both contexts
+          const contextMatches = localContext.includes(highlight.text) && 
+                                highlight.selectionContext.includes(highlight.text);
+          
+          console.log('Context validation for position:', {
+            highlightId: highlight.id,
+            position: highlightStart,
+            localContext: localContext.substring(0, 50) + '...',
+            selectionContext: highlight.selectionContext.substring(0, 50) + '...',
+            contextMatches
+          });
+          
+          if (contextMatches) {
+            highlightPositions.push({
+              start: highlightStart,
+              end: highlightStart + highlight.text.length,
+              highlight: highlight
+            });
+          }
+        } else {
+          // For highlights without context, add them directly
+          highlightPositions.push({
+            start: highlightStart,
+            end: highlightStart + highlight.text.length,
+            highlight: highlight
+          });
+        }
+        
+        searchIndex = highlightStart + 1; // Move to next possible position
+      }
+    });
+    
+    // Sort positions by start index to process them in order
+    highlightPositions.sort((a, b) => a.start - b.start);
+    
+    console.log('Highlight positions found:', highlightPositions.length);
+    
+    // Create segments based on highlight positions
     const segments = [];
     let currentIndex = 0;
     
-    // Sort highlights by creation time (newest first) to handle overlapping selections
-    const sortedHighlights = highlights
-      .filter(h => {
-        // Check if this highlight should apply to this text block
-        if (h.selectionContext && h.domPath) {
-          // Use selection context to find the exact match
-          // This prevents highlighting all instances of the same word
-          const hasText = text.includes(h.text);
-          
-          // More flexible context matching - check if the text appears in the context
-          // but don't require exact context match to prevent losing highlights
-          const hasContext = h.selectionContext && h.selectionContext.includes(h.text);
-          
-          console.log('Filtering highlight:', {
-            highlightId: h.id,
-            highlightText: h.text,
-            hasText,
-            hasContext,
-            textInContext: h.selectionContext.includes(h.text)
-          });
-          
-          // Apply highlight if text is found and we have context info
-          // This prevents highlighting all instances while being more flexible
-          return hasText && hasContext;
-        }
-        // Fallback for old highlights without context
-        const hasText = text.includes(h.text);
-        console.log('Fallback highlight filtering:', {
-          highlightId: h.id,
-          highlightText: h.text,
-          hasText
-        });
-        return hasText;
-      })
-      .sort((a, b) => {
-        // Sort by creation time (newer highlights first)
-        const timeA = a.timestamp || parseInt(a.id.split('-')[1]) || 0;
-        const timeB = b.timestamp || parseInt(b.id.split('-')[1]) || 0;
-        return timeB - timeA;
-      });
-    
-    console.log('Filtered highlights:', sortedHighlights.length);
-    
-    sortedHighlights.forEach(highlight => {
-      // Find the text within the remaining content
-      const highlightStart = text.indexOf(highlight.text, currentIndex);
-      
-      // Skip if this highlight doesn't appear in the remaining text
-      if (highlightStart === -1) {
-        console.log('Highlight not found in remaining text:', {
-          highlightId: highlight.id,
-          highlightText: highlight.text,
-          currentIndex,
-          remainingText: text.substring(currentIndex, currentIndex + 100)
-        });
-        return;
-      }
-      
-      // Simplified context validation - be more permissive to prevent losing highlights
-      if (highlight.selectionContext) {
-        // Get the context around this potential match
-        const contextStart = Math.max(0, highlightStart - 50);
-        const contextEnd = Math.min(text.length, highlightStart + highlight.text.length + 50);
-        const localContext = text.slice(contextStart, contextEnd);
-        
-        // More flexible context matching - check if the highlight text appears in both contexts
-        // This prevents highlighting all instances while being more forgiving
-        const contextMatches = localContext.includes(highlight.text) && 
-                              highlight.selectionContext.includes(highlight.text);
-        
-        console.log('Context validation:', {
-          highlightId: highlight.id,
-          localContext: localContext.substring(0, 50) + '...',
-          selectionContext: highlight.selectionContext.substring(0, 50) + '...',
-          contextMatches
-        });
-        
-        if (!contextMatches) {
-          // This is not the right instance, skip it
-          console.log('Context mismatch, skipping highlight:', highlight.id);
-          return;
-        }
-      }
-      
-      // Add text before highlight
-      if (highlightStart > currentIndex) {
+    highlightPositions.forEach((position, index) => {
+      // Add text before this highlight
+      if (position.start > currentIndex) {
         segments.push({
-          text: text.slice(currentIndex, highlightStart),
+          text: text.slice(currentIndex, position.start),
           isHighlighted: false
         });
       }
       
-      // Add highlighted text
+      // Add the highlighted text
       segments.push({
-        text: highlight.text,
+        text: text.slice(position.start, position.end),
         isHighlighted: true,
-        highlight: highlight
+        highlight: position.highlight
       });
       
-      currentIndex = highlightStart + highlight.text.length;
+      currentIndex = position.end;
       
       console.log('Added highlight segment:', {
-        highlightId: highlight.id,
-        text: highlight.text,
-        start: highlightStart,
-        end: currentIndex
+        highlightId: position.highlight.id,
+        text: position.highlight.text,
+        start: position.start,
+        end: position.end,
+        segmentIndex: index
       });
     });
     

@@ -34,9 +34,12 @@ const safeStringify = (obj) => {
       }
       seen.add(value);
     }
-    // Filter out DOM elements and functions
-    if (value instanceof Element || value instanceof Node || typeof value === 'function') {
-      return '[DOM Element or Function]';
+    // Filter out DOM elements and functions, but preserve highlight data
+    if (value instanceof Element || value instanceof Node) {
+      return '[DOM Element]';
+    }
+    if (typeof value === 'function') {
+      return '[Function]';
     }
     return value;
   });
@@ -88,6 +91,28 @@ const TestTaker = () => {
   const [pickerPosition, setPickerPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
   const contentRef = useRef(null);
+  
+  // Debug highlighting state changes
+  useEffect(() => {
+    console.log('Highlights state changed:', {
+      count: highlights.length,
+      highlights: highlights.map(h => ({
+        id: h.id,
+        text: h.text.substring(0, 30) + '...',
+        color: h.color,
+        timestamp: h.timestamp
+      }))
+    });
+  }, [highlights]);
+  
+  // Debug question highlights changes
+  useEffect(() => {
+    console.log('Question highlights changed:', {
+      currentQuestion: `${currentSection}-${currentQuestion}`,
+      totalQuestions: questionHighlights.size,
+      currentQuestionHighlights: questionHighlights.get(`${currentSection}-${currentQuestion}`)?.length || 0
+    });
+  }, [questionHighlights, currentSection, currentQuestion]);
   
   // Calculator state
   const [showCalculator, setShowCalculator] = useState(false);
@@ -245,7 +270,16 @@ const TestTaker = () => {
   const saveProgress = () => {
     if (!test) return;
     
-
+    console.log('Saving progress with highlights:', {
+      highlightsCount: highlights.length,
+      highlights: highlights.map(h => ({
+        id: h.id,
+        text: h.text.substring(0, 30) + '...',
+        color: h.color,
+        timestamp: h.timestamp
+      })),
+      questionHighlightsCount: questionHighlights.size
+    });
     
     const progress = {
       currentSection,
@@ -262,6 +296,11 @@ const TestTaker = () => {
       // Use safe serialization to prevent circular references
       const testString = safeStringify(progress);
       localStorage.setItem(`test_progress_${testId}`, testString);
+      
+      console.log('Progress saved successfully, highlights preserved:', {
+        savedHighlightsCount: highlights.length,
+        serializedLength: testString.length
+      });
     } catch (error) {
       logger.error('Error saving progress:', error);
       // Fallback: save only essential data without any potential circular references
@@ -275,6 +314,7 @@ const TestTaker = () => {
       };
       try {
         localStorage.setItem(`test_progress_${testId}`, JSON.stringify(fallbackProgress));
+        console.log('Fallback progress saved (without highlights)');
       } catch (fallbackError) {
         logger.error('Error saving fallback progress:', fallbackError);
         // Last resort: save only the most essential data
@@ -285,6 +325,7 @@ const TestTaker = () => {
           lastSaved: new Date().toISOString()
         };
         localStorage.setItem(`test_progress_${testId}`, JSON.stringify(minimalProgress));
+        console.log('Minimal progress saved (without highlights)');
       }
     }
   };
@@ -730,13 +771,38 @@ const TestTaker = () => {
       });
       
       // Add to highlights state - preserve existing highlights
-      setHighlights(prev => [...prev, newHighlight]);
+      setHighlights(prev => {
+        console.log('Adding new highlight to existing highlights:', {
+          previousCount: prev.length,
+          previousHighlights: prev.map(h => ({
+            id: h.id,
+            text: h.text.substring(0, 30) + '...',
+            color: h.color
+          })),
+          newHighlight: {
+            id: newHighlight.id,
+            text: newHighlight.text.substring(0, 30) + '...',
+            color: newHighlight.color
+          }
+        });
+        
+        const updatedHighlights = [...prev, newHighlight];
+        console.log('Updated highlights count:', updatedHighlights.length);
+        return updatedHighlights;
+      });
       
       // Save to question highlights
       const questionKey = `${currentSection}-${currentQuestion}`;
       setQuestionHighlights(prev => {
         const newMap = new Map(prev);
         const questionHighlights = newMap.get(questionKey) || [];
+        
+        console.log('Saving to question highlights:', {
+          questionKey,
+          existingCount: questionHighlights.length,
+          newCount: questionHighlights.length + 1
+        });
+        
         newMap.set(questionKey, [...questionHighlights, newHighlight]);
         return newMap;
       });
