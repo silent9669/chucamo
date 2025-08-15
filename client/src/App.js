@@ -340,7 +340,7 @@ function AppRoutes() {
       <Route
         path="/upgrade-plan"
         element={
-          <ProtectedRoute roles={['admin']}>
+          <ProtectedRoute>
             <Layout>
               <UpgradePlan />
             </Layout>
