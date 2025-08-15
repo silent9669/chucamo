@@ -601,8 +601,8 @@ const TestTaker = () => {
     // Clean the text by removing extra whitespace and normalizing
     const cleanText = text.replace(/\s+/g, ' ').trim();
     
-    // Check minimum and maximum length (optimized for word-level selection)
-    if (cleanText.length < 2 || cleanText.length > 200) {
+    // Check minimum length (allow longer sentences for better highlighting)
+    if (cleanText.length < 2) {
       return false;
     }
     
@@ -621,9 +621,15 @@ const TestTaker = () => {
       return false;
     }
     
-    // Check word count - allow single words or short phrases
+    // Allow longer text selections for better highlighting experience
+    // Increased from 200 chars to 1000 chars and from 10 words to 50 words
+    if (cleanText.length > 1000) {
+      return false;
+    }
+    
+    // Check word count - allow longer sentences
     const words = cleanText.split(/\s+/).filter(word => word.length > 0);
-    if (words.length < 1 || words.length > 10) {
+    if (words.length < 1 || words.length > 50) {
       return false;
     }
     
@@ -678,8 +684,8 @@ const TestTaker = () => {
           domPath = getDOMSelectionPath(range);
           
           // Get surrounding context to make the selection unique
-          const contextBefore = getTextContext(range.startContainer, range.startOffset, 30, 'before');
-          const contextAfter = getTextContext(range.endContainer, range.endOffset, 30, 'after');
+          const contextBefore = getTextContext(range.startContainer, range.startOffset, 50, 'before');
+          const contextAfter = getTextContext(range.endContainer, range.endOffset, 50, 'after');
           selectionContext = `${contextBefore}${text}${contextAfter}`;
           
           logger.debug('Created DOM-based highlight identifier:', {
@@ -692,6 +698,12 @@ const TestTaker = () => {
         } catch (error) {
           logger.error('Error creating DOM-based identifier:', error);
         }
+      }
+      
+      // Check for overlapping highlights before creating the new one
+      const overlappingHighlights = checkHighlightOverlap(text, selectionContext);
+      if (overlappingHighlights.length > 0) {
+        logger.debug('Found overlapping highlights, will preserve them:', overlappingHighlights.length);
       }
       
       // Create new highlight with DOM-based identifier
@@ -713,10 +725,11 @@ const TestTaker = () => {
         text: text.trim(),
         domPath,
         selectionContext,
+        overlappingHighlights: overlappingHighlights.length,
         highlightData: newHighlight
       });
       
-      // Add to highlights state
+      // Add to highlights state - preserve existing highlights
       setHighlights(prev => [...prev, newHighlight]);
       
       // Save to question highlights
@@ -807,6 +820,38 @@ const TestTaker = () => {
       return '';
     }
   };
+  
+  // Helper function to check if a new highlight overlaps with existing ones
+  const checkHighlightOverlap = (newText, newContext) => {
+    try {
+      // Check if the new highlight overlaps with existing highlights
+      const overlappingHighlights = highlights.filter(existing => {
+        // Check if the texts overlap
+        if (newText.includes(existing.text) || existing.text.includes(newText)) {
+          return true;
+        }
+        
+        // Check if the contexts overlap significantly
+        if (newContext && existing.selectionContext) {
+          const contextOverlap = newContext.includes(existing.text) || 
+                                existing.selectionContext.includes(newText);
+          return contextOverlap;
+        }
+        
+        return false;
+      });
+      
+      if (overlappingHighlights.length > 0) {
+        logger.debug('Found overlapping highlights:', overlappingHighlights.length);
+        return overlappingHighlights;
+      }
+      
+      return [];
+    } catch (error) {
+      logger.error('Error checking highlight overlap:', error);
+      return [];
+    }
+  };
 
   const removeHighlight = (highlightId) => {
     try {
@@ -837,7 +882,13 @@ const TestTaker = () => {
     setShowColorPicker(false);
     setPendingSelection(null);
     setSelectedText('');
-    window.getSelection().removeAllRanges();
+    setPickerPosition(null);
+    
+    // Don't clear the text selection immediately - let the user keep their selection
+    // This prevents losing highlights when the color picker is closed
+    // The selection will be cleared when highlight mode is turned off or when a new selection is made
+    
+    logger.debug('Color picker closed, preserving existing highlights');
   };
 
   // Handle document clicks to close color picker
@@ -1035,8 +1086,8 @@ const TestTaker = () => {
         return;
       }
       
-      // Check if selection is too long (prevent selecting entire paragraphs)
-      if (selectedText.length > 200) {
+      // Allow longer text selections (increased from 200 to 1000 characters)
+      if (selectedText.length > 1000) {
         return;
       }
       
@@ -1077,6 +1128,10 @@ const TestTaker = () => {
           endOffset: range.endOffset
         }
       });
+      
+      // Don't clear existing highlights when new text is selected
+      // This prevents losing highlights when reapplying colors
+      // The highlights will only be modified when a color is actually chosen
       
       // Position color picker with a small delay for stability
       setTimeout(() => {

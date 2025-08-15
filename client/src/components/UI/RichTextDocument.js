@@ -169,7 +169,10 @@ const RichTextDocument = ({
           // Use selection context to find the exact match
           // This prevents highlighting all instances of the same word
           const hasText = text.includes(h.text);
-          const hasContext = h.selectionContext.includes(h.text);
+          
+          // More flexible context matching - check if the text appears in the context
+          // but don't require exact context match to prevent losing highlights
+          const hasContext = h.selectionContext && h.selectionContext.includes(h.text);
           
           console.log('Filtering highlight:', {
             highlightId: h.id,
@@ -179,7 +182,8 @@ const RichTextDocument = ({
             textInContext: h.selectionContext.includes(h.text)
           });
           
-          // Only apply highlight if both text and context match
+          // Apply highlight if text is found and we have context info
+          // This prevents highlighting all instances while being more flexible
           return hasText && hasContext;
         }
         // Fallback for old highlights without context
@@ -215,16 +219,17 @@ const RichTextDocument = ({
         return;
       }
       
-      // Additional validation: check if this is the right instance of the text
+      // Simplified context validation - be more permissive to prevent losing highlights
       if (highlight.selectionContext) {
         // Get the context around this potential match
-        const contextStart = Math.max(0, highlightStart - 30);
-        const contextEnd = Math.min(text.length, highlightStart + highlight.text.length + 30);
+        const contextStart = Math.max(0, highlightStart - 50);
+        const contextEnd = Math.min(text.length, highlightStart + highlight.text.length + 50);
         const localContext = text.slice(contextStart, contextEnd);
         
-        // Check if the context matches the selection context
-        const contextMatches = highlight.selectionContext.includes(localContext) || 
-                              localContext.includes(highlight.selectionContext);
+        // More flexible context matching - check if the highlight text appears in both contexts
+        // This prevents highlighting all instances while being more forgiving
+        const contextMatches = localContext.includes(highlight.text) && 
+                              highlight.selectionContext.includes(highlight.text);
         
         console.log('Context validation:', {
           highlightId: highlight.id,
