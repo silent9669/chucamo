@@ -1648,7 +1648,24 @@ const TestTaker = () => {
   const renderPassageWithKaTeX = (passageContent) => {
     if (!passageContent) return '';
     
-    logger.debug('Rendering passage with KaTeX:', passageContent.substring(0, 100) + '...');
+    logger.debug('Rendering passage with KaTeX, length:', passageContent.length);
+    
+    // Function to preprocess LaTeX content for better nth root spacing
+    const preprocessLaTeX = (tex) => {
+      if (!tex) return tex;
+      
+      let processed = tex;
+      
+      // Fix nth root spacing by adding proper LaTeX spacing commands
+      // This ensures the radical covers the entire expression
+      // Handle both \sqrt{...} and \sqrt[n]{...} cases
+      processed = processed.replace(/\\sqrt(\[[^\]]*\])?\{([^}]+)\}/g, '\\sqrt$1{\\quad$2}');
+      
+      // Fix other common spacing issues - only for sqrt without index
+      processed = processed.replace(/\\sqrt([^{\[])/g, '\\sqrt{$1');
+      
+      return processed;
+    };
     
     // Function to render KaTeX content
     const renderKaTeX = (text) => {
@@ -1656,7 +1673,6 @@ const TestTaker = () => {
       
       // Split text by KaTeX delimiters
       const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/);
-      
       logger.debug('KaTeX parts found:', parts.length);
       
       return parts.map((part, index) => {
@@ -1665,8 +1681,9 @@ const TestTaker = () => {
           try {
             const mathContent = part.slice(2, -2);
             logger.debug('Processing display math:', mathContent);
+            const processedMath = preprocessLaTeX(mathContent);
             // Add a hidden span with the original text for highlighting
-            const renderedMath = katex.renderToString(mathContent, {
+            const renderedMath = katex.renderToString(processedMath, {
               displayMode: true,
               throwOnError: false,
               errorColor: '#cc0000',
@@ -1687,8 +1704,9 @@ const TestTaker = () => {
           try {
             const mathContent = part.slice(1, -1);
             logger.debug('Processing inline math:', mathContent);
+            const processedMath = preprocessLaTeX(mathContent);
             // Add a hidden span with the original text for highlighting
-            const renderedMath = katex.renderToString(mathContent, {
+            const renderedMath = katex.renderToString(processedMath, {
               displayMode: false,
               throwOnError: false,
               errorColor: '#cc0000',

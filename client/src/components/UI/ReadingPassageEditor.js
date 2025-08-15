@@ -9,6 +9,23 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
   const textareaRef = useRef(null);
   const previewRef = useRef(null);
 
+  // Function to preprocess LaTeX content for better nth root spacing
+  const preprocessLaTeX = (tex) => {
+    if (!tex) return tex;
+    
+    let processed = tex;
+    
+    // Fix nth root spacing by adding proper LaTeX spacing commands
+    // This ensures the radical covers the entire expression
+    // Handle both \sqrt{...} and \sqrt[n]{...} cases
+    processed = processed.replace(/\\sqrt(\[[^\]]*\])?\{([^}]+)\}/g, '\\sqrt$1{\\quad$2}');
+    
+    // Fix other common spacing issues - only for sqrt without index
+    processed = processed.replace(/\\sqrt([^{\[])/g, '\\sqrt{$1');
+    
+    return processed;
+  };
+
   const renderPreview = useCallback(() => {
     if (!inputValue) {
       setPreviewContent('');
@@ -25,7 +42,8 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
           // Display math
           try {
             const mathContent = part.slice(2, -2);
-            const renderedMath = katex.renderToString(mathContent, {
+            const processedMath = preprocessLaTeX(mathContent);
+            const renderedMath = katex.renderToString(processedMath, {
               displayMode: true,
               throwOnError: false,
               errorColor: '#cc0000',
@@ -44,7 +62,8 @@ const ReadingPassageEditor = ({ value, onChange, placeholder, rows = 8 }) => {
           // Inline math
           try {
             const mathContent = part.slice(1, -1);
-            const renderedMath = katex.renderToString(mathContent, {
+            const processedMath = preprocessLaTeX(mathContent);
+            const renderedMath = katex.renderToString(processedMath, {
               displayMode: false,
               throwOnError: false,
               errorColor: '#cc0000',

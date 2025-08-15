@@ -32,12 +32,13 @@ const KaTeXEditor = React.memo(({ value, onChange, placeholder, rows = 3, label 
     
     let processed = tex;
     
-    // Fix square root spacing by adding proper LaTeX spacing commands
+    // Fix nth root spacing by adding proper LaTeX spacing commands
     // This ensures the radical covers the entire expression
-    processed = processed.replace(/\\sqrt\{([^}]+)\}/g, '\\sqrt{\\quad$1}');
+    // Handle both \sqrt{...} and \sqrt[n]{...} cases
+    processed = processed.replace(/\\sqrt(\[[^\]]*\])?\{([^}]+)\}/g, '\\sqrt$1{\\quad$2}');
     
-    // Fix other common spacing issues
-    processed = processed.replace(/\\sqrt([^{])/g, '\\sqrt{$1');
+    // Fix other common spacing issues - only for sqrt without index
+    processed = processed.replace(/\\sqrt([^{\[])/g, '\\sqrt{$1');
     
     return processed;
   };
