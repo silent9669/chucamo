@@ -117,7 +117,7 @@ function AppRoutes() {
       <Route
         path="/study-plan"
         element={
-          <ProtectedRoute restrictedAccountTypes={['free']}>
+          <ProtectedRoute restrictedAccountTypes={['free', 'pro']}>
             <Layout>
               <StudyPlan />
             </Layout>

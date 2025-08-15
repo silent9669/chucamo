@@ -228,6 +228,7 @@ const UserManagement = () => {
       free: 'bg-gray-100 text-gray-800',
       student: 'bg-blue-100 text-blue-800',
       teacher: 'bg-purple-100 text-purple-800',
+      pro: 'bg-indigo-100 text-indigo-800',
       admin: 'bg-red-100 text-red-800'
     };
     return (
@@ -235,7 +236,8 @@ const UserManagement = () => {
         {accountType === 'student' ? 'Student Account' : 
          accountType === 'free' ? 'Free Account' : 
          accountType === 'teacher' ? 'Teacher Account' : 
-         accountType === 'admin' ? 'Admin Account' : accountType}
+         accountType === 'admin' ? 'Admin Account' : 
+         accountType === 'pro' ? 'Pro Account' : accountType}
       </span>
     );
   };
@@ -295,6 +297,7 @@ const UserManagement = () => {
                   <option value="free">Free Account</option>
                   <option value="student">Student Account</option>
                   <option value="teacher">Teacher Account</option>
+                  <option value="pro">Pro Account</option>
                   <option value="admin">Admin Account</option>
                 </select>
             </div>
@@ -551,6 +554,7 @@ const UserManagement = () => {
                     <option value="free">Free Account</option>
                     <option value="student">Student Account</option>
                     <option value="teacher">Teacher Account</option>
+                    <option value="pro">Pro Account</option>
                     <option value="admin">Admin Account</option>
                   </select>
                 </div>

@@ -124,9 +124,9 @@ router.post('/', protect, async (req, res) => {
     // Set max attempts based on account type
     let maxAttempts;
     let accountTypeLabel;
-    if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student') {
-      maxAttempts = Infinity; // Unlimited attempts for admin, teacher, and student
-      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : 'Student';
+    if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student' || user.accountType === 'pro') {
+      maxAttempts = Infinity; // Unlimited attempts for admin, teacher, student, and pro
+      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : user.accountType === 'student' ? 'Student' : 'Pro';
     } else if (user.accountType === 'free') {
       maxAttempts = 1; // Free account: 1 test attempt
       accountTypeLabel = 'Free';
@@ -456,9 +456,9 @@ router.get('/attempt-status/:testId', protect, async (req, res) => {
     // Set max attempts based on account type
     let maxAttempts;
     let accountTypeLabel;
-    if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student') {
+    if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student' || user.accountType === 'pro') {
       maxAttempts = Infinity;
-      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : 'Student';
+      accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : user.accountType === 'student' ? 'Student' : 'Pro';
     } else if (user.accountType === 'free') {
       maxAttempts = 1;
       accountTypeLabel = 'Free';

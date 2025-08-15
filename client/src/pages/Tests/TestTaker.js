@@ -185,7 +185,7 @@ const TestTaker = () => {
       const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${testId}`) || '0');
       
       let maxAttempts = 1;
-      if (user?.accountType === 'admin' || user?.accountType === 'teacher' || user?.accountType === 'student') {
+      if (user?.accountType === 'admin' || user?.accountType === 'teacher' || user?.accountType === 'student' || user?.accountType === 'pro') {
         maxAttempts = Infinity;
       }
       

@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
   status: { type: String, default: "active" }, // active | locked
   accountType: {
     type: String,
-    enum: ['free', 'premium', 'student', 'teacher', 'admin'],
+    enum: ['free', 'premium', 'student', 'teacher', 'admin', 'pro'],
     default: 'free'
   },
   profilePicture: {

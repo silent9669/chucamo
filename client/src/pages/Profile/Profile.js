@@ -232,6 +232,7 @@ const Profile = () => {
                         user?.accountType === 'student' ? 'Student Account' : 
                         user?.accountType === 'free' ? 'Free Account' : 
                         user?.accountType === 'teacher' ? 'Teacher Account' : 
+                        user?.accountType === 'pro' ? 'Pro Account' : 
                         user?.accountType === 'admin' ? 'Admin Account' : 'Unknown'
                       )}
                     </div>
