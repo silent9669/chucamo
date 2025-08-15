@@ -53,7 +53,7 @@ const VocabQuizTaker = () => {
   const [showQuestionDetails, setShowQuestionDetails] = useState(new Set());
   
   // Font size state
-  const [fontSize] = useState(16);
+  const [fontSize, setFontSize] = useState(16);
 
   // Load quiz data
   const loadQuizData = useCallback(async () => {
@@ -825,6 +825,28 @@ const VocabQuizTaker = () => {
 
         {/* Right - Controls */}
         <div className="flex items-center space-x-4">
+          
+          {/* Font Size Controls */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 font-medium">Font Size:</span>
+            <button
+              onClick={() => setFontSize(prev => Math.max(12, prev - 2))}
+              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-600 hover:text-gray-800"
+              title="Decrease font size"
+            >
+              A-
+            </button>
+            <span className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded bg-gray-50 text-gray-600 text-sm font-medium">
+              {fontSize}
+            </span>
+            <button
+              onClick={() => setFontSize(prev => Math.min(24, prev + 2))}
+              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-50 text-gray-600 hover:text-gray-800"
+              title="Increase font size"
+            >
+              A+
+            </button>
+          </div>
           
           {/* Save & Exit */}
           <button 

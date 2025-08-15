@@ -119,10 +119,7 @@ const LessonViewer = ({ isOpen, onClose, lesson }) => {
                   allowFullScreen
                   className="w-full"
                 />
-                <div className="absolute top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
-                  <Play className="w-4 h-4" />
-                  LIVE
-                </div>
+
               </div>
             </div>
           )}
