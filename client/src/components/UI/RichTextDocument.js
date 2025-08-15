@@ -144,16 +144,101 @@ const RichTextDocument = ({
       return [{ text, isHighlighted: false }];
     }
     
+    // Debug logging
+    console.log('Processing highlights for text block:', {
+      textLength: text.length,
+      textPreview: text.substring(0, 100) + '...',
+      highlightsCount: highlights.length,
+      highlights: highlights.map(h => ({
+        id: h.id,
+        text: h.text,
+        hasContext: !!h.selectionContext,
+        hasDomPath: !!h.domPath,
+        context: h.selectionContext?.substring(0, 50) + '...'
+      }))
+    });
+    
     const segments = [];
     let currentIndex = 0;
     
-    // Sort highlights by start position in the text
+    // Sort highlights by creation time (newest first) to handle overlapping selections
     const sortedHighlights = highlights
-      .filter(h => text.includes(h.text))
-      .sort((a, b) => text.indexOf(a.text) - text.indexOf(b.text));
+      .filter(h => {
+        // Check if this highlight should apply to this text block
+        if (h.selectionContext && h.domPath) {
+          // Use selection context to find the exact match
+          // This prevents highlighting all instances of the same word
+          const hasText = text.includes(h.text);
+          const hasContext = h.selectionContext.includes(h.text);
+          
+          console.log('Filtering highlight:', {
+            highlightId: h.id,
+            highlightText: h.text,
+            hasText,
+            hasContext,
+            textInContext: h.selectionContext.includes(h.text)
+          });
+          
+          // Only apply highlight if both text and context match
+          return hasText && hasContext;
+        }
+        // Fallback for old highlights without context
+        const hasText = text.includes(h.text);
+        console.log('Fallback highlight filtering:', {
+          highlightId: h.id,
+          highlightText: h.text,
+          hasText
+        });
+        return hasText;
+      })
+      .sort((a, b) => {
+        // Sort by creation time (newer highlights first)
+        const timeA = a.timestamp || parseInt(a.id.split('-')[1]) || 0;
+        const timeB = b.timestamp || parseInt(b.id.split('-')[1]) || 0;
+        return timeB - timeA;
+      });
+    
+    console.log('Filtered highlights:', sortedHighlights.length);
     
     sortedHighlights.forEach(highlight => {
+      // Find the text within the remaining content
       const highlightStart = text.indexOf(highlight.text, currentIndex);
+      
+      // Skip if this highlight doesn't appear in the remaining text
+      if (highlightStart === -1) {
+        console.log('Highlight not found in remaining text:', {
+          highlightId: highlight.id,
+          highlightText: highlight.text,
+          currentIndex,
+          remainingText: text.substring(currentIndex, currentIndex + 100)
+        });
+        return;
+      }
+      
+      // Additional validation: check if this is the right instance of the text
+      if (highlight.selectionContext) {
+        // Get the context around this potential match
+        const contextStart = Math.max(0, highlightStart - 30);
+        const contextEnd = Math.min(text.length, highlightStart + highlight.text.length + 30);
+        const localContext = text.slice(contextStart, contextEnd);
+        
+        // Check if the context matches the selection context
+        const contextMatches = highlight.selectionContext.includes(localContext) || 
+                              localContext.includes(highlight.selectionContext);
+        
+        console.log('Context validation:', {
+          highlightId: highlight.id,
+          localContext: localContext.substring(0, 50) + '...',
+          selectionContext: highlight.selectionContext.substring(0, 50) + '...',
+          contextMatches
+        });
+        
+        if (!contextMatches) {
+          // This is not the right instance, skip it
+          console.log('Context mismatch, skipping highlight:', highlight.id);
+          return;
+        }
+      }
       
       // Add text before highlight
       if (highlightStart > currentIndex) {
@@ -171,6 +256,13 @@ const RichTextDocument = ({
       });
       
       currentIndex = highlightStart + highlight.text.length;
+      
+      console.log('Added highlight segment:', {
+        highlightId: highlight.id,
+        text: highlight.text,
+        start: highlightStart,
+        end: currentIndex
+      });
     });
     
     // Add remaining text after last highlight
@@ -180,6 +272,11 @@ const RichTextDocument = ({
         isHighlighted: false
       });
     }
+    
+    console.log('Final segments:', segments.length, segments.map(s => ({
+      text: s.text.substring(0, 20) + '...',
+      isHighlighted: s.isHighlighted
+    })));
     
     return segments.length > 0 ? segments : [{ text, isHighlighted: false }];
   };

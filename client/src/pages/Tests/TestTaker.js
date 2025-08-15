@@ -648,7 +648,7 @@ const TestTaker = () => {
     if (!pendingSelection) return;
 
     try {
-      const { text, originalText } = pendingSelection;
+      const { text, originalText, range } = pendingSelection;
       
       // Validate text data before creating highlight
       if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -668,19 +668,51 @@ const TestTaker = () => {
         return;
       }
       
-      // Create new highlight with validated data
+      // Create a unique identifier based on the DOM selection path
+      let domPath = '';
+      let selectionContext = '';
+      
+      if (range && range.startContainer && range.endContainer) {
+        try {
+          // Get the DOM path to uniquely identify this selection
+          domPath = getDOMSelectionPath(range);
+          
+          // Get surrounding context to make the selection unique
+          const contextBefore = getTextContext(range.startContainer, range.startOffset, 30, 'before');
+          const contextAfter = getTextContext(range.endContainer, range.endOffset, 30, 'after');
+          selectionContext = `${contextBefore}${text}${contextAfter}`;
+          
+          logger.debug('Created DOM-based highlight identifier:', {
+            originalText: text,
+            domPath,
+            contextBefore,
+            contextAfter,
+            selectionContext
+          });
+        } catch (error) {
+          logger.error('Error creating DOM-based identifier:', error);
+        }
+      }
+      
+      // Create new highlight with DOM-based identifier
       const newHighlight = {
         id: highlightId,
         color: color.name,
         colorValue: color.value,
-        text: text.trim(), // Ensure text is trimmed
-        originalText: originalText.trim() // Ensure original text is trimmed
+        text: text.trim(), // The actual text to display
+        originalText: originalText.trim(), // Original selection
+        domPath: domPath, // DOM path for unique identification
+        selectionContext: selectionContext, // Context around selection
+        timestamp: Date.now() // For sorting and uniqueness
       };
       
-      // Debug logging to verify color data
-      console.log('Creating highlight with color data:', {
+      // Debug logging to verify highlight data
+      console.log('Creating DOM-based highlight:', {
         colorName: color.name,
         colorValue: color.value,
+        text: text.trim(),
+        domPath,
+        selectionContext,
         highlightData: newHighlight
       });
       
@@ -711,6 +743,68 @@ const TestTaker = () => {
     } catch (error) {
       logger.error('Error applying highlight:', error);
       closeColorPicker();
+    }
+  };
+  
+  // Helper function to get DOM selection path
+  const getDOMSelectionPath = (range) => {
+    try {
+      if (!range || !range.startContainer) return '';
+      
+      // Create a unique path to the selected text
+      const path = [];
+      let currentNode = range.startContainer;
+      
+      // Walk up the DOM tree to create a unique path
+      while (currentNode && currentNode !== document.body) {
+        if (currentNode.nodeType === Node.TEXT_NODE) {
+          // For text nodes, include the parent element info
+          const parent = currentNode.parentElement;
+          if (parent) {
+            const tagName = parent.tagName.toLowerCase();
+            const className = parent.className || '';
+            const id = parent.id || '';
+            path.unshift(`text[${tagName}${className ? '.' + className.split(' ').join('.') : ''}${id ? '#' + id : ''}]`);
+          }
+        } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
+          const tagName = currentNode.tagName.toLowerCase();
+          const className = currentNode.className || '';
+          const id = currentNode.id || '';
+          path.unshift(`${tagName}${className ? '.' + className.split(' ').join('.') : ''}${id ? '#' + id : ''}`);
+        }
+        currentNode = currentNode.parentNode;
+      }
+      
+      // Add the specific offset information
+      path.push(`offset:${range.startOffset}-${range.endOffset}`);
+      
+      return path.join(' > ');
+    } catch (error) {
+      logger.error('Error getting DOM selection path:', error);
+      return '';
+    }
+  };
+  
+  // Helper function to get text context around a selection
+  const getTextContext = (container, offset, length, direction) => {
+    try {
+      if (!container || typeof offset !== 'number') return '';
+      
+      const textContent = container.textContent || '';
+      let context = '';
+      
+      if (direction === 'before') {
+        const start = Math.max(0, offset - length);
+        context = textContent.slice(start, offset);
+      } else if (direction === 'after') {
+        const end = Math.min(textContent.length, offset + length);
+        context = textContent.slice(offset, end);
+      }
+      
+      return context;
+    } catch (error) {
+      logger.error('Error getting text context:', error);
+      return '';
     }
   };
 
