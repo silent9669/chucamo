@@ -8,6 +8,7 @@ const DeepSeaSATUpgrade = () => {
   const [animatedElements, setAnimatedElements] = useState({
     header: false,
     freeCard: false,
+    halfAccessCard: false,
     premiumCard: false,
     testimonials: false,
     statistics: false
@@ -42,7 +43,8 @@ const DeepSeaSATUpgrade = () => {
     const timers = [
       setTimeout(() => setAnimatedElements(prev => ({...prev, header: true})), 500),
       setTimeout(() => setAnimatedElements(prev => ({...prev, freeCard: true})), 800),
-      setTimeout(() => setAnimatedElements(prev => ({...prev, premiumCard: true})), 1000)
+      setTimeout(() => setAnimatedElements(prev => ({...prev, halfAccessCard: true})), 1000),
+      setTimeout(() => setAnimatedElements(prev => ({...prev, premiumCard: true})), 1200)
     ];
 
     // Prevent background page scroll while fullscreen upgrade is open
@@ -147,9 +149,14 @@ const DeepSeaSATUpgrade = () => {
       setIsLoading(false);
       
       if (plan === 'free') {
-        alert('🌊 Swimming in Shallow Waters!\n\nYou\'ll stay limited to just 1 practice test with no explanations. Ready to dive deeper into success?');
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
+      } else if (plan === 'halfAccess') {
+        // Open registration form in new tab
+        window.open('https://forms.gle/kb1poxTPUbwpwcyA7', '_blank');
       } else {
-        alert('🐠 Excellent Choice!\n\nWelcome to the Deep Sea Explorer plan! You\'re about to unlock unlimited SAT preparation resources. Redirecting to secure checkout...');
+        // Open registration form in new tab
+        window.open('https://forms.gle/kb1poxTPUbwpwcyA7', '_blank');
       }
     }, 2000);
   };
@@ -417,7 +424,7 @@ const DeepSeaSATUpgrade = () => {
         .content {
           position: relative;
           z-index: 10;
-          max-width: 1200px;
+          max-width: 1400px;
           margin: 0 auto;
           padding: 24px 12px;
           transform-origin: top center;
@@ -470,16 +477,18 @@ const DeepSeaSATUpgrade = () => {
         /* Pricing Cards */
         .pricing-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
-          gap: 48px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 40px;
           margin-bottom: 80px;
+          align-items: start;
+          justify-items: center;
         }
 
         .pricing-card {
           background: rgba(255, 255, 255, 0.1);
           backdrop-filter: blur(20px);
           border-radius: 24px;
-          padding: 44px;
+          padding: 48px 40px;
           border: 2px solid rgba(255, 255, 255, 0.2);
           position: relative;
           overflow: hidden;
@@ -488,11 +497,61 @@ const DeepSeaSATUpgrade = () => {
           transform: translateY(80px);
           display: flex;
           flex-direction: column;
+          height: 100%;
+          min-height: 760px;
+          min-width: 400px;
+          width: 100%;
+          max-width: 450px;
+          box-sizing: border-box;
         }
 
         .pricing-card.animate {
           opacity: 1;
           transform: translateY(0);
+        }
+
+        /* Ensure all cards have the same structure */
+        .pricing-card > * {
+          flex-shrink: 0;
+        }
+
+        .pricing-card .features {
+          flex: 1;
+          flex-shrink: 1;
+        }
+
+        .pricing-card .cta-button {
+          flex-shrink: 0;
+          margin-top: auto;
+        }
+
+        /* Force consistent alignment across all cards */
+        .pricing-card .plan-title {
+          margin-bottom: 8px;
+          text-align: center;
+        }
+
+        .pricing-card .plan-subtitle {
+          margin-bottom: 28px;
+          text-align: center;
+        }
+
+        .pricing-card .price-display {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+
+        .pricing-card .features {
+          margin-bottom: 32px;
+        }
+
+        /* Ensure feature items are perfectly aligned */
+        .pricing-card .feature:first-child {
+          margin-top: 0;
+        }
+
+        .pricing-card .feature:last-child {
+          margin-bottom: 0;
         }
 
         .pricing-card::before {
@@ -522,6 +581,11 @@ const DeepSeaSATUpgrade = () => {
           box-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
         }
 
+        .half-access-card {
+          border-color: rgba(245, 158, 11, 0.5);
+          box-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
+        }
+
         .premium-card {
           border-color: rgba(34, 197, 94, 0.5);
           box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
@@ -530,7 +594,7 @@ const DeepSeaSATUpgrade = () => {
 
         .popular-badge {
           position: absolute;
-          top: -16px;
+          top: -12px;
           left: 50%;
           transform: translateX(-50%);
           background: linear-gradient(45deg, #22c55e, #16a34a);
@@ -538,30 +602,52 @@ const DeepSeaSATUpgrade = () => {
           padding: 12px 32px;
           border-radius: 50px;
           font-weight: 700;
-          font-size: 0.9rem;
+          font-size: 1rem;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+          z-index: 10;
+          white-space: nowrap;
         }
 
         .plan-title {
-          font-size: 3rem;
+          font-size: 2.6rem;
           font-weight: 800;
           margin-bottom: 8px;
           text-align: center;
+          line-height: 1.2;
+          word-spacing: normal;
+          letter-spacing: 0.5px;
+        }
+
+        /* Special handling for middle plan title to fix "Explorer" spacing */
+        .half-access-card .plan-title {
+          line-height: 1.9;
+          margin-bottom: 16px;
+        }
+
+        /* Special handling for third plan title to reduce line height */
+        .premium-card .plan-title {
+          line-height: 1;
+          margin-bottom: 8px;
         }
 
         .plan-subtitle {
           color: rgba(255, 255, 255, 0.8);
           text-align: center;
-          margin-bottom: 32px;
-          font-size: 1.1rem;
-          line-height: 1.5;
+          margin-bottom: 28px;
+          font-size: 1.05rem;
+          line-height: 1.4;
+        }
+
+        /* Special handling for middle plan subtitle spacing */
+        .half-access-card .plan-subtitle {
+          margin-bottom: 20px;
         }
 
         .price-display {
           text-align: center;
-          margin-bottom: 40px;
+          margin-bottom: 32px;
         }
 
         /* Align CTA buttons across cards */
@@ -571,7 +657,7 @@ const DeepSeaSATUpgrade = () => {
         }
 
         .price {
-          font-size: 6.2rem;
+          font-size: 5.2rem;
           font-weight: 900;
           margin-bottom: 8px;
           display: block;
@@ -580,6 +666,11 @@ const DeepSeaSATUpgrade = () => {
         .free-price {
           color: #ef4444;
           text-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+
+        .half-access-price {
+          color: #f59e0b;
+          text-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
         }
 
         .premium-price {
@@ -595,27 +686,39 @@ const DeepSeaSATUpgrade = () => {
         /* Features List */
         .features {
           list-style: none;
-          margin-bottom: 40px;
+          margin-bottom: 32px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          padding: 0;
         }
 
         .feature {
           display: flex;
           align-items: flex-start;
           margin-bottom: 16px;
-          font-size: 1.15rem;
-          line-height: 1.5;
+          font-size: 1rem;
+          line-height: 1.4;
+          min-height: 24px;
+          width: 100%;
         }
 
         .feature-icon {
-          width: 28px;
-          height: 28px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-right: 18px;
+          margin-right: 16px;
           margin-top: 2px;
           flex-shrink: 0;
+        }
+
+        .feature span {
+          flex: 1;
+          line-height: 1.4;
         }
 
         .feature-icon.check {
@@ -636,10 +739,10 @@ const DeepSeaSATUpgrade = () => {
         /* CTA Buttons */
         .cta-button {
           width: 100%;
-          padding: 22px;
+          padding: 18px;
           border: none;
           border-radius: 16px;
-          font-size: 1.3rem;
+          font-size: 1.1rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -647,6 +750,7 @@ const DeepSeaSATUpgrade = () => {
           transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
           position: relative;
           overflow: hidden;
+          margin-top: auto;
         }
 
         .features-fill {
@@ -657,6 +761,12 @@ const DeepSeaSATUpgrade = () => {
           background: linear-gradient(45deg, #ef4444, #dc2626);
           color: white;
           box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+        }
+
+        .half-access-button {
+          background: linear-gradient(45deg, #f59e0b, #d97706);
+          color: white;
+          box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
         }
 
         .premium-button {
@@ -719,6 +829,82 @@ const DeepSeaSATUpgrade = () => {
         }
 
         /* Responsive Design */
+        @media (max-width: 1600px) {
+          .content {
+            max-width: 1300px;
+          }
+          
+          .pricing-grid {
+            gap: 36px;
+          }
+          
+          .pricing-card {
+            padding: 44px 36px;
+            min-width: 380px;
+            min-height: 720px;
+          }
+        }
+
+        @media (max-width: 1400px) {
+          .content {
+            max-width: 1200px;
+          }
+          
+          .pricing-grid {
+            gap: 32px;
+          }
+          
+          .pricing-card {
+            padding: 40px 32px;
+            min-width: 360px;
+            min-height: 700px;
+          }
+          
+          .plan-title {
+            font-size: 2.4rem;
+          }
+          
+          .price {
+            font-size: 4.8rem;
+          }
+          
+          .feature {
+            font-size: 0.95rem;
+          }
+        }
+
+        @media (max-width: 1200px) {
+          .pricing-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
+          }
+          
+          .pricing-card {
+            padding: 36px 28px;
+            min-height: 680px;
+            min-width: 340px;
+          }
+          
+          .plan-title {
+            font-size: 2.2rem;
+          }
+          
+          .price {
+            font-size: 4.4rem;
+          }
+          
+          .feature {
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+          }
+          
+          .feature-icon {
+            width: 22px;
+            height: 22px;
+            margin-right: 14px;
+          }
+        }
+
         @media (max-width: 768px) {
           .content {
             padding: 40px 16px;
@@ -731,6 +917,7 @@ const DeepSeaSATUpgrade = () => {
 
           .pricing-card {
             padding: 30px;
+            min-height: auto;
           }
 
           .header h1 {
@@ -875,7 +1062,7 @@ const DeepSeaSATUpgrade = () => {
               </li>
               <li className="feature">
                 <div className="feature-icon cross"><X size={14} /></div>
-                <span><strong>No mentor support</strong> - You’re completely on your own</span>
+                <span><strong>No mentor support</strong> - You're completely on your own</span>
               </li>
               <li className="feature">
                 <div className="feature-icon cross"><X size={14} /></div>
@@ -897,6 +1084,54 @@ const DeepSeaSATUpgrade = () => {
               disabled={isLoading}
             >
               Stay on the Surface
+            </button>
+          </div>
+
+          {/* Half Access Plan - Reef Explorer */}
+          <div className={`pricing-card half-access-card ${animatedElements.halfAccessCard ? 'animate' : ''}`}>
+            <div className="plan-title">🐚 Reef Explorer</div>
+            <div className="plan-subtitle">
+              Dive deeper with unlimited tests and explanations - perfect balance of access and value
+            </div>
+            
+            <div className="price-display">
+              <div className="price half-access-price">$25</div>
+              <div className="price-note">Per month</div>
+            </div>
+
+            <ul className="features features-fill">
+              <li className="feature">
+                <div className="feature-icon check"><Check size={14} /></div>
+                <span><strong>Unlimited test attempts</strong> - Practice until you master every concept</span>
+              </li>
+              <li className="feature">
+                <div className="feature-icon check"><Check size={14} /></div>
+                <span><strong>Detailed explanations</strong> - Understand every question and solution path</span>
+              </li>
+              <li className="feature">
+                <div className="feature-icon cross"><X size={14} /></div>
+                <span><strong>No mentor support</strong> - You're completely on your own</span>
+              </li>
+              <li className="feature">
+                <div className="feature-icon cross"><X size={14} /></div>
+                <span><strong>No test variations</strong> - Limited question exposure</span>
+              </li>
+              <li className="feature">
+                <div className="feature-icon cross"><X size={14} /></div>
+                <span><strong>No progress tracking</strong> - Swimming blind in murky waters</span>
+              </li>
+              <li className="feature">
+                <div className="feature-icon cross"><X size={14} /></div>
+                <span><strong>No advanced features</strong> - Missing the treasure below</span>
+              </li>
+            </ul>
+
+            <button 
+              className="cta-button half-access-button"
+              onClick={() => handlePlanSelection('halfAccess')}
+              disabled={isLoading}
+            >
+              Explore the Reef
             </button>
           </div>
 
