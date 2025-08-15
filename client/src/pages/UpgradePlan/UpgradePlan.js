@@ -86,7 +86,7 @@ const DeepSeaSATUpgrade = () => {
       clearTimeout(s1);
       clearTimeout(s2);
       window.removeEventListener('resize', onResize);
-      if (ro && contentRef.current) {
+      if (ro) {
         ro.disconnect();
       }
     };
@@ -154,36 +154,7 @@ const DeepSeaSATUpgrade = () => {
     }, 2000);
   };
 
-  const AnimatedCounter = ({ target, suffix = '', duration = 2000 }) => {
-    const [count, setCount] = useState(0);
-    const [hasAnimated, setHasAnimated] = useState(false);
-
-    useEffect(() => {
-      if (animatedElements.statistics && !hasAnimated) {
-        setHasAnimated(true);
-        let startTime = null;
-        
-        const animate = (currentTime) => {
-          if (!startTime) startTime = currentTime;
-          const progress = Math.min((currentTime - startTime) / duration, 1);
-          const easeOut = 1 - Math.pow(1 - progress, 3);
-          
-          setCount(Math.floor(target * easeOut));
-          
-          if (progress < 1) {
-            requestAnimationFrame(animate);
-          } else {
-            // Ensure we end exactly at target
-            setCount(target);
-          }
-        };
-        
-        requestAnimationFrame(animate);
-      }
-    }, [animatedElements.statistics, target, duration, hasAnimated]);
-
-    return <span>{count}{suffix}</span>;
-  };
+  // AnimatedCounter component removed as it was unused
 
   return (
     <div className={`ocean-container ${isVisible ? 'visible' : ''} ${showIntro ? 'intro' : ''}`}>
