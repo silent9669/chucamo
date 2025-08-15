@@ -1662,7 +1662,7 @@ const TestTaker = () => {
       processed = processed.replace(/\\sqrt(\[[^\]]*\])?\{([^}]+)\}/g, '\\sqrt$1{\\quad$2}');
       
       // Fix other common spacing issues - only for sqrt without index
-      processed = processed.replace(/\\sqrt([^{\[])/g, '\\sqrt{$1');
+      processed = processed.replace(/\\sqrt([^{\[])/g, '\\sqrt{$1}');
       
       return processed;
     };
