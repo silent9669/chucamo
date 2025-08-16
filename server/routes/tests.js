@@ -43,6 +43,14 @@ router.get('/', protect, async (req, res) => {
 
     const skip = (page - 1) * limit;
     
+    // Debug logging
+    console.log('=== TESTS API DEBUG ===');
+    console.log('Query:', JSON.stringify(query, null, 2));
+    console.log('Page:', page);
+    console.log('Limit:', limit);
+    console.log('Skip:', skip);
+    console.log('User account type:', req.user.accountType);
+    
     const tests = await Test.find(query)
       .populate('createdBy', 'firstName lastName')
       .sort({ createdAt: -1 })
@@ -50,6 +58,10 @@ router.get('/', protect, async (req, res) => {
       .limit(parseInt(limit));
 
     const total = await Test.countDocuments(query);
+    
+    console.log('Found tests count:', tests.length);
+    console.log('Total tests in query:', total);
+    console.log('Test titles:', tests.map(t => t.title));
 
     res.json({
       success: true,

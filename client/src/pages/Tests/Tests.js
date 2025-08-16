@@ -20,8 +20,16 @@ const Tests = () => {
   const loadTests = async () => {
     try {
       setLoading(true);
-      const response = await testsAPI.getAll();
+      // Request all tests without pagination limit
+      const response = await testsAPI.getAll({ limit: 1000 });
+      console.log('=== API RESPONSE DEBUG ===');
+      console.log('Full API response:', response);
+      console.log('Response data:', response.data);
+      console.log('Tests array:', response.data.tests);
+      
       const testsData = response.data.tests || response.data || [];
+      console.log('Tests data to process:', testsData);
+      console.log('Tests data length:', testsData.length);
       
       // Transform the data to match our UI format
       const transformedTests = testsData.map(test => {
@@ -42,7 +50,7 @@ const Tests = () => {
           }
         }
 
-        return {
+        const transformedTest = {
           id: test._id || test.id,
           title: test.title,
           description: test.description,
@@ -58,7 +66,13 @@ const Tests = () => {
           category: test.category || null,
           created: test.createdAt ? new Date(test.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         };
+        
+        console.log('Transformed test:', transformedTest);
+        return transformedTest;
       });
+      
+      console.log('Final transformed tests:', transformedTests);
+      console.log('Final transformed tests length:', transformedTests.length);
       
       setTests(transformedTests);
     } catch (error) {
@@ -161,6 +175,7 @@ const Tests = () => {
         if (sectionFilter === 'math' && !hasMathSection) return false;
       }
     }
+    // If testTypeFilter is 'all', show all tests (no filtering by test type)
     
     // Then filter by search term (applies to all test types)
     if (searchTerm && !test.title.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -169,6 +184,16 @@ const Tests = () => {
     
     return true;
   });
+
+  // Debug logging
+  console.log('=== FILTERING DEBUG ===');
+  console.log('Total tests:', tests.length);
+  console.log('testTypeFilter:', testTypeFilter);
+  console.log('searchTerm:', searchTerm);
+  console.log('sectionFilter:', sectionFilter);
+  console.log('Filtered tests count:', filteredTests.length);
+  console.log('All tests:', tests.map(t => ({ title: t.title, testType: t.testType, type: t.type })));
+  console.log('Filtered tests:', filteredTests.map(t => ({ title: t.title, testType: t.testType, type: t.type })));
 
   const TestCard = ({ test }) => (
     <div className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">

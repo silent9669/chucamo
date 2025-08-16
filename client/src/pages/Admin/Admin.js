@@ -774,7 +774,7 @@ const RealTestManagement = () => {
   const loadTests = async () => {
     try {
       setLoading(true);
-      const response = await testsAPI.getAll();
+      const response = await testsAPI.getAll({ limit: 1000 });
       const realTests = response.data.tests.filter(test => 
         test.testType === 'practice' || !test.testType
       ).map(test => ({
@@ -3018,7 +3018,7 @@ const MockTestManagement = () => {
   const loadTests = async () => {
     try {
       setLoading(true);
-      const response = await testsAPI.getAll();
+      const response = await testsAPI.getAll({ limit: 1000 });
       const mockTests = response.data.tests.filter(test => 
         test.testType === 'study-plan'
       ).map(test => ({
