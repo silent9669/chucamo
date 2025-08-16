@@ -1116,6 +1116,38 @@ text + .katex-inline {
   scrollbar-width: none !important;
 }
 
+/* English section reading passage - enable scrolling with custom scrollbar */
+.reading-passage-container.english-section .reading-passage {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Custom scrollbar for English section reading passage */
+.reading-passage-container.english-section .reading-passage::-webkit-scrollbar {
+  display: block !important;
+  width: 8px !important;
+}
+
+.reading-passage-container.english-section .reading-passage::-webkit-scrollbar-track {
+  background: #f7fafc !important;
+  border-radius: 4px !important;
+}
+
+.reading-passage-container.english-section .reading-passage::-webkit-scrollbar-thumb {
+  background: #cbd5e0 !important;
+  border-radius: 4px !important;
+}
+
+.reading-passage-container.english-section .reading-passage::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0 !important;
+}
+
+/* Firefox scrollbar for English section */
+.reading-passage-container.english-section .reading-passage {
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e0 #f7fafc !important;
+}
+
 /* Overlay-based highlighting for SimpleRichText - preserves formatting completely */
 .custom-highlight-overlay {
   position: absolute !important;

@@ -2181,7 +2181,7 @@ const TestTaker = () => {
 
               {/* Reading Passage - Scrollable Container */}
               {currentQuestionData.passage && (
-                <div className="reading-passage-container flex-1 flex flex-col min-h-0 relative z-5">
+                <div className={`reading-passage-container flex-1 flex flex-col min-h-0 relative z-5 ${currentSectionData?.type === 'english' ? 'english-section' : ''}`}>
                   <div 
                     key={`passage-${currentSection}-${currentQuestion}`}
                     className={`reading-passage ${isHighlightMode ? 'highlighter-cursor highlightable-area' : ''}`}
@@ -2189,8 +2189,8 @@ const TestTaker = () => {
                       fontFamily: 'serif',
                       fontSize: `${fontSize}px`,
                       position: 'relative', // Ensure proper positioning context for watermark
-                      maxHeight: '400px', // Maximum height for very long passages
-                      overflowY: 'auto', // Enable vertical scrolling only when needed
+                      maxHeight: currentSectionData?.type === 'english' ? '100%' : '400px', // Full height for English section to enable scrolling
+                      overflowY: currentSectionData?.type === 'english' ? 'auto' : 'hidden', // Enable scrolling for English section
                       overflowX: 'hidden' // Hide horizontal scrollbar
                     }}
                   >
@@ -2842,28 +2842,30 @@ const TestTaker = () => {
         
         /* Reading passage auto-scaling and scrolling styles */
         .reading-passage {
-          scrollbar-width: thin;
-          scrollbar-color: #cbd5e0 #f7fafc;
           border-right: 2px solid #e2e8f0; /* Visual separator at middle line */
-          min-height: fit-content; /* Auto-scale to content */
-          height: auto; /* Allow natural height */
         }
         
-        .reading-passage::-webkit-scrollbar {
+        /* English section specific scrollbar styles */
+        .reading-passage-container.english-section .reading-passage {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e0 #f7fafc;
+        }
+        
+        .reading-passage-container.english-section .reading-passage::-webkit-scrollbar {
           width: 8px;
         }
         
-        .reading-passage::-webkit-scrollbar-track {
+        .reading-passage-container.english-section .reading-passage::-webkit-scrollbar-track {
           background: #f7fafc;
           border-radius: 4px;
         }
         
-        .reading-passage::-webkit-scrollbar-thumb {
+        .reading-passage-container.english-section .reading-passage::-webkit-scrollbar-thumb {
           background: #cbd5e0;
           border-radius: 4px;
         }
         
-        .reading-passage::-webkit-scrollbar-thumb:hover {
+        .reading-passage-container.english-section .reading-passage::-webkit-scrollbar-thumb:hover {
           background: #a0aec0;
         }
         
@@ -2876,6 +2878,19 @@ const TestTaker = () => {
         .reading-passage-container {
           height: auto;
           min-height: fit-content;
+        }
+        
+        /* English section specific height and overflow behavior */
+        .reading-passage-container.english-section {
+          height: 50vh !important;
+          max-height: 50vh !important;
+          overflow: hidden !important;
+        }
+        
+        .reading-passage-container.english-section .reading-passage {
+          height: 100% !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
         }
         
         /* Fixed height for images to prevent layout shift */
