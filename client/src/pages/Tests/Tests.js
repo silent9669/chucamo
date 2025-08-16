@@ -160,6 +160,16 @@ const Tests = () => {
       if (test.testType !== 'practice') {
         return false;
       }
+      
+      // Apply section filtering to real tests as well
+      if (sectionFilter !== 'all') {
+        // Check if test has sections that match the filter
+        const hasEnglishSection = test.sections && test.sections.some(section => section.type === 'english');
+        const hasMathSection = test.sections && test.sections.some(section => section.type === 'math');
+        
+        if (sectionFilter === 'english' && !hasEnglishSection) return false;
+        if (sectionFilter === 'math' && !hasMathSection) return false;
+      }
     } else if (testTypeFilter === 'study-plan') {
       // For mock tests, filter by testType field (which should be 'study-plan' for mock tests)
       if (test.testType !== 'study-plan') {
@@ -304,8 +314,8 @@ const Tests = () => {
           {testTypeFilter === 'all' 
             ? 'Browse and take all available SAT tests to improve your skills.'
             : testTypeFilter === 'practice' 
-            ? 'Browse and take SAT real tests to simulate actual exam conditions.'
-            : 'Browse and take SAT mock tests with focused sections.'
+            ? 'Browse and take SAT real tests to simulate actual exam conditions. Filter by section type to focus on specific areas.'
+            : 'Browse and take SAT mock tests with focused sections. Filter by section type to focus on specific areas.'
           }
         </p>
       </div>
@@ -382,7 +392,7 @@ const Tests = () => {
           </div>
         </div>
 
-        {testTypeFilter === 'study-plan' && (
+        {(testTypeFilter === 'study-plan' || testTypeFilter === 'practice') && (
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <FiFilter size={16} className="text-gray-500" />
@@ -393,7 +403,9 @@ const Tests = () => {
                 onClick={() => setSectionFilter('all')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sectionFilter === 'all'
-                    ? 'bg-green-100 text-green-700'
+                    ? testTypeFilter === 'practice' 
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -403,7 +415,9 @@ const Tests = () => {
                 onClick={() => setSectionFilter('english')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sectionFilter === 'english'
-                    ? 'bg-green-100 text-green-700'
+                    ? testTypeFilter === 'practice' 
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -413,7 +427,9 @@ const Tests = () => {
                 onClick={() => setSectionFilter('math')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sectionFilter === 'math'
-                    ? 'bg-green-100 text-green-700'
+                    ? testTypeFilter === 'practice' 
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-green-100 text-green-700'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -429,13 +445,21 @@ const Tests = () => {
           <FiBookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No {testTypeFilter === 'all' ? '' : testTypeFilter === 'practice' ? 'real' : 'mock'} tests found
+            {sectionFilter !== 'all' && (testTypeFilter === 'practice' || testTypeFilter === 'study-plan') 
+              ? ` with ${sectionFilter} sections` 
+              : ''
+            }
           </h3>
           <p className="text-gray-600">
             {testTypeFilter === 'all' 
               ? 'No tests match your current filters.'
               : testTypeFilter === 'practice' 
-              ? 'No real tests match your current filters.'
-              : 'No mock tests match your current filters.'
+              ? sectionFilter !== 'all' 
+                ? `No real tests with ${sectionFilter} sections match your current filters.`
+                : 'No real tests match your current filters.'
+              : sectionFilter !== 'all'
+                ? `No mock tests with ${sectionFilter} sections match your current filters.`
+                : 'No mock tests match your current filters.'
             }
           </p>
         </div>
