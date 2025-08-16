@@ -23,46 +23,10 @@ const Tests = () => {
       const response = await testsAPI.getAll();
       const testsData = response.data.tests || response.data || [];
       
-      // Transform the data to match our UI format and calculate difficulty
-      const transformedTests = await Promise.all(testsData.map(async test => {
-        // Calculate test difficulty based on question difficulties
-        let calculatedDifficulty = test.difficulty || 'Medium';
-        
-        try {
-          // Fetch questions for this test to calculate difficulty
-          const questionsResponse = await testsAPI.getQuestions(test._id || test.id);
-          const questions = questionsResponse.data.questions || [];
-          
-          if (questions.length > 0) {
-            // Count difficulties
-            const difficultyCounts = {
-              easy: 0,
-              medium: 0,
-              hard: 0
-            };
-            
-            questions.forEach(question => {
-              const difficulty = (question.difficulty || 'medium').toLowerCase();
-              if (difficultyCounts.hasOwnProperty(difficulty)) {
-                difficultyCounts[difficulty]++;
-              }
-            });
-            
-            // Determine the most common difficulty
-            const maxCount = Math.max(difficultyCounts.easy, difficultyCounts.medium, difficultyCounts.hard);
-            
-            if (difficultyCounts.hard === maxCount) {
-              calculatedDifficulty = 'Hard';
-            } else if (difficultyCounts.medium === maxCount) {
-              calculatedDifficulty = 'Medium';
-            } else {
-              calculatedDifficulty = 'Easy';
-            }
-          }
-        } catch (error) {
-          logger.error(`Error fetching questions for test ${test._id}:`, error);
-          // Keep the original difficulty if we can't fetch questions
-        }
+      // Transform the data to match our UI format
+      const transformedTests = testsData.map(test => {
+        // Use the test's difficulty field directly
+        const testDifficulty = test.difficulty || 'Medium';
         
         // Determine testType based on available fields
         let determinedTestType = test.testType;
@@ -84,7 +48,7 @@ const Tests = () => {
           description: test.description,
           duration: test.totalTime || test.timeLimit || test.duration || 180,
           questions: test.totalQuestions || test.questions || 0,
-          difficulty: calculatedDifficulty || 'Medium', // Ensure difficulty is never undefined
+          difficulty: testDifficulty, // Use the test's difficulty field
           status: test.isActive ? 'published' : 'draft',
           visible: test.isPublic,
           testType: determinedTestType, // Use determined testType
@@ -94,9 +58,8 @@ const Tests = () => {
           category: test.category || null,
           created: test.createdAt ? new Date(test.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         };
-      }));
+      });
       
-
       setTests(transformedTests);
     } catch (error) {
       logger.error('Error loading tests:', error);
@@ -129,6 +92,8 @@ const Tests = () => {
       case 'advanced':
       case 'hard':
         return 'bg-red-100 text-red-800';
+      case 'expert':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

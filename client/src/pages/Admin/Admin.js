@@ -717,7 +717,8 @@ const RealTestManagement = () => {
     description: '',
     timeLimit: 180,
     sections: [],
-    testType: 'practice'
+    testType: 'practice',
+    difficulty: 'medium'
   });
   const [currentSection, setCurrentSection] = useState({
     type: 'english',
@@ -735,7 +736,6 @@ const RealTestManagement = () => {
     ],
     correctAnswer: 0,
     explanation: '',
-    difficulty: 'medium',
     images: [],
     passage: '',
     answerType: 'multiple-choice',
@@ -956,6 +956,7 @@ const RealTestManagement = () => {
         id: test.id,
         title: test.title,
         description: test.description,
+        difficulty: test.difficulty || 'medium',
       timeLimit: transformedSections.reduce((total, section) => total + section.timeLimit, 0), // Sum of section times
         sections: transformedSections,
         testType: 'practice'
@@ -1028,7 +1029,7 @@ const RealTestManagement = () => {
         description: description,
         type: 'custom',
         testType: 'practice',
-        difficulty: 'medium',
+        difficulty: currentTest.difficulty || 'medium',
         sections: transformedSections,
         totalTime: totalTime,
         totalQuestions: totalQuestions
@@ -1127,7 +1128,7 @@ const RealTestManagement = () => {
         question: currentQuestion.question,
         content: currentQuestion.question,
         topic: currentQuestion.topic || 'general', // This is the question type (e.g., "Information & Ideas", "Algebra")
-        difficulty: currentQuestion.difficulty || 'medium',
+        difficulty: 'medium',
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
         type: currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice', // This is the answer type
@@ -1371,7 +1372,7 @@ const RealTestManagement = () => {
           ],
       correctAnswer: correctAnswer,
       explanation: question.explanation || '',
-      difficulty: question.difficulty || 'medium',
+      difficulty: 'medium',
       images: question.images || [],
       passage: question.passage || '',
       answerType: question.type === 'grid-in' ? 'written' : 'multiple-choice',
@@ -1480,7 +1481,7 @@ const RealTestManagement = () => {
       question: currentQuestion.question,
         content: currentQuestion.question,
       topic: currentQuestion.topic || 'general',
-      difficulty: currentQuestion.difficulty || 'medium',
+      difficulty: 'medium',
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
       // Preserve the original question type, don't override it
@@ -1601,7 +1602,7 @@ const RealTestManagement = () => {
         question: currentQuestion.question,
         content: currentQuestion.question,
         topic: editingQuestion ? (editingQuestion.topic || currentQuestion.topic || 'general') : (currentQuestion.topic || 'general'),
-        difficulty: currentQuestion.difficulty || 'medium',
+        difficulty: 'medium',
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
         // CRITICAL: Preserve the original question type, don't override it
@@ -1917,7 +1918,7 @@ const RealTestManagement = () => {
             />
           <button
             onClick={() => {
-              setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice' });
+              setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice', difficulty: 'medium' });
               setCurrentView('test-builder');
             }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
@@ -1945,7 +1946,7 @@ const RealTestManagement = () => {
             {!searchTerm && (
             <button
               onClick={() => {
-                  setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice' });
+                  setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'practice', difficulty: 'medium' });
                 setCurrentView('test-builder');
               }}
               className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-white"
@@ -2127,6 +2128,21 @@ const RealTestManagement = () => {
             <p className="text-xs text-gray-500 mt-1">
               English sections: 32 min each • Math sections: 35 min each
             </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Test Difficulty
+            </label>
+            <select
+              value={currentTest.difficulty}
+              onChange={(e) => setCurrentTest(prev => ({ ...prev, difficulty: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+              <option value="expert">Expert</option>
+            </select>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2437,7 +2453,6 @@ const RealTestManagement = () => {
                   </span>
                 </div>
                 <h4 className="font-medium text-gray-900">{question.content || question.question}</h4>
-                <p className="text-sm text-gray-600">{question.difficulty}</p>
                 {question.images && question.images.length > 0 && (
                   <p className="text-xs text-gray-500 mt-1">📷 {question.images.length} image(s)</p>
                 )}
@@ -2567,20 +2582,6 @@ const RealTestManagement = () => {
 
         <div className="bg-white border rounded-lg p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Difficulty Level
-              </label>
-              <select
-                value={currentQuestion.difficulty}
-                onChange={(e) => setCurrentQuestion(prev => ({ ...prev, difficulty: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Question Type
@@ -3111,6 +3112,7 @@ const MockTestManagement = () => {
         id: test.id,
         title: test.title,
         description: test.description,
+        difficulty: test.difficulty || 'medium',
       timeLimit: transformedSections.reduce((total, section) => total + section.timeLimit, 0), // Sum of section times
         sections: transformedSections,
         testType: 'study-plan'
@@ -3223,7 +3225,7 @@ const MockTestManagement = () => {
         description: description,
         type: 'custom',
         testType: 'study-plan',
-        difficulty: 'medium',
+        difficulty: currentTest.difficulty || 'medium',
         sections: transformedSections,
         totalTime: currentTest.timeLimit || 180,
         totalQuestions: currentTest.sections ? currentTest.sections.reduce((total, section) => total + (section.questions ? section.questions.length : 0), 0) : 0
@@ -3319,7 +3321,7 @@ const MockTestManagement = () => {
         question: currentQuestion.question,
         content: currentQuestion.question,
         topic: currentQuestion.topic || 'general', // This is the question type (e.g., "Information & Ideas", "Algebra")
-        difficulty: currentQuestion.difficulty || 'medium',
+        difficulty: 'medium',
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
         type: currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice', // This is the answer type
@@ -3536,7 +3538,7 @@ const MockTestManagement = () => {
         : ['', '', '', ''],
       correctAnswer: correctAnswer,
       explanation: question.explanation || '',
-      difficulty: question.difficulty || 'medium',
+      difficulty: 'medium',
       images: question.images || [],
       passage: question.passage || '',
       answerType: question.type === 'grid-in' ? 'written' : 'multiple-choice',
@@ -3569,7 +3571,7 @@ const MockTestManagement = () => {
       question: currentQuestion.question,
       content: currentQuestion.question,
       topic: currentQuestion.topic || 'general',
-      difficulty: currentQuestion.difficulty || 'medium',
+      difficulty: 'medium',
       explanation: currentQuestion.explanation || '',
       passage: currentQuestion.passage || '',
       // Preserve the original question type, don't override it
@@ -3688,7 +3690,7 @@ const MockTestManagement = () => {
             />
           <button
             onClick={() => {
-              setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'study-plan' });
+              setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'study-plan', difficulty: 'medium' });
               setCurrentView('test-builder');
             }}
               className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
@@ -3715,7 +3717,7 @@ const MockTestManagement = () => {
             </p>
             <button
               onClick={() => {
-                setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'study-plan' });
+                setCurrentTest({ title: '', description: '', timeLimit: 180, sections: [], testType: 'study-plan', difficulty: 'medium' });
                 setCurrentView('test-builder');
               }}
               className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-white"
@@ -3815,7 +3817,8 @@ const MockTestManagement = () => {
                 description: '',
                 timeLimit: 0,
                 sections: [],
-                testType: 'study-plan'
+                testType: 'study-plan',
+                difficulty: 'medium'
               });
               setCurrentView('dashboard');
             }}
@@ -3856,6 +3859,21 @@ const MockTestManagement = () => {
             <p className="text-xs text-gray-500 mt-1">
               English sections: 32 min each • Math sections: 35 min each
             </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Test Difficulty
+            </label>
+            <select
+              value={currentTest.difficulty}
+              onChange={(e) => setCurrentTest(prev => ({ ...prev, difficulty: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+              <option value="expert">Expert</option>
+            </select>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -4144,7 +4162,6 @@ const MockTestManagement = () => {
                   </span>
                 </div>
                 <h4 className="font-medium text-gray-900">{question.content || question.question}</h4>
-                <p className="text-sm text-gray-600">{question.difficulty}</p>
                 {question.images && question.images.length > 0 && (
                   <p className="text-xs text-gray-500 mt-1">📷 {question.images.length} image(s)</p>
                 )}
@@ -4274,20 +4291,6 @@ const MockTestManagement = () => {
 
         <div className="bg-white border rounded-lg p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Difficulty Level
-              </label>
-              <select
-                value={currentQuestion.difficulty}
-                onChange={(e) => setCurrentQuestion(prev => ({ ...prev, difficulty: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Question Type
