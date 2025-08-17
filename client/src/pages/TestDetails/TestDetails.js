@@ -444,15 +444,13 @@ const TestDetails = () => {
                 {showAnswers ? 'Hide' : 'Show'} Answers
               </button>
               
-              {user?.accountType !== 'free' && (
-                <button
-                  onClick={() => setShowExplanations(!showExplanations)}
-                  className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                >
-                  {showExplanations ? <FiEyeOff className="h-4 w-4 mr-1" /> : <FiEye className="h-4 w-4 mr-1" />}
-                  {showExplanations ? 'Hide' : 'Show'} Explanations
-                </button>
-              )}
+              <button
+                onClick={() => setShowExplanations(!showExplanations)}
+                className="flex items-center px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                {showExplanations ? <FiEyeOff className="h-4 w-4 mr-1" /> : <FiEye className="h-4 w-4 mr-1" />}
+                {showExplanations ? 'Hide' : 'Show'} Explanations
+              </button>
             </div>
           </div>
         </div>
@@ -775,7 +773,7 @@ const TestDetails = () => {
                     )}
 
                     {/* Explanation */}
-                    {user?.accountType !== 'free' && showExplanations && currentQuestionData.explanation && (
+                    {showExplanations && currentQuestionData.explanation && (
                       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <h4 className="font-medium text-blue-900 mb-2">Explanation</h4>
                         <div className="text-blue-800">
