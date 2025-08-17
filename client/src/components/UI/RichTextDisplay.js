@@ -14,6 +14,8 @@ const RichTextDisplay = ({ content, fontFamily = 'inherit', fontSize = 'inherit'
 
     // Convert markdown-like syntax to HTML with better structure for highlighting
     let processedContent = text
+      // Fill-in-the-blank underscores: ______ (render as natural underline)
+      .replace(/_{3,}/g, '<span style="text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>')
       // Bold text: **text** or __text__
       .replace(/\*\*(.*?)\*\*/g, '<strong class="rich-text-bold" data-format="bold">$1</strong>')
       .replace(/__(.*?)__/g, '<strong class="rich-text-bold" data-format="bold">$1</strong>')
