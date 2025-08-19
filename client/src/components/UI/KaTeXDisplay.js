@@ -302,7 +302,7 @@ export const InlineKaTeX = ({ mathContent, className = '', ...props }) => {
       let processed = mathContent.trim();
       
       // Remove common problematic characters
-      processed = processed.replace(/[^\x00-\x7F]/g, ''); // Remove non-ASCII characters
+      processed = processed.replace(/[^\u0000-\u007F]/g, ''); // Remove non-ASCII characters
 
       // Attempt to render with KaTeX
       const html = katex.renderToString(processed, {
@@ -329,7 +329,7 @@ export const InlineKaTeX = ({ mathContent, className = '', ...props }) => {
   return (
     <span 
       ref={containerRef} 
-      className={`katex-inline-container ${className}`} 
+      className={`katex-inline-container ${className} ${hasError ? 'katex-error' : ''}`} 
       {...props}
       dangerouslySetInnerHTML={{ __html: renderedContent }}
     />
