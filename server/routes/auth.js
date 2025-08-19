@@ -97,7 +97,7 @@ router.post('/register', [
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     res.status(500).json({ message: 'Server error during registration' });
   }
 });
@@ -267,7 +267,7 @@ router.get('/me', protect, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user error:', error);
+    logger.error('Get user error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -327,7 +327,7 @@ router.put('/profile', protect, [
       }
     });
   } catch (error) {
-    console.error('Profile update error:', error);
+    logger.error('Profile update error:', error);
     res.status(500).json({ message: 'Server error during profile update' });
   }
 });
@@ -369,7 +369,7 @@ router.post('/change-password', protect, [
       message: 'Password changed successfully'
     });
   } catch (error) {
-    console.error('Password change error:', error);
+    logger.error('Password change error:', error);
     res.status(500).json({ message: 'Server error during password change' });
   }
 });
@@ -387,7 +387,7 @@ router.post('/logout', checkSession, async (req, res) => {
       message: 'Logged out successfully' 
     });
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error:', error);
     res.status(500).json({ message: 'Server error during logout' });
   }
 });

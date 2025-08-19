@@ -87,12 +87,13 @@ if (isDevelopment) {
 }
 
 // CORS configuration
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://yourdomain.com', // Replace with your actual domain
-  'https://www.yourdomain.com'
-];
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://yourdomain.com'
+    ];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -258,7 +259,7 @@ console.log('================================');
 if (!MONGODB_URI) {
   logger.warn('No MONGODB_URI found in environment variables');
   if (process.env.NODE_ENV === 'production') {
-    console.error('MONGODB_URI is required in production!');
+    logger.error('MONGODB_URI is required in production!');
     process.exit(1);
   } else {
     MONGODB_URI = 'mongodb://localhost:27017/bluebook-sat-simulator';
