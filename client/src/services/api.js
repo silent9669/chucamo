@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger';
 
 // Create axios instance
 const api = axios.create({
@@ -24,7 +25,7 @@ const api = axios.create({
       }
       
       // Fallback to known Railway URL
-      return 'https://chucamo-production.up.railway.app/api';
+      return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
     }
     
     // Development fallback - use proxy
@@ -46,7 +47,7 @@ api.interceptors.request.use(
     
     // Log request details for debugging (only in development)
     if (process.env.NODE_ENV === 'development') {
-      console.log('API Request:', {
+      logger.debug('API Request:', {
         url: config.url,
         method: config.method,
         baseURL: config.baseURL,
@@ -69,7 +70,7 @@ api.interceptors.response.use(
   (error) => {
     // Log detailed error information for debugging (only in development)
     if (process.env.NODE_ENV === 'development') {
-      console.error('API Error:', {
+      logger.error('API Error:', {
         url: error.config?.url,
         method: error.config?.method,
         baseURL: error.config?.baseURL,

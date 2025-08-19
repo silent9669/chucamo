@@ -1,10 +1,11 @@
 // Test utility for copy-paste functionality across different IP addresses
 
 import { getEnvironmentConfig, logEnvironmentInfo } from './ipUtils';
+import logger from './logger';
 
 // Test the copy-paste functionality
 export const testCopyPaste = async () => {
-  console.log('🧪 Testing Copy-Paste Functionality...');
+  logger.info('🧪 Testing Copy-Paste Functionality...');
   
   // Log environment information
   logEnvironmentInfo();
@@ -13,11 +14,11 @@ export const testCopyPaste = async () => {
   
   // Test clipboard API availability
   const clipboardAvailable = navigator.clipboard && navigator.clipboard.writeText;
-  console.log('📋 Clipboard API Available:', clipboardAvailable);
+  logger.debug('📋 Clipboard API Available:', clipboardAvailable);
   
   // Test selection API
   const selectionAvailable = window.getSelection;
-  console.log('👆 Selection API Available:', selectionAvailable);
+  logger.debug('👆 Selection API Available:', selectionAvailable);
   
   // Test if we can create a test selection
   try {
@@ -36,15 +37,15 @@ export const testCopyPaste = async () => {
     selection.removeAllRanges();
     selection.addRange(range);
     
-    console.log('✅ Selection created successfully');
+    logger.debug('✅ Selection created successfully');
     
     // Test clipboard write if available
     if (clipboardAvailable) {
       try {
         await navigator.clipboard.writeText('Test clipboard write');
-        console.log('✅ Clipboard write successful');
+        logger.debug('✅ Clipboard write successful');
       } catch (error) {
-        console.warn('⚠️ Clipboard write failed:', error.message);
+        logger.warn('⚠️ Clipboard write failed:', error.message);
       }
     }
     
@@ -53,41 +54,52 @@ export const testCopyPaste = async () => {
     document.body.removeChild(testElement);
     
   } catch (error) {
-    console.error('❌ Selection test failed:', error);
+    logger.error('❌ Selection test failed:', error);
   }
   
   // Test environment-specific functionality
-  console.log('🌍 Environment Test Results:', {
+  const results = {
     isLocal: config.isLocal,
     isProduction: config.isProd,
     copyPasteEnabled: config.copyPasteEnabled,
     watermarkText: config.watermarkText,
-    debugMode: config.debugMode
-  });
+    debugMode: config.debugMode,
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    cookieEnabled: navigator.cookieEnabled,
+    onLine: navigator.onLine,
+    language: navigator.language,
+    languages: navigator.languages
+  };
+  
+  logger.debug('🌍 Environment Test Results:', results);
   
   // Test IP/hostname detection
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
-  console.log('🏠 Network Info:', {
+  const networkInfo = {
+    connection: navigator.connection ? {
+      effectiveType: navigator.connection.effectiveType,
+      downlink: navigator.connection.downlink,
+      rtt: navigator.connection.rtt
+    } : 'Not available',
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    deviceMemory: navigator.deviceMemory
+  };
+  logger.debug('🏠 Network Info:', {
     hostname,
     protocol,
     fullUrl: window.location.href,
-    origin: window.location.origin
+    origin: window.location.origin,
+    networkInfo: networkInfo
   });
   
-  return {
-    success: true,
-    clipboardAvailable,
-    selectionAvailable,
-    config,
-    hostname,
-    protocol
-  };
+  return results;
 };
 
 // Test specific copy event handling
 export const testCopyEvent = () => {
-  console.log('📝 Testing Copy Event Handling...');
+  logger.debug('📝 Testing Copy Event Handling...');
   
   try {
     // Create a test copy event
@@ -100,10 +112,10 @@ export const testCopyEvent = () => {
     Object.defineProperty(testEvent, 'clipboardData', {
       value: {
         setData: (type, data) => {
-          console.log(`📋 Setting clipboard data: ${type} = ${data}`);
+          logger.debug(`📋 Setting clipboard data: ${type} = ${data}`);
         },
         getData: (type) => {
-          console.log(`📋 Getting clipboard data: ${type}`);
+          logger.debug(`📋 Getting clipboard data: ${type}`);
           return 'test data';
         }
       },
@@ -112,19 +124,19 @@ export const testCopyEvent = () => {
     
     // Dispatch the event
     document.dispatchEvent(testEvent);
-    console.log('✅ Copy event dispatched successfully');
+    logger.debug('✅ Copy event dispatched successfully');
     
     return true;
   } catch (error) {
-    console.error('❌ Copy event test failed:', error);
+    logger.error('❌ Copy event test failed:', error);
     return false;
   }
 };
 
 // Comprehensive test suite
 export const runCopyPasteTestSuite = async () => {
-  console.log('🚀 Starting Copy-Paste Test Suite...');
-  console.log('=' .repeat(50));
+  logger.info('🚀 Starting Copy-Paste Test Suite...');
+  logger.debug('=' .repeat(50));
   
   const results = {
     timestamp: new Date().toISOString(),
@@ -155,8 +167,8 @@ export const runCopyPasteTestSuite = async () => {
     onLine: navigator.onLine
   };
   
-  console.log('📊 Test Suite Results:', results);
-  console.log('=' .repeat(50));
+  logger.debug('📊 Test Suite Results:', results);
+  logger.debug('=' .repeat(50));
   
   return results;
 };

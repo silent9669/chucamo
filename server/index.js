@@ -85,46 +85,45 @@ if (isDevelopment) {
     }
   }));
 }
-app.use(cors({
+
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://yourdomain.com', // Replace with your actual domain
+  'https://www.yourdomain.com'
+];
+
+const corsOptions = {
   origin: function (origin, callback) {
-    // Add CORS debugging
-    console.log('=== CORS REQUEST ===');
-    console.log('Request origin:', origin);
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
-      console.log('No origin - allowing request');
+      logger.debug('No origin - allowing request');
       return callback(null, true);
     }
     
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001', 
-      'http://localhost:5000',
-      'http://localhost:5173',
-      'https://chucamo-production.up.railway.app',
-      'https://railway.com'
-    ];
+    // Check if origin is in allowed list
+    const normalizedOrigin = origin.toLowerCase().replace(/^https?:\/\//, '');
+    const normalizedAllowedOrigins = allowedOrigins.map(o => o.toLowerCase().replace(/^https?:\/\//, ''));
     
-    console.log('Allowed origins:', allowedOrigins);
-    console.log('Origin in allowed list:', allowedOrigins.indexOf(origin) !== -1);
-    
-    // Normalize origin by removing trailing slash for comparison
-    const normalizedOrigin = origin.replace(/\/$/, '');
-    const normalizedAllowedOrigins = allowedOrigins.map(origin => origin.replace(/\/$/, ''));
-    
-    if (normalizedAllowedOrigins.indexOf(normalizedOrigin) !== -1) {
-      console.log('CORS: Allowing request from', origin, '(normalized:', normalizedOrigin, ')');
+    if (allowedOrigins.indexOf(origin) !== -1 || normalizedAllowedOrigins.indexOf(normalizedOrigin) !== -1) {
+      // Only log in development to reduce Railway logs
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('CORS: Allowing request from', origin);
+      }
       callback(null, true);
     } else {
-      console.log('CORS: Blocking request from', origin, '(normalized:', normalizedOrigin, ')');
-      console.log('Normalized allowed origins:', normalizedAllowedOrigins);
+      // Only log in development to reduce Railway logs
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('CORS: Blocking request from', origin);
+      }
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Rate limiting removed - no limits for users
 // const authLimiter = rateLimit({
@@ -225,11 +224,11 @@ if (process.env.NODE_ENV === 'production' || isRailway || buildExists) {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
+  logger.error('Server error:', err.message);
+  if (process.env.NODE_ENV === 'development') {
+    logger.error(err.stack);
+  }
+  res.status(500).json({ message: 'Internal server error' });
 });
 
 // Database connection
@@ -250,7 +249,7 @@ console.log('CORS origins allowed:', [
   'http://localhost:3001', 
   'http://localhost:5000',
   'http://localhost:5173',
-  'https://chucamo-production.up.railway.app',
+        process.env.ALLOWED_ORIGIN || 'https://yourdomain.com',
   'https://railway.com'
 ]);
 console.log('================================');

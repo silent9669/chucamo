@@ -1,8 +1,14 @@
 const { spawn } = require('child_process');
+const path = require('path');
 
+// Minimal startup logging to reduce Railway logs
 console.log('🚀 Starting Bluebook SAT Simulator...');
-console.log('Environment:', process.env.NODE_ENV || 'development');
-console.log('Port:', process.env.PORT || 5000);
+
+// Only log environment in development
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Environment:', process.env.NODE_ENV || 'development');
+  console.log('Port:', process.env.PORT || 5000);
+}
 
 // Start the server
 const server = spawn('node', ['server/index.js'], {
@@ -15,18 +21,23 @@ server.on('error', (error) => {
   process.exit(1);
 });
 
-server.on('exit', (code) => {
-  console.log(`Server exited with code ${code}`);
-  process.exit(code);
+// Process management
+process.on('exit', (code) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`Server exited with code ${code}`);
+  }
 });
 
-// Handle process signals
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down...');
-  server.kill('SIGTERM');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('SIGTERM received, shutting down...');
+  }
+  process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down...');
-  server.kill('SIGINT');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('SIGINT received, shutting down...');
+  }
+  process.exit(0);
 });

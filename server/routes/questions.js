@@ -50,25 +50,20 @@ router.get('/', protect, async (req, res) => {
 // @access  Private
 router.get('/:id', protect, async (req, res) => {
   try {
-    console.log('=== GET QUESTION DEBUG ===');
-    console.log('Fetching question with ID:', req.params.id);
-    console.log('User ID:', req.user.id);
+    logger.debug('Fetching question with ID:', req.params.id);
     
     const question = await Question.findById(req.params.id);
     
     if (!question) {
-      console.log('Question not found');
+      logger.debug('Question not found');
       return res.status(404).json({ message: 'Question not found' });
     }
-
-    console.log('Question found:', question._id);
-    console.log('Question images:', question.images);
-    console.log('Question images array length:', question.images ? question.images.length : 0);
-    console.log('=== GET QUESTION COMPLETE ===');
-
+    
+    logger.debug('Question found:', question._id);
+    
     res.json(question);
   } catch (error) {
-    console.error('Get question by ID error:', error);
+    logger.error('Get question by ID error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -154,62 +149,48 @@ router.post('/', protect, authorize('admin'), [
 // @access  Private (question creator or admin)
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    console.log('=== UPDATE QUESTION DEBUG ===');
-    console.log('Updating question with ID:', req.params.id);
-    console.log('Update data received:', req.body);
-    console.log('Images in update request:', req.body.images);
-    console.log('Images array length:', req.body.images ? req.body.images.length : 0);
-    console.log('Images array type:', typeof req.body.images);
-    console.log('Images array is array:', Array.isArray(req.body.images));
-    console.log('User ID:', req.user.id);
+    logger.debug('Updating question with ID:', req.params.id);
     
-    // Additional validation for images array structure
+    // Validate images array structure for update
     if (req.body.images && Array.isArray(req.body.images)) {
-      console.log('Validating images array structure for update...');
-      req.body.images.forEach((img, index) => {
-        console.log(`Update Image ${index}:`, img);
-        if (!img.url || !img.name) {
-          console.log(`Update Image ${index} missing required fields:`, img);
+      logger.debug('Validating images array structure for update...');
+      
+      for (let index = 0; index < req.body.images.length; index++) {
+        const img = req.body.images[index];
+        if (!img.url || !img.altText) {
+          logger.debug(`Update Image ${index} missing required fields:`, img);
+          return res.status(400).json({ 
+            message: `Image ${index + 1} is missing required fields` 
+          });
         }
-      });
+      }
     }
     
-    let question = await Question.findById(req.params.id);
-
+    const question = await Question.findById(req.params.id);
+    
     if (!question) {
-      console.log('Question not found in database');
+      logger.debug('Question not found in database');
       return res.status(404).json({ message: 'Question not found' });
     }
-
-    console.log('Found existing question:', question._id);
-    console.log('Existing question images:', question.images);
-    console.log('Existing question images array length:', question.images ? question.images.length : 0);
-    console.log('Existing question images structure:', question.images);
-
-    if (question.createdBy.toString() !== req.user.id && req.user.role !== 'admin') {
-      console.log('Access denied - user not authorized');
+    
+    // Check if user is authorized to update this question
+    if (question.createdBy.toString() !== req.user.id && req.user.accountType !== 'admin') {
+      logger.debug('Access denied - user not authorized');
       return res.status(403).json({ message: 'Access denied' });
     }
-
-    question = await Question.findByIdAndUpdate(
+    
+    // Update the question
+    const updatedQuestion = await Question.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
-
-    console.log('Question updated successfully:', question._id);
-    console.log('Updated question with images:', question.images);
-    console.log('Updated question images array length:', question.images ? question.images.length : 0);
-    console.log('Updated question images structure:', question.images);
-    console.log('=== UPDATE QUESTION COMPLETE ===');
-
-    res.json({
-      success: true,
-      message: 'Question updated successfully',
-      question
-    });
+    
+    logger.debug('Question updated successfully:', updatedQuestion._id);
+    
+    res.json(updatedQuestion);
   } catch (error) {
-    console.error('Update question error:', error);
+    logger.error('Update question error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

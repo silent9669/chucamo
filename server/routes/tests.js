@@ -43,13 +43,7 @@ router.get('/', protect, async (req, res) => {
 
     const skip = (page - 1) * limit;
     
-    // Debug logging
-    console.log('=== TESTS API DEBUG ===');
-    console.log('Query:', JSON.stringify(query, null, 2));
-    console.log('Page:', page);
-    console.log('Limit:', limit);
-    console.log('Skip:', skip);
-    console.log('User account type:', req.user.accountType);
+    logger.debugBatch('Tests query', Object.keys(query).length, { search, type, difficulty, page, limit });
     
     const tests = await Test.find(query)
       .populate('createdBy', 'firstName lastName')
@@ -59,9 +53,9 @@ router.get('/', protect, async (req, res) => {
 
     const total = await Test.countDocuments(query);
     
-    console.log('Found tests count:', tests.length);
-    console.log('Total tests in query:', total);
-    console.log('Test titles:', tests.map(t => t.title));
+    logger.debug('Found tests count:', tests.length);
+    logger.debug('Total tests in query:', total);
+    logger.debug('Test titles:', tests.map(t => t.title));
 
     res.json({
       success: true,
@@ -230,7 +224,7 @@ router.post('/', protect, authorize('admin'), [
       test
     });
   } catch (error) {
-    console.error('Create test error:', error);
+    logger.error('Create test error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -254,8 +248,8 @@ router.put('/:id', protect, authorize('teacher', 'admin'), [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('PUT Validation errors:', errors.array());
-      console.log('PUT Request body:', req.body);
+      logger.debug('PUT Validation errors:', errors.array());
+      logger.debug('PUT Request body:', req.body);
       return res.status(400).json({ 
         message: 'Validation failed',
         errors: errors.array() 
@@ -273,17 +267,17 @@ router.put('/:id', protect, authorize('teacher', 'admin'), [
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    console.log('=== UPDATING TEST ===');
-    console.log('Update data:', JSON.stringify(req.body, null, 2));
+    logger.debug('=== UPDATING TEST ===');
+    logger.debug('Update data:', JSON.stringify(req.body, null, 2));
     
     // Log question types being updated
     if (req.body.sections && req.body.sections.length > 0) {
-      console.log('=== QUESTION TYPES BEING UPDATED ===');
+      logger.debug('=== QUESTION TYPES BEING UPDATED ===');
       req.body.sections.forEach((section, sectionIndex) => {
         if (section.questions && section.questions.length > 0) {
-          console.log(`Section ${sectionIndex + 1} (${section.name}) questions:`);
+          logger.debug(`Section ${sectionIndex + 1} (${section.name}) questions:`);
           section.questions.forEach((question, questionIndex) => {
-            console.log(`  Question ${questionIndex + 1}:`, {
+            logger.debug(`  Question ${questionIndex + 1}:`, {
               id: question.id,
               type: question.type,
               answerType: question.answerType,
@@ -300,17 +294,17 @@ router.put('/:id', protect, authorize('teacher', 'admin'), [
       { new: true, runValidators: true }
     );
     
-    console.log('=== TEST UPDATED ===');
-    console.log('Updated test sections:', JSON.stringify(test.sections, null, 2));
+    logger.debug('=== TEST UPDATED ===');
+    logger.debug('Updated test sections:', JSON.stringify(test.sections, null, 2));
     
     // Log question types after updating
     if (test.sections && test.sections.length > 0) {
-      console.log('=== QUESTION TYPES AFTER UPDATING ===');
+      logger.debug('=== QUESTION TYPES AFTER UPDATING ===');
       test.sections.forEach((section, sectionIndex) => {
         if (section.questions && section.questions.length > 0) {
-          console.log(`Section ${sectionIndex + 1} (${section.name}) questions:`);
+          logger.debug(`Section ${sectionIndex + 1} (${section.name}) questions:`);
           section.questions.forEach((question, questionIndex) => {
-            console.log(`  Question ${questionIndex + 1}:`, {
+            logger.debug(`  Question ${questionIndex + 1}:`, {
               id: question.id,
               type: question.type,
               answerType: question.answerType,
@@ -327,7 +321,7 @@ router.put('/:id', protect, authorize('teacher', 'admin'), [
       test
     });
   } catch (error) {
-    console.error('Update test error:', error);
+    logger.error('Update test error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -355,7 +349,7 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
       message: 'Test deleted successfully'
     });
   } catch (error) {
-    console.error('Delete test error:', error);
+    logger.error('Delete test error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -395,7 +389,7 @@ router.get('/:id/questions', protect, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get test questions error:', error);
+    logger.error('Get test questions error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -446,7 +440,7 @@ router.post('/:id/duplicate', protect, authorize('teacher', 'admin'), async (req
       test: duplicatedTest
     });
   } catch (error) {
-    console.error('Duplicate test error:', error);
+    logger.error('Duplicate test error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -462,14 +456,14 @@ router.get('/:id/debug', protect, async (req, res) => {
       return res.status(404).json({ message: 'Test not found' });
     }
 
-    console.log('=== DEBUG TEST DATA ===');
-    console.log('Test ID:', req.params.id);
-    console.log('Test title:', test.title);
-    console.log('Sections count:', test.sections?.length || 0);
+    logger.debug('=== DEBUG TEST DATA ===');
+    logger.debug('Test ID:', req.params.id);
+    logger.debug('Test title:', test.title);
+    logger.debug('Sections count:', test.sections?.length || 0);
     
     if (test.sections) {
       test.sections.forEach((section, index) => {
-        console.log(`Section ${index + 1}:`, {
+        logger.debug(`Section ${index + 1}:`, {
           name: section.name,
           type: section.type,
           timeLimit: section.timeLimit,
@@ -510,7 +504,7 @@ router.get('/:id/debug', protect, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Debug test error:', error);
+    logger.error('Debug test error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -560,7 +554,7 @@ router.get('/history', protect, async (req, res) => {
       data: testHistory
     });
   } catch (error) {
-    console.error('Get test history error:', error);
+    logger.error('Get test history error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -597,7 +591,7 @@ router.get('/:id/results', protect, async (req, res) => {
       data: testResults
     });
   } catch (error) {
-    console.error('Get test results error:', error);
+    logger.error('Get test results error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

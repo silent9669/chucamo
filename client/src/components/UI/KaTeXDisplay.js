@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import 'katex/dist/katex.min.css';
 import katex from 'katex';
+import logger from '../../utils/logger';
 
 const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize = 'inherit' }) => {
   if (!content) return null;
@@ -31,8 +32,8 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
     processed = processed.replace(/\\underline\{\\text\{([^}]*)\}\}/g, '\\underline{$1}');
     
     if (debug) {
-      console.log('Original LaTeX:', tex);
-      console.log('Processed LaTeX:', processed);
+      logger.debug('Original LaTeX:', tex);
+      logger.debug('Processed LaTeX:', processed);
     }
     
     return processed;
@@ -65,8 +66,8 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
           return `<div class="katex-display-container" style="font-size: 1.25em; margin: 0.75rem 0; text-align: center; position: relative; z-index: 1; line-height: 1.3; display: block;">${katexHTML}</div>`;
         } catch (error) {
           if (debug) {
-            console.error('KaTeX rendering error:', error);
-            console.log('Falling back to plain text for:', mathContent);
+            logger.error('KaTeX rendering error:', error);
+            logger.debug('Falling back to plain text for:', mathContent);
           }
           // Fallback: render as plain text with improved spacing and sizing
           const fallbackContent = mathContent.replace(/\\[a-zA-Z]+(\{[^}]*\})?/g, '');
@@ -91,8 +92,8 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
           return `<span class="katex-inline-container" style="font-size: 1.15em; display: inline; vertical-align: baseline; position: relative; z-index: 1; line-height: inherit; margin: 0 0.2rem; padding: 0; user-select: text; -webkit-user-select: text; cursor: text;">${katexHTML}</span>`;
         } catch (error) {
           if (debug) {
-            console.error('KaTeX inline rendering error:', error);
-            console.log('Falling back to plain text for:', mathContent);
+            logger.error('KaTeX inline rendering error:', error);
+            logger.debug('Falling back to plain text for:', mathContent);
           }
           // Fallback: render as plain text with improved spacing and sizing
           const fallbackContent = mathContent.replace(/\\[a-zA-Z]+(\{[^}]*\})?/g, '');
@@ -284,6 +285,54 @@ const KaTeXDisplay = ({ content, fontFamily = 'inherit', debug = false, fontSize
         }
       `}</style>
     </>
+  );
+};
+
+// Inline KaTeX component
+export const InlineKaTeX = ({ mathContent, className = '', ...props }) => {
+  const containerRef = useRef(null);
+  const [renderedContent, setRenderedContent] = useState('');
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!mathContent || !containerRef.current) return;
+
+    try {
+      // Clean and process the LaTeX content
+      let processed = mathContent.trim();
+      
+      // Remove common problematic characters
+      processed = processed.replace(/[^\x00-\x7F]/g, ''); // Remove non-ASCII characters
+
+      // Attempt to render with KaTeX
+      const html = katex.renderToString(processed, {
+        displayMode: false,
+        throwOnError: false,
+        errorColor: '#cc0000',
+        strict: false
+      });
+
+      setRenderedContent(html);
+      setHasError(false);
+    } catch (error) {
+      logger.error('KaTeX inline rendering error:', error);
+      setHasError(true);
+      
+      // Fallback to plain text
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('Falling back to plain text for:', mathContent);
+      }
+      setRenderedContent(mathContent);
+    }
+  }, [mathContent]);
+
+  return (
+    <span 
+      ref={containerRef} 
+      className={`katex-inline-container ${className}`} 
+      {...props}
+      dangerouslySetInnerHTML={{ __html: renderedContent }}
+    />
   );
 };
 
