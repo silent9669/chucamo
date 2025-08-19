@@ -1,106 +1,33 @@
-const loggingConfig = require('../config/logging');
-const isDevelopment = process.env.NODE_ENV === 'development';
+// Simple, bulletproof logger that will definitely work
 const isProduction = process.env.NODE_ENV === 'production';
-
-// Log levels
-const LOG_LEVELS = {
-  ERROR: 0,
-  WARN: 1,
-  INFO: 2,
-  DEBUG: 3
-};
-
-// Current log level (can be set via environment variable)
-// In production, default to ERROR only to minimize Railway logs
-const currentLogLevel = process.env.LOG_LEVEL || loggingConfig.server.default;
-
-const shouldLog = (level) => {
-  // In production, be very strict about what gets logged
-  if (isProduction) {
-    if (loggingConfig.production.always.includes(level)) return true;
-    if (loggingConfig.production.never.includes(level)) return false;
-    if (loggingConfig.production.conditional.includes(level)) {
-      return process.env.LOG_LEVEL ? LOG_LEVELS[level] <= LOG_LEVELS[currentLogLevel] : false;
-    }
-  }
-  
-  // Ensure currentLogLevel is a valid level
-  const levelToCheck = LOG_LEVELS[level] || 0;
-  const currentLevel = LOG_LEVELS[currentLogLevel] || 0;
-  
-  return levelToCheck <= currentLevel;
-};
-
-// Batch logging for high-volume operations (no rate limiting)
-let batchedLogs = [];
-let batchTimeout = null;
-const BATCH_DELAY = loggingConfig.batching.flushInterval;
-
-const flushBatchedLogs = () => {
-  if (batchedLogs.length > 0) {
-    const summary = loggingConfig.batching.summaryFormat
-      .replace('{count}', batchedLogs.length)
-      .replace('{summary}', batchedLogs.slice(0, 3).join(', ') + (batchedLogs.length > 3 ? '...' : ''));
-    console.log(summary);
-    batchedLogs = [];
-  }
-  batchTimeout = null;
-};
-
-const addToBatch = (level, message, args) => {
-  if (batchedLogs.length < loggingConfig.batching.maxBatchSize) {
-    batchedLogs.push(`${level}: ${message}`);
-  }
-  
-  if (!batchTimeout) {
-    batchTimeout = setTimeout(flushBatchedLogs, BATCH_DELAY);
-  }
-};
 
 const logger = {
   error: (message, ...args) => {
-    if (shouldLog('ERROR')) {
-      console.error(`[ERROR] ${message}`, ...args);
-    }
+    // Always log errors
+    console.error(`[ERROR] ${message}`, ...args);
   },
   
   warn: (message, ...args) => {
-    if (shouldLog('WARN')) {
-      console.warn(`[WARN] ${message}`, ...args);
-    }
+    // Log warnings if LOG_LEVEL allows it
+    if (process.env.LOG_LEVEL === 'ERROR') return;
+    console.warn(`[WARN] ${message}`, ...args);
   },
   
   info: (message, ...args) => {
-    if (shouldLog('INFO')) {
-      console.log(`[INFO] ${message}`, ...args);
-    }
+    // Log info if LOG_LEVEL allows it
+    if (process.env.LOG_LEVEL === 'ERROR' || process.env.LOG_LEVEL === 'WARN') return;
+    console.log(`[INFO] ${message}`, ...args);
   },
   
   debug: (message, ...args) => {
-    if (shouldLog('DEBUG')) {
-      // In production, batch debug logs to reduce volume
-      if (isProduction && loggingConfig.batching.enabled) {
-        addToBatch('DEBUG', message, args);
-      } else {
-        console.log(`[DEBUG] ${message}`, ...args);
-      }
-    }
+    // Log debug if LOG_LEVEL allows it
+    if (process.env.LOG_LEVEL === 'ERROR' || process.env.LOG_LEVEL === 'WARN' || process.env.LOG_LEVEL === 'INFO') return;
+    console.log(`[DEBUG] ${message}`, ...args);
   },
   
-  // Special method for critical logs that should always be shown
   critical: (message, ...args) => {
+    // Always log critical messages
     console.log(`[CRITICAL] ${message}`, ...args);
-  },
-  
-  // Method for high-volume debug operations
-  debugBatch: (operation, count, details = '') => {
-    if (shouldLog('DEBUG')) {
-      if (isProduction && loggingConfig.batching.enabled) {
-        addToBatch('DEBUG', `${operation}: ${count} items`, details);
-      } else {
-        console.log(`[DEBUG] ${operation}: ${count} items`, details);
-      }
-    }
   }
 };
 
