@@ -43,7 +43,7 @@ router.get('/', protect, async (req, res) => {
 
     const skip = (page - 1) * limit;
     
-    logger.debugBatch('Tests query', Object.keys(query).length, { search, type, difficulty, page, limit });
+    logger.debug('Tests query:', Object.keys(query).length, 'items', { search, type, difficulty, page, limit });
     
     const tests = await Test.find(query)
       .populate('createdBy', 'firstName lastName')

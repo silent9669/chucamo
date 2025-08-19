@@ -1,5 +1,4 @@
 // Simple, bulletproof client logger
-const isProduction = process.env.NODE_ENV === 'production';
 
 const logger = {
   error: (message, ...args) => {
