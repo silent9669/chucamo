@@ -301,8 +301,8 @@ export const InlineKaTeX = ({ mathContent, className = '', ...props }) => {
       // Clean and process the LaTeX content
       let processed = mathContent.trim();
       
-      // Remove common problematic characters
-      processed = processed.replace(/[^\u0000-\u007F]/g, ''); // Remove non-ASCII characters
+      // Remove common problematic characters - filter out non-printable characters
+      processed = processed.split('').filter(char => char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 126).join('');
 
       // Attempt to render with KaTeX
       const html = katex.renderToString(processed, {
