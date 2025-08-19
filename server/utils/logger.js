@@ -24,7 +24,11 @@ const shouldLog = (level) => {
     }
   }
   
-  return LOG_LEVELS[level] <= LOG_LEVELS[currentLogLevel];
+  // Ensure currentLogLevel is a valid level
+  const levelToCheck = LOG_LEVELS[level] || 0;
+  const currentLevel = LOG_LEVELS[currentLogLevel] || 0;
+  
+  return levelToCheck <= currentLevel;
 };
 
 // Batch logging for high-volume operations (no rate limiting)

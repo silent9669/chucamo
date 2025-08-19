@@ -14,7 +14,11 @@ const LOG_LEVELS = {
 const currentLogLevel = process.env.REACT_APP_LOG_LEVEL || (isProduction ? 'ERROR' : 'DEBUG');
 
 const shouldLog = (level) => {
-  return LOG_LEVELS[level] <= LOG_LEVELS[currentLogLevel];
+  // Ensure both levels are valid
+  const levelToCheck = LOG_LEVELS[level] || 0;
+  const currentLevel = LOG_LEVELS[currentLogLevel] || 0;
+  
+  return levelToCheck <= currentLevel;
 };
 
 // Batch logging for high-volume operations (no rate limiting)
