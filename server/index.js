@@ -97,6 +97,15 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // In development mode, be more permissive with localhost
+    if (process.env.NODE_ENV === 'development') {
+      // Allow all localhost origins in development
+      if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        logger.debug('CORS: Allowing localhost request from', origin);
+        return callback(null, true);
+      }
+    }
+    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       logger.debug('No origin - allowing request');
@@ -158,6 +167,29 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static files
 app.use('/uploads', express.static('uploads'));
+
+// Global error handler middleware
+app.use((err, req, res, next) => {
+  logger.error('Global error handler caught:', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    origin: req.headers.origin,
+    userAgent: req.headers['user-agent']
+  });
+  
+  // Don't expose internal errors in production
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'Internal server error' 
+    : err.message;
+  
+  res.status(500).json({
+    success: false,
+    message: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

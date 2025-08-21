@@ -8,8 +8,12 @@ const api = axios.create({
     const envUrl = process.env.REACT_APP_API_URL;
     
     if (envUrl) {
-      // Ensure the URL has the correct protocol
+      // Ensure the URL has the correct protocol and /api suffix for localhost
       if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
+        // If it's localhost and doesn't end with /api, add it
+        if (envUrl.includes('localhost') && !envUrl.endsWith('/api')) {
+          return `${envUrl}/api`;
+        }
         return envUrl;
       } else {
         return `https://${envUrl}`;
