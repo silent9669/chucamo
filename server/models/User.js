@@ -39,13 +39,13 @@ const userSchema = new mongoose.Schema({
 
   role: {
     type: String,
-    enum: ['user', 'student', 'admin', 'teacher'],
+    enum: ['user', 'student', 'admin', 'mentor'],
     default: 'user'
   },
   status: { type: String, default: "active" }, // active | locked
   accountType: {
     type: String,
-    enum: ['free', 'premium', 'student', 'teacher', 'admin', 'pro'],
+    enum: ['free', 'premium', 'student', 'mentor', 'admin', 'pro'],
     default: 'free'
   },
   profilePicture: {

@@ -69,7 +69,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // @route   POST /api/questions
-// @desc    Create a new question (teachers and admins only)
+// @desc    Create a new question (mentors and admins only)
 // @access  Private
 router.post('/', protect, authorize('admin'), [
   body('type').isIn(['multiple-choice', 'grid-in', 'essay', 'true-false', 'matching']).withMessage('Invalid question type'),

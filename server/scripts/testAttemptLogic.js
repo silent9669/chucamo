@@ -35,13 +35,13 @@ async function testAttemptLogic() {
         role: 'student'
       },
       {
-        email: 'teacher@test.com',
-        username: 'teacheruser',
-        password: 'password123',
-        firstName: 'Teacher',
-        lastName: 'User',
-        accountType: 'teacher',
-        role: 'teacher'
+              email: 'mentor@test.com',
+      username: 'mentoruser',
+      password: 'password123',
+      firstName: 'Mentor',
+      lastName: 'User',
+      accountType: 'mentor',
+      role: 'mentor'
       },
       {
         email: 'admin@test.com',
@@ -146,7 +146,7 @@ async function testAttemptLogic() {
       
       // Determine max attempts
       let maxAttempts;
-      if (user.accountType === 'admin' || user.accountType === 'teacher' || user.accountType === 'student' || user.accountType === 'pro') {
+      if (user.accountType === 'admin' || user.accountType === 'mentor' || user.accountType === 'student' || user.accountType === 'pro') {
         maxAttempts = Infinity;
       } else {
         maxAttempts = 1;

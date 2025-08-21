@@ -77,9 +77,9 @@ router.post('/profile-picture', protect, upload.single('profilePicture'), async 
 });
 
 // @route   POST /api/upload/question-image
-// @desc    Upload image for questions (teachers and admins only)
+// @desc    Upload image for questions (mentors and admins only)
 // @access  Private
-router.post('/question-image', protect, authorize('teacher', 'admin'), upload.single('questionImage'), async (req, res) => {
+router.post('/question-image', protect, authorize('mentor', 'admin'), upload.single('questionImage'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -102,9 +102,9 @@ router.post('/question-image', protect, authorize('teacher', 'admin'), upload.si
 });
 
 // @route   POST /api/upload/test-image
-// @desc    Upload image for tests (teachers and admins only)
+// @desc    Upload image for tests (mentors and admins only)
 // @access  Private
-router.post('/test-image', protect, authorize('teacher', 'admin'), upload.single('testImage'), async (req, res) => {
+router.post('/test-image', protect, authorize('mentor', 'admin'), upload.single('testImage'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });

@@ -110,7 +110,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // @route   POST /api/tests
-// @desc    Create a new test (teachers and admins only)
+// @desc    Create a new test (mentors and admins only)
 // @access  Private
 router.post('/', protect, authorize('admin'), [
   body('title').trim().isLength({ min: 3, max: 200 }).withMessage('Title must be between 3 and 200 characters'),
@@ -232,7 +232,7 @@ router.post('/', protect, authorize('admin'), [
 // @route   PUT /api/tests/:id
 // @desc    Update a test
 // @access  Private (test creator or admin)
-router.put('/:id', protect, authorize('teacher', 'admin'), [
+router.put('/:id', protect, authorize('mentor', 'admin'), [
   body('title').optional().trim().isLength({ min: 3, max: 200 }).withMessage('Title must be between 3 and 200 characters'),
   body('description').optional().trim().isLength({ min: 10, max: 1000 }).withMessage('Description must be between 10 and 1000 characters'),
   body('type').optional().isIn(['full', 'math', 'reading', 'writing', 'custom', 'study-plan']).withMessage('Invalid test type'),
@@ -395,9 +395,9 @@ router.get('/:id/questions', protect, async (req, res) => {
 });
 
 // @route   POST /api/tests/:id/duplicate
-// @desc    Duplicate a test (teachers and admins only)
+// @desc    Duplicate a test (mentors and admins only)
 // @access  Private
-router.post('/:id/duplicate', protect, authorize('teacher', 'admin'), async (req, res) => {
+router.post('/:id/duplicate', protect, authorize('mentor', 'admin'), async (req, res) => {
   try {
     const originalTest = await Test.findById(req.params.id);
 

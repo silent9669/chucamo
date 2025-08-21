@@ -108,7 +108,7 @@ const testProAccount = async () => {
     
     // Determine max attempts for pro account
     let maxAttempts;
-    if (proUser.accountType === 'admin' || proUser.accountType === 'teacher' || proUser.accountType === 'student' || proUser.accountType === 'pro') {
+          if (proUser.accountType === 'admin' || proUser.accountType === 'mentor' || proUser.accountType === 'student' || proUser.accountType === 'pro') {
       maxAttempts = Infinity;
     } else {
       maxAttempts = 1;

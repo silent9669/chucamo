@@ -34,7 +34,7 @@ router.get('/leaderboard', protect, async (req, res) => {
     const accountTypeFilter = currentUser.accountType;
     
     // Aggregate users with their test counts, filtered by account type
-    // Exclude teacher and admin accounts from leaderboard
+    // Exclude mentor and admin accounts from leaderboard
     const leaderboard = await Result.aggregate([
       {
         $lookup: {

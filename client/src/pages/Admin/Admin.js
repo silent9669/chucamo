@@ -227,17 +227,19 @@ const UserManagement = () => {
     const styles = {
       free: 'bg-gray-100 text-gray-800',
       student: 'bg-blue-100 text-blue-800',
-      teacher: 'bg-purple-100 text-purple-800',
+      
       pro: 'bg-indigo-100 text-indigo-800',
-      admin: 'bg-red-100 text-red-800'
+      admin: 'bg-red-100 text-red-800',
+      mentor: 'bg-purple-100 text-purple-800'
     };
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[accountType] || 'bg-gray-100 text-gray-800'}`}>
         {accountType === 'student' ? 'Student Account' : 
          accountType === 'free' ? 'Free Account' : 
-         accountType === 'teacher' ? 'Teacher Account' : 
+                   accountType === 'mentor' ? 'Mentor Account' : 
          accountType === 'admin' ? 'Admin Account' : 
-         accountType === 'pro' ? 'Pro Account' : accountType}
+         accountType === 'pro' ? 'Pro Account' : 
+         accountType === 'mentor' ? 'Mentor Account' : accountType}
       </span>
     );
   };
@@ -296,9 +298,10 @@ const UserManagement = () => {
                   <option value="">All Types</option>
                   <option value="free">Free Account</option>
                   <option value="student">Student Account</option>
-                  <option value="teacher">Teacher Account</option>
+                                        <option value="mentor">Mentor Account</option>
                   <option value="pro">Pro Account</option>
                   <option value="admin">Admin Account</option>
+                  <option value="mentor">Mentor Account</option>
                 </select>
             </div>
 
@@ -553,9 +556,10 @@ const UserManagement = () => {
                   >
                     <option value="free">Free Account</option>
                     <option value="student">Student Account</option>
-                    <option value="teacher">Teacher Account</option>
+                    <option value="mentor">Mentor Account</option>
                     <option value="pro">Pro Account</option>
                     <option value="admin">Admin Account</option>
+                    <option value="mentor">Mentor Account</option>
                   </select>
                 </div>
                 <div className="text-sm text-gray-600">

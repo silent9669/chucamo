@@ -261,9 +261,9 @@ const Tests = () => {
               let maxAttempts = 1;
               let accountType = 'Free';
               
-              if (user?.accountType === 'admin' || user?.accountType === 'teacher' || user?.accountType === 'student' || user?.accountType === 'pro') {
+              if (user?.accountType === 'admin' || user?.accountType === 'mentor' || user?.accountType === 'student' || user?.accountType === 'pro') {
                 maxAttempts = '∞';
-                accountType = user.accountType === 'admin' ? 'Admin' : user.accountType === 'teacher' ? 'Teacher' : user.accountType === 'student' ? 'Student' : 'Pro';
+                                  accountType = user.accountType === 'admin' ? 'Admin' : user.accountType === 'mentor' ? 'Mentor' : user.accountType === 'student' ? 'Student' : 'Pro';
               } else {
                 maxAttempts = 1;
                 accountType = 'Free';
