@@ -10,7 +10,10 @@ const Profile = () => {
     firstName: '',
     lastName: '',
     username: '',
-    email: ''
+    email: '',
+    school: '',
+    grade: '',
+    targetScore: ''
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -63,7 +66,10 @@ const Profile = () => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         username: user.username || '',
-        email: user.email || ''
+        email: user.email || '',
+        school: user.school || '',
+        grade: user.grade || '',
+        targetScore: user.targetScore || ''
       });
     }
     fetchLeaderboard();
@@ -217,6 +223,45 @@ const Profile = () => {
                       value={profileData.email}
                       onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
                       disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">School Name</label>
+                    <input
+                      type="text"
+                      value={profileData.school}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, school: e.target.value }))}
+                      disabled={!isEditing}
+                      placeholder="Enter your school name"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
+                    <select
+                      value={profileData.grade || ''}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, grade: e.target.value ? parseInt(e.target.value) : '' }))}
+                      disabled={!isEditing}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                    >
+                      <option value="">Select Grade</option>
+                      <option value="9">Grade 9</option>
+                      <option value="10">Grade 10</option>
+                      <option value="11">Grade 11</option>
+                      <option value="12">Grade 12</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Target SAT Score</label>
+                    <input
+                      type="number"
+                      value={profileData.targetScore || ''}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, targetScore: e.target.value ? parseInt(e.target.value) : '' }))}
+                      disabled={!isEditing}
+                      min="400"
+                      max="1600"
+                      placeholder="e.g., 1200"
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
                     />
                   </div>

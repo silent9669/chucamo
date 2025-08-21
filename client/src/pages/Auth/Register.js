@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiBookOpen } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff, FiBookOpen, FiBookmark, FiTrendingUp } from 'react-icons/fi';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 
@@ -184,7 +184,98 @@ const Register = () => {
               </div>
             </div>
 
+            {/* School */}
+            <div>
+              <label htmlFor="school" className="block text-sm font-medium text-gray-700">
+                School Name
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiBookmark className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  id="school"
+                  type="text"
+                  autoComplete="organization"
+                  className="pl-10"
+                  error={errors.school?.message}
+                  {...register('school', {
+                    maxLength: {
+                      value: 100,
+                      message: 'School name cannot exceed 100 characters',
+                    },
+                  })}
+                />
+              </div>
+            </div>
 
+            {/* Grade */}
+            <div>
+              <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
+                Grade Level
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiBookmark className="h-5 w-5 text-gray-400" />
+                </div>
+                <select
+                  id="grade"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-primary-500 focus:outline-none transition-colors"
+                  {...register('grade', {
+                    setValueAs: (value) => value ? parseInt(value) : undefined,
+                    min: {
+                      value: 9,
+                      message: 'Grade must be at least 9',
+                    },
+                    max: {
+                      value: 12,
+                      message: 'Grade cannot exceed 12',
+                    },
+                  })}
+                >
+                  <option value="">Select Grade</option>
+                  <option value="9">Grade 9</option>
+                  <option value="10">Grade 10</option>
+                  <option value="11">Grade 11</option>
+                  <option value="12">Grade 12</option>
+                </select>
+                {errors.grade && (
+                  <p className="mt-1 text-sm text-red-600">{errors.grade.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Target Score */}
+            <div>
+              <label htmlFor="targetScore" className="block text-sm font-medium text-gray-700">
+                Target SAT Score
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiTrendingUp className="h-5 w-5 text-gray-400" />
+                </div>
+                <Input
+                  id="targetScore"
+                  type="number"
+                  min="400"
+                  max="1600"
+                  placeholder="e.g., 1200"
+                  className="pl-10"
+                  error={errors.targetScore?.message}
+                  {...register('targetScore', {
+                    setValueAs: (value) => value ? parseInt(value) : undefined,
+                    min: {
+                      value: 400,
+                      message: 'Target score must be at least 400',
+                    },
+                    max: {
+                      value: 1600,
+                      message: 'Target score cannot exceed 1600',
+                    },
+                  })}
+                />
+              </div>
+            </div>
 
             {/* Password */}
             <div>
