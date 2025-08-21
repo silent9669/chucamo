@@ -298,10 +298,9 @@ const UserManagement = () => {
                   <option value="">All Types</option>
                   <option value="free">Free Account</option>
                   <option value="student">Student Account</option>
-                                        <option value="mentor">Mentor Account</option>
+                  <option value="mentor">Mentor Account</option>
                   <option value="pro">Pro Account</option>
                   <option value="admin">Admin Account</option>
-                  <option value="mentor">Mentor Account</option>
                 </select>
             </div>
 
@@ -559,7 +558,6 @@ const UserManagement = () => {
                     <option value="mentor">Mentor Account</option>
                     <option value="pro">Pro Account</option>
                     <option value="admin">Admin Account</option>
-                    <option value="mentor">Mentor Account</option>
                   </select>
                 </div>
                 <div className="text-sm text-gray-600">
