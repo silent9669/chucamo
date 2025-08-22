@@ -144,6 +144,7 @@ export const resultsAPI = {
   submitTest: (id, data) => api.put(`/results/${id}`, data),
   getAnalytics: () => api.get('/results/analytics/overview'),
   addReview: (id, reviewNotes) => api.put(`/results/${id}/review`, { reviewNotes }),
+  delete: (id) => api.delete(`/results/${id}`),
 };
 
 // Articles API

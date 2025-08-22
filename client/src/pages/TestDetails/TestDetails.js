@@ -243,8 +243,14 @@ const TestDetails = () => {
         
         // Convert answeredQuestions array to answers object for scoring
         const answers = {};
-        parsedData.answeredQuestions.forEach(([questionKey, answer]) => {
+        parsedData.answeredQuestions.forEach(([questionKey, answerData]) => {
           try {
+            // Handle both old format (string) and new format (object with answer property)
+            let actualAnswer = answerData;
+            if (answerData && typeof answerData === 'object' && answerData.answer) {
+              actualAnswer = answerData.answer;
+            }
+            
             // Handle different questionKey formats
             let questionId;
             
@@ -262,11 +268,11 @@ const TestDetails = () => {
               questionId = questionKey?.toString() || 'unknown';
             }
             
-            answers[questionId] = { selectedAnswer: answer };
+            answers[questionId] = { selectedAnswer: actualAnswer };
           } catch (error) {
             logger.warn('Error processing questionKey:', questionKey, error);
             const questionId = questionKey?.toString() || 'unknown';
-            answers[questionId] = { selectedAnswer: answer };
+            answers[questionId] = { selectedAnswer: answerData };
           }
         });
         
@@ -350,10 +356,9 @@ const TestDetails = () => {
               } else {
                 incorrectCount++;
               }
-            } else {
-              // Unanswered questions count as incorrect
-              incorrectCount++;
             }
+            // REMOVED: Unanswered questions no longer count as incorrect
+            // This was causing the "58 incorrect" issue
           });
         });
         
@@ -364,7 +369,7 @@ const TestDetails = () => {
           score: overallScore,
           correctCount,
           incorrectCount,
-          totalQuestions: correctCount + incorrectCount,
+          totalQuestions: totalQuestions, // Use actual total questions, not just answered ones
           completedAt: parsedData.completedAt || new Date().toISOString(),
           timeSpent: parsedData.timeSpent || 0
         });
@@ -460,7 +465,7 @@ const TestDetails = () => {
       {testResults && (
         <div className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
                   {testResults.score || 0}%
@@ -478,6 +483,12 @@ const TestDetails = () => {
                   {testResults.incorrectCount || 0}
                 </div>
                 <div className="text-sm text-gray-600">Incorrect</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {(testResults.totalQuestions || 0) - (testResults.correctCount || 0) - (testResults.incorrectCount || 0)}
+                </div>
+                <div className="text-sm text-gray-600">Skipped</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-gray-600">
@@ -549,10 +560,15 @@ const TestDetails = () => {
                                   <FiX className="h-3 w-3 mr-1" />
                                   Incorrect
                                 </>
-                              )) : (
+                              ))                               : (
                                 <>
                                   <FiX className="h-3 w-3 mr-1" />
                                   Unanswered
+                                  {showAnswers && (
+                                    <span className="ml-2 text-xs text-blue-600">
+                                      (Correct answer will be shown below)
+                                    </span>
+                                  )}
                                 </>
                               )
                             }
@@ -704,6 +720,42 @@ const TestDetails = () => {
                             );
                           })}
                         </div>
+                        
+                        {/* Show correct answer and explanation for unanswered multiple choice questions */}
+                        {showAnswers && testResults && !getQuestionResult(`${currentSection}-${currentQuestion}`) && (
+                          <div className="mt-4 space-y-4">
+                            {/* Correct Answer */}
+                            {currentQuestionData.correctAnswer && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-3">Correct Answer</h4>
+                                <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">
+                                  <p className="text-green-800 font-medium">
+                                    {currentQuestionData.correctAnswer}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Explanation */}
+                            {currentQuestionData.explanation && (
+                              <div>
+                                <h4 className="font-medium text-blue-900 mb-3">Explanation</h4>
+                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                  <div className="text-blue-800">
+                                    {getCurrentSectionData()?.type === 'english' ? (
+                                      <RichTextDisplay 
+                                        content={currentQuestionData.explanation}
+                                        sectionType={getCurrentSectionData()?.type}
+                                      />
+                                    ) : (
+                                      <KaTeXDisplay content={currentQuestionData.explanation} />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 

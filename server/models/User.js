@@ -97,10 +97,25 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  lastCoinEarnedDate: {
+    lastCoinEarnedDate: {
     type: Date,
     default: null
   },
+  // Track historical test attempts (persists even after deletion)
+  historicalTestAttempts: [{
+    testId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
+    attemptsUsed: {
+      type: Number,
+      default: 0
+    },
+    lastAttemptDate: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   streakBonusUsedToday: {
     type: Boolean,
     default: false

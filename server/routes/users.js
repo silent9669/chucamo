@@ -210,33 +210,31 @@ router.get('/', protect, async (req, res) => {
 });
 
 // @route   PUT /api/users/:id
-// @desc    Update user account type (admin only)
-// @access  Private
+// @desc    Update user by ID (admin only)
+// @access  Private, Admin only
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    const { accountType } = req.body;
-
-    // Check if user exists and get their current role
-    const existingUser = await User.findById(req.params.id);
-    if (!existingUser) {
+    const { firstName, lastName, username, email, accountType, role, isActive } = req.body;
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Prevent editing admin accounts
-    if (existingUser.accountType === 'admin') {
-      return res.status(400).json({ message: 'Admin accounts cannot be edited' });
-    }
+    // Update user fields
+    if (firstName !== undefined) user.firstName = firstName;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (username !== undefined) user.username = username;
+    if (email !== undefined) user.email = email;
+    if (accountType !== undefined) user.accountType = accountType;
+    if (role !== undefined) user.role = role;
+    if (isActive !== undefined) user.isActive = isActive;
 
-    // Only allow updating account type, not role or status
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { accountType },
-      { new: true, runValidators: true }
-    ).select('-password');
+    await user.save();
 
     res.json({
       success: true,
-      message: 'User account type updated successfully',
+      message: 'User updated successfully',
       user
     });
   } catch (error) {
@@ -371,25 +369,41 @@ router.get('/:id/sessions', protect, authorize('admin'), async (req, res) => {
 });
 
 // @route   DELETE /api/users/:id
-// @desc    Delete user (admin only)
-// @access  Private
+// @desc    Delete user by ID (admin only) - automatically cleans up all user data
+// @access  Private, Admin only
 router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-
+    const userId = req.params.id;
+    
+    // Check if user exists
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (user.accountType === 'admin') {
-      return res.status(400).json({ message: 'Cannot delete admin user' });
+    // Prevent admin from deleting themselves
+    if (userId === req.user.id) {
+      return res.status(400).json({ message: 'Cannot delete your own account' });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    // Delete all user's results
+    const resultsDeleted = await Result.deleteMany({ user: userId });
+    console.log(`Deleted ${resultsDeleted.deletedCount} results for user ${userId}`);
+
+    // Delete all user's sessions
+    const sessionsDeleted = await Session.deleteMany({ user: userId });
+    console.log(`Deleted ${sessionsDeleted.deletedCount} sessions for user ${userId}`);
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
 
     res.json({
       success: true,
-      message: 'User deleted successfully'
+      message: 'User and all associated data deleted successfully',
+      deletedData: {
+        results: resultsDeleted.deletedCount,
+        sessions: sessionsDeleted.deletedCount
+      }
     });
   } catch (error) {
     console.error('Delete user error:', error);

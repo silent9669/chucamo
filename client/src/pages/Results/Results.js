@@ -1,46 +1,82 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import { testsAPI } from '../../services/api';
+import { testsAPI, resultsAPI } from '../../services/api';
 import logger from '../../utils/logger';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Performance Breakdown Chart Component
 const PerformanceBreakdownChart = ({ test }) => {
   const [testData, setTestData] = useState(null);
+  const [resultData, setResultData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Helper function to get test completion data (same as Test Review page)
+  const getTestCompletionData = () => {
+    try {
+      const completionData = localStorage.getItem(`test_completion_${test.id}`);
+              if (!completionData) {
+          return null;
+        }
+        
+        const parsedData = JSON.parse(completionData);
+        
+        const answers = {};
+        
+        // Convert answeredQuestions array to answers object (same logic as Test Review)
+        if (parsedData.answeredQuestions && Array.isArray(parsedData.answeredQuestions)) {
+          parsedData.answeredQuestions.forEach(([questionKey, answerData]) => {
+            try {
+              let actualAnswer = answerData;
+              if (answerData && typeof answerData === 'object' && answerData.answer) {
+                actualAnswer = answerData.answer;
+              }
+              answers[questionKey] = { selectedAnswer: actualAnswer };
+            } catch (error) {
+              console.warn('Error processing answer data:', error);
+            }
+          });
+        }
+        
+        return { answers, parsedData };
+    } catch (error) {
+      console.warn('Error loading test completion data:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    const loadTestData = async () => {
+    const loadData = async () => {
       try {
-        const response = await testsAPI.getById(test.id);
-        setTestData(response.data.test);
+        // Load test data
+        const testResponse = await testsAPI.getById(test.id);
+        setTestData(testResponse.data.test);
+        
+        // Load result data from database if available
+        if (test.resultId) {
+          try {
+            const resultResponse = await resultsAPI.getById(test.resultId);
+            setResultData(resultResponse.data.result);
       } catch (error) {
-        logger.error('Error loading test data:', error);
+            console.log('No database result found, using localStorage fallback');
+          }
+        }
+      } catch (error) {
+        logger.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (test.id) {
-      loadTestData();
+      loadData();
     }
   }, [test.id]);
 
   const calculatePerformanceByCategory = () => {
     if (!testData || !testData.sections) return { english: [], math: [] };
 
-    // Load completion data from localStorage
-    const completionData = localStorage.getItem(`test_completion_${test.id}`);
-    if (!completionData) return { english: [], math: [] };
-
-    const parsedData = JSON.parse(completionData);
-    const answers = {};
-    
-    // Convert answeredQuestions array to answers object
-    parsedData.answeredQuestions?.forEach(([questionKey, answer]) => {
-      answers[questionKey] = { selectedAnswer: answer };
-    });
-
+    // Define categories at the top level so they're available in all code paths
     const englishCategories = [
       { name: 'Information and Ideas', percentage: 26, questions: '12-14' },
       { name: 'Craft and Structure', percentage: 28, questions: '13-15' },
@@ -55,45 +91,111 @@ const PerformanceBreakdownChart = ({ test }) => {
       { name: 'Geometry and Trigonometry', percentage: 15, questions: '5-7' }
     ];
 
-    // Calculate performance for each category
-    const calculateCategoryPerformance = (categories, sectionType) => {
-      return categories.map(category => {
-        let correctCount = 0;
-        let totalCount = 0;
+    // PRIORITY 1: Always use localStorage test completion data for view score (same as Test Review page)
+    const completionData = getTestCompletionData();
+    if (completionData) {
+      const { answers } = completionData;
+      
+      // Calculate performance for each category using localStorage data
+      const calculateCategoryPerformance = (categories, sectionType) => {
+        return categories.map(category => {
+          let correctCount = 0;
+          let totalCount = 0;
 
-        testData.sections.forEach((section, sectionIndex) => {
-          if (section.type === sectionType) {
-            section.questions?.forEach((question, questionIndex) => {
-              const questionKey = `${sectionIndex}-${questionIndex + 1}`;
-              const userAnswer = answers[questionKey];
-              
-              if (userAnswer && question.topic === category.name) {
-                totalCount++;
-                const isCorrect = question.correctAnswer === userAnswer.selectedAnswer ||
-                                 question.options?.find(opt => opt.isCorrect)?.content === userAnswer.selectedAnswer;
-                if (isCorrect) correctCount++;
-              }
-            });
-          }
+          testData.sections.forEach((section, sectionIndex) => {
+            if (section.type === sectionType) {
+              section.questions?.forEach((question, questionIndex) => {
+                const questionKey = `${sectionIndex}-${questionIndex + 1}`;
+                const userAnswer = answers[questionKey];
+                
+                // Always count total questions for this category, regardless of whether they were answered
+                const topicMatch = question.topic === category.name;
+                const contentMatch = question.content?.toLowerCase().includes(category.name.toLowerCase()) ||
+                                   question.question?.toLowerCase().includes(category.name.toLowerCase());
+                
+                if (topicMatch || contentMatch) {
+                  totalCount++; // Count ALL questions in this category
+                  
+                  if (userAnswer) {
+                    // Only check correctness if the question was answered
+                    const isCorrect = question.correctAnswer === userAnswer.selectedAnswer ||
+                                     question.options?.find(opt => opt.isCorrect)?.content === userAnswer.selectedAnswer;
+                    if (isCorrect) correctCount++;
+                  }
+                }
+              });
+            }
+          });
+
+          const performance = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+          const scoreRange = getScoreRange(performance);
+
+          return {
+            ...category,
+            correctCount,
+            totalCount,
+            performance,
+            scoreRange
+          };
         });
+      };
 
-        const performance = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
-        const scoreRange = getScoreRange(performance);
+      return {
+        english: calculateCategoryPerformance(englishCategories, 'english'),
+        math: calculateCategoryPerformance(mathCategories, 'math')
+      };
+    }
 
-        return {
-          ...category,
-          correctCount,
-          totalCount,
-          performance,
-          scoreRange
-        };
-      });
-    };
+    // PRIORITY 2: Fallback to database result data (only if no localStorage data)
+    if (resultData && resultData.questionResults) {
 
-    return {
-      english: calculateCategoryPerformance(englishCategories, 'english'),
-      math: calculateCategoryPerformance(mathCategories, 'math')
-    };
+      // Calculate performance for each category using database data
+      const calculateCategoryPerformance = (categories, sectionType) => {
+        return categories.map(category => {
+          let correctCount = 0;
+          let totalCount = 0;
+
+          testData.sections.forEach((section, sectionIndex) => {
+            if (section.type === sectionType) {
+              section.questions?.forEach((question, questionIndex) => {
+                // Always count total questions for this category, regardless of whether they were answered
+                totalCount++;
+                
+                // Check if this question was answered correctly in the database result
+                const questionResult = resultData.questionResults.find(qr => {
+                  // Handle both direct question reference and nested question object
+                  const questionId = qr.question?._id?.toString() || qr.question?.toString();
+                  return questionId === question._id?.toString();
+                });
+                
+                if (questionResult && questionResult.isCorrect && !questionResult.isUnanswered) {
+                  correctCount++;
+                }
+              });
+            }
+          });
+
+          const performance = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+          const scoreRange = getScoreRange(performance);
+
+          return {
+            ...category,
+            correctCount,
+            totalCount,
+            performance,
+            scoreRange
+          };
+        });
+      };
+
+      return {
+        english: calculateCategoryPerformance(englishCategories, 'english'),
+        math: calculateCategoryPerformance(mathCategories, 'math')
+      };
+    }
+
+    // PRIORITY 3: Final fallback - return empty arrays if no data available
+    return { english: [], math: [] };
   };
 
   const getScoreRange = (performance) => {
@@ -196,67 +298,145 @@ const PerformanceBreakdownChart = ({ test }) => {
 // Section Details Component
 const SectionDetails = ({ test }) => {
   const [testData, setTestData] = useState(null);
+  const [resultData, setResultData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Helper function to get test completion data (same as Test Review page)
+  const getTestCompletionData = () => {
+    try {
+      const completionData = localStorage.getItem(`test_completion_${test.id}`);
+      if (!completionData) {
+        return null;
+      }
+      
+      const parsedData = JSON.parse(completionData);
+      
+      const answers = {};
+      
+      // Convert answeredQuestions array to answers object (same logic as Test Review)
+      if (parsedData.answeredQuestions && Array.isArray(parsedData.answeredQuestions)) {
+        parsedData.answeredQuestions.forEach(([questionKey, answerData]) => {
+          try {
+            let actualAnswer = answerData;
+            if (answerData && typeof answerData === 'object' && answerData.answer) {
+              actualAnswer = answerData.answer;
+            }
+            answers[questionKey] = { selectedAnswer: actualAnswer };
+        } catch (error) {
+            console.warn('Error processing answer data:', error);
+          }
+        });
+      }
+      return { answers, parsedData };
+    } catch (error) {
+      console.warn('Error loading test completion data:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    const loadTestData = async () => {
+    const loadData = async () => {
       try {
-        const response = await testsAPI.getById(test.id);
-        setTestData(response.data.test);
+        // Load test data
+        const testResponse = await testsAPI.getById(test.id);
+        setTestData(testResponse.data.test);
+        
+        // Load result data from database if available
+        if (test.resultId) {
+          try {
+            const resultResponse = await resultsAPI.getById(test.resultId);
+            setResultData(resultResponse.data.result);
       } catch (error) {
-        logger.error('Error loading test data:', error);
+            console.log('No database result found, using localStorage fallback');
+          }
+        }
+      } catch (error) {
+        logger.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (test.id) {
-      loadTestData();
+      loadData();
     }
   }, [test.id]);
 
   const getSectionStats = () => {
     if (!testData || !testData.sections) return [];
 
-    // Load completion data from localStorage
-    const completionData = localStorage.getItem(`test_completion_${test.id}`);
-    if (!completionData) return [];
+    // PRIORITY 1: Always use localStorage test completion data for view score (same as Test Review page)
+    const completionData = getTestCompletionData();
+    if (completionData) {
+      const { answers } = completionData;
+      
+      return testData.sections.map((section, sectionIndex) => {
+        let correctCount = 0;
+        let totalCount = 0;
 
-    const parsedData = JSON.parse(completionData);
-    const answers = {};
-    
-    // Convert answeredQuestions array to answers object
-    parsedData.answeredQuestions?.forEach(([questionKey, answer]) => {
-      answers[questionKey] = { selectedAnswer: answer };
-    });
+        section.questions?.forEach((question, questionIndex) => {
+          const questionKey = `${sectionIndex}-${questionIndex + 1}`;
+          const userAnswer = answers[questionKey];
+          
+          if (userAnswer) {
+            totalCount++;
+            // Use the same logic as Test Review page to determine correctness
+            const isCorrect = question.correctAnswer === userAnswer.selectedAnswer ||
+                             question.options?.find(opt => opt.isCorrect)?.content === userAnswer.selectedAnswer;
+            if (isCorrect) correctCount++;
+          }
+        });
 
-    return testData.sections.map((section, sectionIndex) => {
-      let correctCount = 0;
-      let totalCount = 0;
+        const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
 
-      section.questions?.forEach((question, questionIndex) => {
-        const questionKey = `${sectionIndex}-${questionIndex + 1}`;
-        const userAnswer = answers[questionKey];
-        
-        if (userAnswer) {
-          totalCount++;
-          const isCorrect = question.correctAnswer === userAnswer.selectedAnswer ||
-                           question.options?.find(opt => opt.isCorrect)?.content === userAnswer.selectedAnswer;
-          if (isCorrect) correctCount++;
-        }
+        return {
+          name: section.name,
+          type: section.type,
+          correctCount,
+          totalCount,
+          percentage,
+          questionCount: section.questions?.length || 0
+        };
       });
+    }
 
-      const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+    // PRIORITY 2: Fallback to database result data (only if no localStorage data)
+    if (resultData && resultData.questionResults) {
+      return testData.sections.map((section, sectionIndex) => {
+        let correctCount = 0;
+        let totalCount = section.questions?.length || 0;
 
-      return {
-        name: section.name,
-        type: section.type,
-        correctCount,
-        totalCount,
-        percentage,
-        questionCount: section.questions?.length || 0
-      };
-    });
+        // Count correct answers from database result
+        resultData.questionResults.forEach(qr => {
+          // Handle both direct question reference and nested question object
+          const questionId = qr.question?._id?.toString() || qr.question?.toString();
+          
+          if (questionId && !qr.isUnanswered) {
+            // Check if this question belongs to this section
+            const questionInSection = section.questions?.find(q => 
+              q._id?.toString() === questionId
+            );
+            if (questionInSection && qr.isCorrect) {
+              correctCount++;
+            }
+          }
+        });
+
+        const percentage = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+
+        return {
+          name: section.name,
+          type: section.type,
+          correctCount,
+          totalCount,
+          percentage,
+          questionCount: totalCount
+        };
+      });
+    }
+
+    // PRIORITY 3: Final fallback - return empty array if no data available
+    return [];
   };
 
   if (loading) {
@@ -293,7 +473,7 @@ const SectionDetails = ({ test }) => {
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Correct Answers:</span>
-                      <span className="font-medium">{section.correctCount}/{section.totalCount}</span>
+                      <span className="font-medium">{section.correctCount}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Total Questions:</span>
@@ -328,7 +508,7 @@ const SectionDetails = ({ test }) => {
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Correct Answers:</span>
-                      <span className="font-medium">{section.correctCount}/{section.totalCount}</span>
+                      <span className="font-medium">{section.correctCount}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-600">Total Questions:</span>
@@ -350,6 +530,7 @@ const SectionDetails = ({ test }) => {
 
 const Results = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [testHistory, setTestHistory] = useState([]);
   const [filteredTestHistory, setFilteredTestHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -372,6 +553,105 @@ const Results = () => {
     try {
       setLoading(true);
       
+      // Try to fetch from database first
+      const response = await resultsAPI.getAll();
+      
+      if (response.data.results && response.data.results.length > 0) {
+        // Transform database results to match our UI format
+        const transformedResults = await transformDatabaseResults(response.data.results);
+        
+        if (transformedResults.length > 0) {
+          setTestHistory(transformedResults);
+          setFilteredTestHistory(transformedResults);
+          return; // Successfully loaded from database
+        } else {
+          logger.warn('Database results transformed to empty array, falling back to localStorage');
+        }
+      } else {
+        logger.info('No database results found, falling back to localStorage');
+      }
+      
+      // Fallback to localStorage if database fails or is empty
+      await loadFromLocalStorage();
+      
+    } catch (error) {
+      logger.error('Error loading from database:', error);
+      // Always try localStorage as fallback
+      try {
+        await loadFromLocalStorage();
+      } catch (localStorageError) {
+        logger.error('Error loading from localStorage fallback:', localStorageError);
+        setError('Failed to load test history from both database and local storage');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const transformDatabaseResults = async (dbResults) => {
+    const transformedResults = [];
+    
+    for (const result of dbResults) {
+      try {
+        // Validate that result.test exists and is a valid ID
+        if (!result.test || result.test === 'null' || result.test === 'undefined') {
+          logger.warn(`Skipping result ${result._id} - invalid test reference:`, result.test);
+          continue;
+        }
+        
+        // Handle both string IDs and ObjectId objects
+        let testId;
+        if (typeof result.test === 'string') {
+          testId = result.test;
+        } else if (result.test && result.test._id) {
+          testId = result.test._id.toString();
+        } else {
+          logger.warn(`Skipping result ${result._id} - cannot extract test ID from:`, result.test);
+          continue;
+        }
+        
+        // Validate testId format
+        if (!testId || testId === 'null' || testId === 'undefined' || testId.length < 10) {
+          logger.warn(`Skipping result ${result._id} - invalid test ID format:`, testId);
+          continue;
+        }
+        
+        // Get test details
+        const testResponse = await testsAPI.getById(testId);
+        const testData = testResponse.data.test;
+        
+        // Transform the result
+        const transformedResult = {
+          id: testId,
+          resultId: result._id,
+          title: testData.title || testData.testName,
+          type: testData.type || 'custom',
+          completed: result.status === 'completed',
+          status: result.status || 'incomplete',
+          score: result.percentage || null,
+          correctAnswers: result.analytics?.correctAnswers || 0,
+          incorrectAnswers: result.analytics?.incorrectAnswers || 0,
+          totalQuestions: result.analytics?.totalQuestions || 0,
+          answeredQuestions: result.analytics?.correctAnswers + result.analytics?.incorrectAnswers || 0,
+          completedAt: result.endTime || result.completedAt,
+          startedAt: result.startTime || result.startedAt,
+          createdAt: result.createdAt,
+          databaseResult: true,
+          attemptNumber: result.attemptNumber || 1
+        };
+        
+        transformedResults.push(transformedResult);
+      } catch (error) {
+        logger.error(`Error transforming result ${result._id}:`, error);
+        // Continue with other results instead of failing completely
+      }
+    }
+    
+    return transformedResults;
+  };
+
+  const loadFromLocalStorage = async () => {
+    try {
       // Get all test completion data from localStorage
       const completionKeys = Object.keys(localStorage).filter(key => 
         key.startsWith('test_completion_')
@@ -401,9 +681,10 @@ const Results = () => {
                          // Calculate score and other metrics
              // Count unique answered questions (avoid duplicates)
              const uniqueAnsweredQuestions = new Set();
-             completionData.answeredQuestions.forEach(([questionKey, answer]) => {
+            completionData.answeredQuestions.forEach(([questionKey, answerData]) => {
                try {
                  if (typeof questionKey === 'string' && questionKey.includes('-')) {
+                  // Format: "section-question" (e.g., "0-1")
                    const [sectionIndex, questionNum] = questionKey.split('-').map(Number);
                    uniqueAnsweredQuestions.add(`${sectionIndex}-${questionNum}`);
                  }
@@ -420,8 +701,14 @@ const Results = () => {
             
             // Convert answeredQuestions array to answers object for scoring
             const answers = {};
-            completionData.answeredQuestions.forEach(([questionKey, answer]) => {
+            completionData.answeredQuestions.forEach(([questionKey, answerData]) => {
               try {
+                // Handle both old format (string) and new format (object with answer property)
+                let actualAnswer = answerData;
+                if (answerData && typeof answerData === 'object' && answerData.answer) {
+                  actualAnswer = answerData.answer;
+                }
+                
                 // Handle different questionKey formats
                 let questionId;
                 
@@ -439,11 +726,11 @@ const Results = () => {
                   questionId = questionKey?.toString() || 'unknown';
                 }
                 
-                answers[questionId] = { selectedAnswer: answer };
+                answers[questionId] = { selectedAnswer: actualAnswer };
               } catch (error) {
                 logger.warn('Error processing questionKey:', questionKey, error);
                 const questionId = questionKey?.toString() || 'unknown';
-                answers[questionId] = { selectedAnswer: answer };
+                answers[questionId] = { selectedAnswer: answerData };
               }
             });
             
@@ -530,7 +817,10 @@ const Results = () => {
               answeredQuestions: answeredCount,
               completedAt: completionData.completedAt,
               startedAt: completionData.startedAt || completionData.completedAt,
-              createdAt: testData.createdAt || completionData.completedAt
+              createdAt: testData.createdAt || completionData.completedAt,
+              // Add localStorage-specific fields
+              localStorageData: true,
+              localStorageKey: key
             });
           } catch (apiError) {
             logger.error(`Error fetching test ${testId}:`, apiError);
@@ -549,7 +839,10 @@ const Results = () => {
               answeredQuestions: completionData.answeredQuestions.length,
               completedAt: completionData.completedAt,
               startedAt: completionData.startedAt || completionData.completedAt,
-              createdAt: completionData.completedAt
+              createdAt: completionData.completedAt,
+              // Add localStorage-specific fields
+              localStorageData: true,
+              localStorageKey: key
             });
           }
         } catch (parseError) {
@@ -559,16 +852,14 @@ const Results = () => {
       
       // Sort by completion date (newest first)
       testHistoryData.sort((a, b) => 
-        new Date(b.completedAt || b.startedAt) - new Date(a.completedAt || a.startedAt)
+        new Date(b.completedAt || b.startedAt) - new Date(a.completedAt || b.startedAt)
       );
       
       setTestHistory(testHistoryData);
       setFilteredTestHistory(testHistoryData);
     } catch (error) {
-      logger.error('Error loading test history:', error);
-      setError('Failed to load test history');
-    } finally {
-      setLoading(false);
+      logger.error('Error loading from localStorage:', error);
+      setError('Failed to load test history from localStorage');
     }
   };
 
@@ -620,14 +911,37 @@ const Results = () => {
     navigate(`/test-details/${test.id}`);
   };
 
-  const handleDeleteTest = (test) => {
+  const handleDeleteTest = async (test) => {
     if (window.confirm(`Are you sure you want to delete the test result for "${test.title}"? This action cannot be undone.`)) {
+      try {
+        // If it's a database result, try to delete from database first
+        if (test.databaseResult && test.resultId) {
+          try {
+            await resultsAPI.delete(test.resultId);
+            logger.info(`Successfully deleted database result ${test.resultId} for test ${test.id}`);
+          } catch (dbError) {
+            logger.error('Failed to delete from database:', dbError);
+            // Continue with localStorage deletion even if database deletion fails
+          }
+        }
+        
       // Remove from localStorage
+        if (test.localStorageKey) {
+          localStorage.removeItem(test.localStorageKey);
+        } else {
       localStorage.removeItem(`test_completion_${test.id}`);
+        }
       localStorage.removeItem(`test_progress_${test.id}`);
       
       // Remove from state
       setTestHistory(prev => prev.filter(t => t.id !== test.id));
+        setFilteredTestHistory(prev => prev.filter(t => t.id !== test.id));
+        
+        logger.info(`Test result deleted successfully for: ${test.title}`);
+      } catch (error) {
+        logger.error('Error deleting test result:', error);
+        alert('Failed to delete test result. Please try again.');
+      }
     }
   };
 
@@ -721,12 +1035,9 @@ const Results = () => {
               <FiBarChart2 className="h-8 w-8 text-blue-600" />
               <h1 className="text-2xl font-bold text-gray-900">Results & Analytics</h1>
             </div>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-            >
-              Back to Dashboard
-            </button>
+            <div className="flex items-center space-x-3">
+
+            </div>
           </div>
         </div>
       </div>

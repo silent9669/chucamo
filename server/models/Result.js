@@ -151,24 +151,45 @@ const resultSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Calculate score and percentage before saving
+  // Calculate score and percentage before saving
 resultSchema.pre('save', function(next) {
   if (this.questionResults && this.questionResults.length > 0) {
     // Calculate total correct answers
     this.analytics.correctAnswers = this.questionResults.filter(q => q.isCorrect).length;
-    this.analytics.totalQuestions = this.questionResults.length;
+    
+    // Only set totalQuestions if it hasn't been set by the route logic
+    // This allows the PUT route to set the correct total from test data
+    if (!this.analytics.totalQuestions || this.analytics.totalQuestions === 0) {
+      this.analytics.totalQuestions = this.questionResults.length;
+    }
+    
     this.analytics.incorrectAnswers = this.questionResults.filter(q => !q.isCorrect && q.userAnswer).length;
-    this.analytics.skippedQuestions = this.questionResults.filter(q => !q.userAnswer).length;
     
-    // Calculate score (assuming each question is worth equal points)
-    const pointsPerQuestion = this.maxScore / this.analytics.totalQuestions;
-    this.score = Math.round(this.analytics.correctAnswers * pointsPerQuestion);
+    // Only set skippedQuestions if it hasn't been set by the route logic
+    // This allows the PUT route to set the correct value from test data
+    if (!this.analytics.skippedQuestions && this.analytics.skippedQuestions !== 0) {
+      this.analytics.skippedQuestions = this.questionResults.filter(q => !q.userAnswer).length;
+    }
     
-    // Calculate percentage
-    this.percentage = Math.round((this.score / this.maxScore) * 100);
-    
-    // Determine if passed
-    this.passed = this.score >= (this.test?.passingScore || 1000);
+    // Only calculate score and percentage for completed tests
+    if (this.status === 'completed') {
+      // Calculate score (assuming each question is worth equal points)
+      // Use the actual answered questions for score calculation, not total test questions
+      const answeredQuestions = this.questionResults.length;
+      const pointsPerQuestion = this.maxScore / answeredQuestions;
+      this.score = Math.round(this.analytics.correctAnswers * pointsPerQuestion);
+      
+      // Calculate percentage
+      this.percentage = Math.round((this.score / this.maxScore) * 100);
+      
+      // Determine if passed
+      this.passed = this.score >= (this.test?.passingScore || 1000);
+    } else {
+      // For incomplete tests, don't set final score/percentage
+      this.score = undefined;
+      this.percentage = undefined;
+      this.passed = false;
+    }
     
     // Calculate average time per question
     const totalTime = this.questionResults.reduce((sum, q) => sum + (q.timeSpent || 0), 0);

@@ -26,14 +26,8 @@ const Tests = () => {
       setLoading(true);
       // Request all tests without pagination limit
       const response = await testsAPI.getAll({ limit: 1000 });
-      console.log('=== API RESPONSE DEBUG ===');
-      console.log('Full API response:', response);
-      console.log('Response data:', response.data);
-      console.log('Tests array:', response.data.tests);
       
       const testsData = response.data.tests || response.data || [];
-      console.log('Tests data to process:', testsData);
-      console.log('Tests data length:', testsData.length);
       
       // Transform the data to match our UI format
       const transformedTests = testsData.map(test => {
@@ -71,12 +65,8 @@ const Tests = () => {
           created: test.createdAt ? new Date(test.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         };
         
-        console.log('Transformed test:', transformedTest);
         return transformedTest;
       });
-      
-      console.log('Final transformed tests:', transformedTests);
-      console.log('Final transformed tests length:', transformedTests.length);
       
       setTests(transformedTests);
     } catch (error) {
@@ -222,105 +212,152 @@ const Tests = () => {
     setCurrentPage(1);
   }, [testTypeFilter, searchTerm, sectionFilter]);
 
-  // Debug logging
-  console.log('=== FILTERING DEBUG ===');
-  console.log('Total tests:', tests.length);
-  console.log('testTypeFilter:', testTypeFilter);
-  console.log('searchTerm:', searchTerm);
-  console.log('sectionFilter:', sectionFilter);
-  console.log('Filtered tests count:', filteredTests.length);
-  console.log('All tests:', tests.map(t => ({ title: t.title, testType: t.testType, type: t.type })));
-  console.log('Filtered tests:', filteredTests.map(t => ({ title: t.title, testType: t.testType, type: t.type })));
-
-  const TestCard = ({ test }) => (
-    <div className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{test.title}</h3>
-          <p className="text-gray-600 text-sm mb-3">{test.description}</p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(test.difficulty)}`}>
-            {test.difficulty || 'Unknown'}
-          </span>
-          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(test.status)}`}>
-            {test.status === 'published' ? 'Published' : 'Draft'}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-        <span className="flex items-center gap-1">
-          <FiClock size={14} />
-          {formatDuration(test.duration)}
-        </span>
-        <span className="flex items-center gap-1">
-          <FiBookOpen size={14} />
-          {test.questions} questions
-        </span>
-        <span className="text-xs text-gray-500">
-          Created: {test.created}
-        </span>
-        {test.category && (
-          <span className="text-xs text-blue-600">
-            Test Date: {test.category}
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex flex-wrap gap-1">
-          <span className={`px-2 py-1 rounded text-xs font-medium ${
-            test.testType === 'study-plan'
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-blue-100 text-blue-800'
-          }`}>
-            {test.testType === 'study-plan' ? 'Mock Test' : 'Real Test'}
-          </span>
-        </div>
+  const TestCard = ({ test }) => {
+    const [attemptStatus, setAttemptStatus] = useState(null);
+    
+    useEffect(() => {
+      const checkAttemptStatus = async () => {
+        try {
+          const response = await fetch(`/api/results/attempt-status/${test.id}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setAttemptStatus(data.data);
+          }
+        } catch (error) {
+          console.warn('Database check failed, using localStorage fallback:', error);
+        }
+      };
+      
+      checkAttemptStatus();
+    }, [test.id]);
+    
+    const getButtonState = () => {
+      // Use database data if available, otherwise fallback to localStorage
+      if (attemptStatus) {
+        const { hasIncompleteAttempt, canAttempt, completedAttempts } = attemptStatus;
         
-        {test.status === 'published' && (
-          <div className="flex flex-col gap-2">
-            {/* Show attempt information and determine button text */}
-            {(() => {
-              const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${test.id}`) || '0');
-              const hasProgress = localStorage.getItem(`test_progress_${test.id}`);
-              let maxAttempts = 1;
-              let accountType = 'Free';
-              
-              if (user?.accountType === 'admin' || user?.accountType === 'mentor' || user?.accountType === 'student' || user?.accountType === 'pro') {
-                maxAttempts = '∞';
-                                  accountType = user.accountType === 'admin' ? 'Admin' : user.accountType === 'mentor' ? 'Mentor' : user.accountType === 'student' ? 'Student' : 'Pro';
-              } else {
-                maxAttempts = 1;
-                accountType = 'Free';
-              }
-              
-              return (
-                <>
-                  <div className="text-xs text-gray-500 mb-1">
-                    {maxAttempts === '∞' ? (
-                      <span>Unlimited attempts ({accountType})</span>
-                    ) : (
-                      <span>{completedAttempts}/{maxAttempts} attempts ({accountType})</span>
-                    )}
-                  </div>
-                  
-                  <Link
-                    to={`/tests/${test.id}`}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2 min-w-[120px]"
-                  >
-                    <FiPlay size={16} />
-                    {hasProgress ? 'Continue Test' : 'Start Test'}
-                  </Link>
-                </>
-              );
-            })()}
+        // Always ensure we have consistent values for maxAttempts and accountTypeLabel
+        let maxAttempts = attemptStatus.maxAttempts;
+        let accountTypeLabel = attemptStatus.accountTypeLabel;
+        
+        // Fallback to localStorage logic if database values are missing
+        if (!maxAttempts || !accountTypeLabel) {
+          if (user?.accountType === 'admin' || user?.accountType === 'mentor' || user?.accountType === 'student' || user?.accountType === 'pro') {
+            maxAttempts = '∞';
+            accountTypeLabel = user.accountType === 'admin' ? 'Admin' : user.accountType === 'mentor' ? 'Mentor' : user.accountType === 'student' ? 'Student' : 'Pro';
+          } else {
+            maxAttempts = 1;
+            accountTypeLabel = 'Free';
+          }
+        }
+        
+        return {
+          text: hasIncompleteAttempt ? 'Continue Test' : 'Start Test',
+          maxAttempts,
+          accountTypeLabel,
+          canAttempt
+        };
+      }
+      
+      // Fallback to localStorage logic
+      const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${test.id}`) || '0');
+      const hasProgress = localStorage.getItem(`test_progress_${test.id}`);
+      let maxAttempts = 1;
+      let accountType = 'Free';
+      
+      if (user?.accountType === 'admin' || user?.accountType === 'mentor' || user?.accountType === 'student' || user?.accountType === 'pro') {
+        maxAttempts = '∞';
+        accountType = user.accountType === 'admin' ? 'Admin' : user.accountType === 'mentor' ? 'Mentor' : user.accountType === 'student' ? 'Student' : 'Pro';
+      } else {
+        maxAttempts = 1;
+        accountType = 'Free';
+      }
+      
+      return {
+        text: hasProgress ? 'Continue Test' : 'Start Test',
+        maxAttempts,
+        accountTypeLabel: accountType,
+        canAttempt: maxAttempts === '∞' || completedAttempts < maxAttempts
+      };
+    };
+    
+    const buttonState = getButtonState();
+    
+    return (
+      <div className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{test.title}</h3>
+            <p className="text-gray-600 text-sm mb-3">{test.description}</p>
           </div>
-        )}
+          <div className="flex flex-col items-end gap-2">
+            <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(test.difficulty)}`}>
+              {test.difficulty || 'Unknown'}
+            </span>
+            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(test.status)}`}>
+              {test.status === 'published' ? 'Published' : 'Draft'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+          <span className="flex items-center gap-1">
+            <FiClock size={14} />
+            {formatDuration(test.duration)}
+          </span>
+          <span className="flex items-center gap-1">
+            <FiBookOpen size={14} />
+            {test.questions} questions
+          </span>
+          <span className="text-xs text-gray-500">
+            Created: {test.created}
+          </span>
+          {test.category && (
+            <span className="text-xs text-blue-600">
+              Test Date: {test.category}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-1">
+            <span className={`px-2 py-1 rounded text-xs font-medium ${
+              test.testType === 'study-plan'
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-blue-100 text-blue-800'
+            }`}>
+              {test.testType === 'study-plan' ? 'Mock Test' : 'Real Test'}
+            </span>
+          </div>
+          
+          {test.status === 'published' && (
+            <div className="flex flex-col gap-2">
+              <div className="text-xs text-gray-500 mb-1">
+                <span>{buttonState.accountTypeLabel}: {buttonState.maxAttempts === '∞' ? 'Unlimited' : buttonState.maxAttempts} attempts</span>
+              </div>
+              
+              <Link
+                to={`/tests/${test.id}`}
+                className={`px-6 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center gap-2 min-w-[120px] ${
+                  buttonState.canAttempt
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
+              >
+                <FiPlay size={16} />
+                {buttonState.text}
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -597,4 +634,4 @@ const Tests = () => {
   );
 };
 
-export default Tests; 
+export default Tests;

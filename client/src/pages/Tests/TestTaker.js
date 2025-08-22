@@ -17,7 +17,7 @@ import CalculatorPopup from '../../components/UI/CalculatorPopup';
 import KaTeXDisplay from '../../components/UI/KaTeXDisplay';
 import RichTextDocument from '../../components/UI/RichTextDocument';
 import Watermark from '../../components/UI/Watermark';
-import { testsAPI } from '../../services/api';
+import { testsAPI, resultsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
@@ -207,9 +207,9 @@ const TestTaker = () => {
         testData.sections.forEach((section, sectionIndex) => {
           if (section.questions && section.questions.length > 0) {
             section.questions.forEach((question, questionIndex) => {
-              // Add section info to each question
+              // Add section info to each question and preserve ALL original question fields
               const questionWithSection = {
-                ...question,
+                ...question, // Preserve ALL original question fields
                 section: section.name,
                 sectionIndex: sectionIndex,
                 questionNumber: questionIndex + 1,
@@ -230,6 +230,24 @@ const TestTaker = () => {
         const sectionTime = testData.sections[0].timeLimit * 60; // Convert to seconds
         setTimeLeft(sectionTime);
         logger.debug('Initialized timer with', sectionTime, 'seconds for section', testData.sections[0].title);
+      }
+      
+      // Create or resume test result record
+      try {
+        // Always call startTest to handle the "1 user = 1 result per test" policy
+        // The backend will either create new, resume incomplete, or overwrite completed
+        const startResponse = await resultsAPI.startTest(testId);
+        const resultId = startResponse.data.result._id;
+        localStorage.setItem(`test_result_${testId}`, resultId);
+        
+        if (startResponse.data.resumed) {
+          logger.debug('Resuming existing test result:', resultId);
+        } else {
+          logger.debug('Created new test result record:', resultId);
+        }
+      } catch (error) {
+        logger.error('Error creating/resuming test result:', error);
+        // Don't block test loading for this error
       }
       
       logger.debug('Loaded test data:', testData);
@@ -258,8 +276,19 @@ const TestTaker = () => {
         
         // Load the current question's answer state
         const questionKey = `${progress.currentSection || 0}-${progress.currentQuestion || 1}`;
-        const previousAnswer = new Map(progress.answeredQuestions || []).get(questionKey);
-        setSelectedAnswer(previousAnswer || null);
+        const previousAnswerData = new Map(progress.answeredQuestions || []).get(questionKey);
+        
+        // Handle both old format (string) and new format (object with answer property)
+        let previousAnswer = null;
+        if (previousAnswerData) {
+          if (typeof previousAnswerData === 'object' && previousAnswerData.answer) {
+            previousAnswer = previousAnswerData.answer;
+          } else {
+            previousAnswer = previousAnswerData;
+          }
+        }
+        
+        setSelectedAnswer(previousAnswer);
         setIsMarkedForReview(new Set(progress.markedForReviewQuestions || []).has(questionKey));
       } catch (error) {
         logger.error('Error loading saved progress:', error);
@@ -572,14 +601,44 @@ const TestTaker = () => {
     
     // Get current question data to get the actual question ID
     const currentQuestionData = getCurrentQuestionData();
-    const questionId = currentQuestionData?.id || `${currentSection}-${currentQuestion}`;
+    if (!currentQuestionData) {
+      console.warn('⚠️ No current question data found for section', currentSection, 'question', currentQuestion);
+      return;
+    }
+    
+    // Handle Mongoose subdocuments - extract the actual _id from _doc or convert to plain object
+    let questionId;
+    if (currentQuestionData._doc && currentQuestionData._doc._id) {
+      // Mongoose subdocument - extract from _doc
+      questionId = currentQuestionData._doc._id;
+    } else if (currentQuestionData._id) {
+      // Direct _id access
+      questionId = currentQuestionData._id;
+    } else if (currentQuestionData.id) {
+      // Fallback to numeric id
+      questionId = currentQuestionData.id;
+    }
+    
     const questionKey = `${currentSection}-${currentQuestion}`;
     
-    // Save with both question ID and section-question key for compatibility
+    console.log('🔍 handleAnswerSelect Debug:', {
+      section: currentSection,
+      question: currentQuestion,
+      questionId: questionId,
+      questionKey: questionKey,
+      answer: answer,
+      currentQuestionData: currentQuestionData,
+      hasDoc: !!currentQuestionData._doc,
+      docId: currentQuestionData._doc?._id
+    });
+    
+    // Store with questionKey and include questionId in the value for later use
     setAnsweredQuestions(prev => {
       const newMap = new Map(prev);
-      newMap.set(questionKey, answer);
-      newMap.set(questionId, answer);
+      newMap.set(questionKey, {
+        answer: answer,
+        questionId: questionId?.toString()
+      });
       return newMap;
     });
     
@@ -591,14 +650,27 @@ const TestTaker = () => {
     
     // Get current question data to get the actual question ID
     const currentQuestionData = getCurrentQuestionData();
-    const questionId = currentQuestionData?.id || `${currentSection}-${currentQuestion}`;
+    let questionId;
+    if (currentQuestionData._doc && currentQuestionData._doc._id) {
+      // Mongoose subdocument - extract from _doc
+      questionId = currentQuestionData._doc._id;
+    } else if (currentQuestionData._id) {
+      // Direct _id access
+      questionId = currentQuestionData._id;
+    } else if (currentQuestionData.id) {
+      // Fallback to numeric id
+      questionId = currentQuestionData.id;
+    }
+    
     const questionKey = `${currentSection}-${currentQuestion}`;
     
-    // Save with both question ID and section-question key for compatibility
+    // Store with questionKey and include questionId in the value for later use
     setAnsweredQuestions(prev => {
       const newMap = new Map(prev);
-      newMap.set(questionKey, value);
-      newMap.set(questionId, value);
+      newMap.set(questionKey, {
+        answer: value,
+        questionId: questionId?.toString()
+      });
       return newMap;
     });
     
@@ -1265,11 +1337,17 @@ const TestTaker = () => {
     
     // Load appropriate answer based on question type
     if (previousAnswer) {
+      // Handle both old format (string) and new format (object with answer property)
+      let actualAnswer = previousAnswer;
+      if (typeof previousAnswer === 'object' && previousAnswer.answer) {
+        actualAnswer = previousAnswer.answer;
+      }
+      
       const questionData = getCurrentQuestionData();
       if (questionData?.answerType === 'written') {
-        setWrittenAnswer(previousAnswer);
+        setWrittenAnswer(actualAnswer);
       } else {
-        setSelectedAnswer(previousAnswer);
+        setSelectedAnswer(actualAnswer);
       }
     }
     
@@ -1309,7 +1387,7 @@ const TestTaker = () => {
     setShowQuestionNav(false);
   };
 
-  const handleSaveAndExit = () => {
+  const handleSaveAndExit = async () => {
     // Calculate total time limit from all sections
     const totalTimeLimit = test.sections?.reduce((total, section) => total + (section.timeLimit || 0), 0) || 0;
     const totalTimeLimitSeconds = totalTimeLimit * 60; // Convert to seconds
@@ -1341,6 +1419,164 @@ const TestTaker = () => {
     // Save completion data - overwrite if same test
     localStorage.setItem(`test_completion_${testId}`, JSON.stringify(completionData));
     
+    // Also save to database if we have a result ID
+    console.log('🔍 Save & Exit Debug Info:');
+    console.log('  testId:', testId);
+    console.log('  answeredQuestions Map size:', answeredQuestions.size);
+    console.log('  answeredQuestions entries:', Array.from(answeredQuestions.entries()));
+    
+    try {
+      const resultId = localStorage.getItem(`test_result_${testId}`);
+      console.log('  resultId from localStorage:', resultId);
+      
+      if (resultId) {
+        // Prepare question results for answered questions only
+        const questionResults = [];
+        console.log('🔍 Constructing questionResults from answeredQuestions:', {
+          answeredQuestionsSize: answeredQuestions.size,
+          answeredQuestionsEntries: Array.from(answeredQuestions.entries()),
+          flattenedQuestionsCount: questions.length
+        });
+        
+        answeredQuestions.forEach((answerData, questionKey) => {
+          console.log('🔍 Processing answer:', { questionKey, answerData });
+          
+          // Handle both section-question keys (e.g., "0-1") and question IDs
+          let sectionIndex, questionIndex;
+          
+          if (questionKey.includes('-')) {
+            // This is a section-question key like "0-1"
+            [sectionIndex, questionIndex] = questionKey.split('-').map(Number);
+          } else {
+            // This is a question ID, we need to find which section/question it belongs to
+            console.log('🔍 Question ID found, searching for section/question...');
+            let found = false;
+            for (let s = 0; s < test.sections.length && !found; s++) {
+              for (let q = 0; q < test.sections[s].questions.length && !found; q++) {
+                const question = test.sections[s].questions[q];
+                if (question._id?.toString() === questionKey || question.id?.toString() === questionKey) {
+                  sectionIndex = s;
+                  questionIndex = q + 1;
+                  found = true;
+                  console.log('🔍 Found question in section', s, 'question', q + 1);
+                }
+              }
+            }
+            if (!found) {
+              console.warn('⚠️ Could not find question with ID:', questionKey);
+              return;
+            }
+          }
+          
+          // Use the flattened questions array for consistency
+          const flattenedQuestion = questions.find(q => 
+            q.sectionIndex === sectionIndex && q.questionNumber === questionIndex
+          );
+          
+          if (flattenedQuestion) {
+            // Handle Mongoose subdocuments - extract the actual _id from _doc or convert to plain object
+            let questionId;
+            if (flattenedQuestion._doc && flattenedQuestion._doc._id) {
+              // Mongoose subdocument - extract from _doc
+              questionId = flattenedQuestion._doc._id;
+            } else if (flattenedQuestion._id) {
+              // Direct _id access
+              questionId = flattenedQuestion._id;
+            } else if (flattenedQuestion.id) {
+              // Fallback to numeric id
+              questionId = flattenedQuestion.id;
+            }
+            
+            console.log('🔍 Processing flattened question:', {
+              sectionIndex,
+              questionIndex,
+              questionId: questionId,
+              questionContent: flattenedQuestion.question?.substring(0, 50) + '...',
+              questionData: flattenedQuestion,
+              hasDoc: !!flattenedQuestion._doc,
+              docId: flattenedQuestion._doc?._id
+            });
+            
+            // Extract the actual answer from the answerData object
+            const actualAnswer = typeof answerData === 'object' ? answerData.answer : answerData;
+            
+            // Determine if the answer is correct
+            let isCorrect = false;
+            if (flattenedQuestion.type === 'multiple-choice' || flattenedQuestion.answerType === 'multiple-choice') {
+              // Method 1: Check if the selected answer matches an option with isCorrect flag
+              if (flattenedQuestion.options) {
+                const selectedOption = flattenedQuestion.options.find(opt => opt.content === actualAnswer);
+                if (selectedOption && selectedOption.isCorrect === true) {
+                  isCorrect = true;
+                }
+              }
+
+              // Method 2: Check if the selected answer matches the correctAnswer field
+              if (!isCorrect) {
+                if (typeof flattenedQuestion.correctAnswer === 'string') {
+                  isCorrect = actualAnswer === flattenedQuestion.correctAnswer;
+                } else if (typeof flattenedQuestion.correctAnswer === 'number' && flattenedQuestion.options) {
+                  const correctOption = flattenedQuestion.options[flattenedQuestion.correctAnswer];
+                  const correctContent = correctOption?.content || correctOption;
+                  isCorrect = actualAnswer === correctContent;
+                } else if (typeof flattenedQuestion.correctAnswer === 'number') {
+                  isCorrect = actualAnswer === flattenedQuestion.correctAnswer.toString();
+                }
+              }
+
+              // Method 3: Check if the selected answer matches any option marked as correct
+              if (!isCorrect && flattenedQuestion.options) {
+                const correctOption = flattenedQuestion.options.find(opt => opt.isCorrect === true);
+                if (correctOption && correctOption.content === actualAnswer) {
+                  isCorrect = true;
+                }
+              }
+            } else if (flattenedQuestion.answerType === 'written' || flattenedQuestion.type === 'grid-in') {
+              const acceptableAnswers = flattenedQuestion.acceptableAnswers || [];
+              const writtenAnswer = flattenedQuestion.writtenAnswer || '';
+              const allAcceptableAnswers = [...acceptableAnswers];
+              if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
+                allAcceptableAnswers.push(writtenAnswer);
+              }
+              isCorrect = allAcceptableAnswers.some(acceptableAnswer => 
+                actualAnswer.toLowerCase().trim() === acceptableAnswer.toLowerCase().trim()
+              );
+            }
+            
+            questionResults.push({
+              question: questionId,
+              userAnswer: actualAnswer,
+              isCorrect,
+              timeSpent: 0
+            });
+          } else {
+            console.warn('⚠️ Could not find flattened question for section', sectionIndex, 'question', questionIndex);
+          }
+        });
+        
+        console.log('🔍 Final questionResults:', questionResults);
+        
+        // Update the result in database
+        console.log('🚀 Calling resultsAPI.submitTest with:', {
+          resultId,
+          questionResultsCount: questionResults.length,
+          questionResults: questionResults,
+          status: 'in-progress'
+        });
+        
+        const submitResponse = await resultsAPI.submitTest(resultId, {
+          questionResults,
+          endTime: new Date().toISOString(),
+          status: 'in-progress' // Keep as in-progress since user is saving and exiting
+        });
+        
+        console.log('✅ API Response:', submitResponse.data);
+        logger.debug('Test progress saved to database');
+      }
+    } catch (error) {
+      logger.error('Error saving test progress to database:', error);
+    }
+    
     // Keep progress data for resuming
     saveProgress();
     
@@ -1363,7 +1599,14 @@ const TestTaker = () => {
     
     const questionKey = `${currentSection}-${totalQuestionsInSection}`;
     const previousAnswer = answeredQuestions.get(questionKey);
-    setSelectedAnswer(previousAnswer || null);
+    
+    // Handle both old format (string) and new format (object with answer property)
+    let actualAnswer = previousAnswer;
+    if (previousAnswer && typeof previousAnswer === 'object' && previousAnswer.answer) {
+      actualAnswer = previousAnswer.answer;
+    }
+    
+    setSelectedAnswer(actualAnswer || null);
     setIsMarkedForReview(markedForReviewQuestions.has(questionKey));
     
     // Clear any auto-started timer from next section
@@ -1394,7 +1637,14 @@ const TestTaker = () => {
       // Load saved answers for new section
       const questionKey = `${currentSection + 1}-1`;
       const previousAnswer = answeredQuestions.get(questionKey);
-      setSelectedAnswer(previousAnswer || null);
+      
+      // Handle both old format (string) and new format (object with answer property)
+      let actualAnswer = previousAnswer;
+      if (previousAnswer && typeof previousAnswer === 'object' && previousAnswer.answer) {
+        actualAnswer = previousAnswer.answer;
+      }
+      
+      setSelectedAnswer(actualAnswer || null);
       setIsMarkedForReview(markedForReviewQuestions.has(questionKey));
       
       saveProgress();
@@ -1430,111 +1680,55 @@ const TestTaker = () => {
       // Save completion data - overwrite if same test
       localStorage.setItem(`test_completion_${testId}`, JSON.stringify(completionData));
       
-      // Clear progress data and result ID
+      // Clear progress data but keep result ID for API call
       localStorage.removeItem(`test_progress_${testId}`);
-      localStorage.removeItem(`test_result_${testId}`);
+      // Don't remove result ID yet - we need it for the API call
+      // localStorage.removeItem(`test_result_${testId}`);
       
       // Submit results to API and show coins earned
       try {
-        // Get the existing result ID from localStorage or create a new one
-        let resultId = localStorage.getItem(`test_result_${testId}`);
+        // Always use the existing result ID from localStorage (created in loadTestData)
+        const resultId = localStorage.getItem(`test_result_${testId}`);
         
         if (!resultId) {
-          // If no existing result, create a new one
-          const startResponse = await fetch('/api/results', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              testId
-            })
-          });
-          
-          if (!startResponse.ok) {
-            const errorText = await startResponse.text();
-            
-            try {
-              const errorData = JSON.parse(errorText);
-              
-              // Handle attempt limit errors with specific messages
-              if (errorData.message && errorData.message.includes('reached max attempt')) {
-                if (errorData.upgradeRequired) {
-                  alert(`⚠️ ${errorData.message}`);
-                  if (user?.role === 'admin') {
-                    navigate('/upgrade-plan');
-                  } else {
-                    navigate('/dashboard');
-                  }
-                  return;
-                } else {
-                  alert(`⚠️ ${errorData.message}`);
+          console.error('❌ No result ID found in localStorage. This should not happen.');
+          alert('Error: Test session not found. Please restart the test.');
                   navigate('/tests');
                   return;
-                }
-              } else if (errorData.message === 'Upgrade to student account to re-do test' || 
-                         errorData.message === 'Free accounts can only attempt each test once. Upgrade to student account for more attempts.' ||
-                         errorData.upgradeRequired) {
-                alert('⚠️ Free accounts can only attempt each test once. Upgrade to student account for more attempts.');
-                if (user?.role === 'admin') {
-                  navigate('/upgrade-plan');
-                } else {
-                  navigate('/dashboard');
-                }
-                return;
-              } else if (errorData.message === 'Maximum attempts reached for this test') {
-                alert('⚠️ Maximum attempts reached for this test');
-                navigate('/tests');
-                return;
-              }
-            } catch (e) {
-              logger.error('Error parsing error response:', e);
-            }
-            
-            // Check if it's a free account limitation error (fallback for unparseable responses)
-            if (errorText.includes('Free accounts can only attempt each test once') || 
-                errorText.includes('Upgrade to student account') ||
-                errorText.includes('reached max attempt')) {
-              if (errorText.includes('Free account type reached max attempt')) {
-                alert('⚠️ Free account type reached max attempt (1). Upgrade to student account for more attempts.');
-                if (user?.role === 'admin') {
-                  navigate('/upgrade-plan');
-                } else {
-                  navigate('/dashboard');
-                }
-              } else {
-                alert('⚠️ Account type reached max attempt. Please contact support.');
-                navigate('/tests');
-              }
-              return;
-            }
-            
-            alert('Failed to start test. Please try again.');
-            return;
-          }
-          
-          const startResult = await startResponse.json();
-          resultId = startResult.result._id;
-          localStorage.setItem(`test_result_${testId}`, resultId);
         }
+        
+        console.log('🔍 Using existing result ID for Finish Test:', resultId);
         
         // Prepare question results
         const questionResults = [];
         
-        // Process ALL questions in the test, not just answered ones
-        test.sections.forEach((section, sectionIndex) => {
-          section.questions.forEach((question, questionIndex) => {
-            const questionKey = `${sectionIndex}-${questionIndex + 1}`;
-            const selectedAnswer = answeredQuestions.get(questionKey);
+        // Process ONLY answered questions, not all questions in the test
+        answeredQuestions.forEach((answerData, questionKey) => {
+          // Parse section and question indices from the question key
+          const [sectionIndex, questionIndex] = questionKey.split('-').map(Number);
+          
+          // Use the flattened questions array for consistency
+          const flattenedQuestion = questions.find(q => 
+            q.sectionIndex === sectionIndex && q.questionNumber === questionIndex
+          );
+          
+          if (flattenedQuestion) {
+            console.log('🔍 Finish Test - Processing question:', {
+              sectionIndex,
+              questionIndex,
+              questionId: flattenedQuestion._id || flattenedQuestion.id,
+              questionContent: flattenedQuestion.question?.substring(0, 50) + '...'
+            });
+            
+            // Extract the actual answer from the answerData object
+            const actualAnswer = typeof answerData === 'object' ? answerData.answer : answerData;
             
             // Determine if the answer is correct
             let isCorrect = false;
-            if (selectedAnswer) {
-              if (question.type === 'multiple-choice' || question.answerType === 'multiple-choice') {
+            if (flattenedQuestion.type === 'multiple-choice' || flattenedQuestion.answerType === 'multiple-choice') {
                 // Method 1: Check if the selected answer matches an option with isCorrect flag
-                if (question.options) {
-                  const selectedOption = question.options.find(opt => opt.content === selectedAnswer);
+              if (flattenedQuestion.options) {
+                const selectedOption = flattenedQuestion.options.find(opt => opt.content === actualAnswer);
                   if (selectedOption && selectedOption.isCorrect === true) {
                     isCorrect = true;
                   }
@@ -1542,62 +1736,68 @@ const TestTaker = () => {
 
                 // Method 2: Check if the selected answer matches the correctAnswer field
                 if (!isCorrect) {
-                  if (typeof question.correctAnswer === 'string') {
-                    isCorrect = selectedAnswer === question.correctAnswer;
-                  } else if (typeof question.correctAnswer === 'number' && question.options) {
-                    const correctOption = question.options[question.correctAnswer];
+                if (typeof flattenedQuestion.correctAnswer === 'string') {
+                  isCorrect = actualAnswer === flattenedQuestion.correctAnswer;
+                } else if (typeof flattenedQuestion.correctAnswer === 'number' && flattenedQuestion.options) {
+                  const correctOption = flattenedQuestion.options[flattenedQuestion.correctAnswer];
                     const correctContent = correctOption?.content || correctOption;
-                    isCorrect = selectedAnswer === correctContent;
-                  } else if (typeof question.correctAnswer === 'number') {
-                    isCorrect = selectedAnswer === question.correctAnswer.toString();
+                  isCorrect = actualAnswer === correctContent;
+                } else if (typeof flattenedQuestion.correctAnswer === 'number') {
+                  isCorrect = actualAnswer === flattenedQuestion.correctAnswer.toString();
                   }
                 }
 
                 // Method 3: Check if the selected answer matches any option marked as correct
-                if (!isCorrect && question.options) {
-                  const correctOption = question.options.find(opt => opt.isCorrect === true);
-                  if (correctOption && correctOption.content === selectedAnswer) {
+              if (!isCorrect && flattenedQuestion.options) {
+                const correctOption = flattenedQuestion.options.find(opt => opt.isCorrect === true);
+                if (correctOption && correctOption.content === actualAnswer) {
                     isCorrect = true;
                   }
                 }
-              } else if (question.answerType === 'written' || question.type === 'grid-in') {
-                const acceptableAnswers = question.acceptableAnswers || [];
-                const writtenAnswer = question.writtenAnswer || '';
+            } else if (flattenedQuestion.answerType === 'written' || flattenedQuestion.type === 'grid-in') {
+              const acceptableAnswers = flattenedQuestion.acceptableAnswers || [];
+              const writtenAnswer = flattenedQuestion.writtenAnswer || '';
                 const allAcceptableAnswers = [...acceptableAnswers];
                 if (writtenAnswer && !acceptableAnswers.includes(writtenAnswer)) {
                   allAcceptableAnswers.push(writtenAnswer);
                 }
-                isCorrect = allAcceptableAnswers.some(answer => 
-                  selectedAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
+              isCorrect = allAcceptableAnswers.some(acceptableAnswer => 
+                actualAnswer.toLowerCase().trim() === acceptableAnswer.toLowerCase().trim()
                 );
-              }
             }
             
             questionResults.push({
-              question: question._id || question.id,
-              selectedAnswer: selectedAnswer || null,
+              question: flattenedQuestion._id || flattenedQuestion.id,
+              userAnswer: actualAnswer,
               isCorrect,
               timeSpent: 0 // Could be calculated if needed
             });
-          });
+          } else {
+            console.warn('⚠️ Finish Test - Could not find flattened question for section', sectionIndex, 'question', questionIndex);
+          }
         });
         
-        // Now complete the test by updating the result
-        const completeResponse = await fetch(`/api/results/${resultId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
+        console.log('🔍 Finish Test - Final questionResults:', questionResults);
+        
+        // Now complete the test by updating the existing result
+        try {
+          console.log('🚀 Calling resultsAPI.submitTest to complete test:', {
+            resultId,
+            questionResultsCount: questionResults.length,
+            status: 'completed'
+          });
+          
+          const completeResponse = await resultsAPI.submitTest(resultId, {
             questionResults,
             endTime: new Date().toISOString(),
             status: 'completed'
-          })
-        });
-        
-        if (completeResponse.ok) {
-          const result = await completeResponse.json();
+          });
+          
+          const result = completeResponse.data;
+          console.log('✅ Test completed successfully:', result);
+          
+          // Now clear the result ID after successful completion
+          localStorage.removeItem(`test_result_${testId}`);
           
           // Track completed attempts in localStorage
           const currentCompletedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${testId}`) || '0');
@@ -1614,9 +1814,8 @@ const TestTaker = () => {
           } catch (error) {
             logger.error('Error refreshing user data:', error);
           }
-        } else {
-          const errorText = await completeResponse.text();
-          logger.error('Failed to complete test:', errorText);
+        } catch (error) {
+          logger.error('Failed to complete test:', error);
         }
       } catch (error) {
         logger.error('Error submitting results:', error);
