@@ -36,7 +36,9 @@ export const initializePerformanceMonitoring = () => {
       window.addEventListener('load', () => {
         const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
         if (loadTime > 5000) {
-          console.warn('Page load time is slow:', loadTime + 'ms');
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Page load time is slow:', loadTime + 'ms');
+          }
         }
       });
     }
@@ -46,8 +48,10 @@ export const initializePerformanceMonitoring = () => {
       setInterval(() => {
         const memory = performance.memory;
         if (memory.usedJSHeapSize > 100 * 1024 * 1024) { // 100MB
-          console.warn('High memory usage detected:', 
-            Math.round(memory.usedJSHeapSize / 1024 / 1024) + 'MB');
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('High memory usage detected:', 
+              Math.round(memory.usedJSHeapSize / 1024 / 1024) + 'MB');
+          }
         }
       }, 30000); // Check every 30 seconds
     }
@@ -84,10 +88,14 @@ export const performHealthCheck = async () => {
       });
       
       if (!response.ok) {
-        console.warn('Health check failed:', response.status);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Health check failed:', response.status);
+        }
       }
     } catch (error) {
-      console.warn('Health check error:', error.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Health check error:', error.message);
+      }
     }
   }
 };

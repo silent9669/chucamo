@@ -15,6 +15,7 @@ import {
   FiBookOpen
 } from 'react-icons/fi';
 
+
 const Layout = ({ children, hideNavigation = false }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -357,6 +358,8 @@ const Layout = ({ children, hideNavigation = false }) => {
           {children}
         </main>
       </div>
+      
+
     </div>
   );
 };

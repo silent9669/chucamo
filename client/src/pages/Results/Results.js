@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { testsAPI, resultsAPI } from '../../services/api';
 import logger from '../../utils/logger';
-import { useAuth } from '../../contexts/AuthContext';
+
+import ResultsCacheManager from '../../utils/resultsCacheManager';
 
 // Performance Breakdown Chart Component
 const PerformanceBreakdownChart = ({ test }) => {
@@ -15,52 +16,73 @@ const PerformanceBreakdownChart = ({ test }) => {
   const getTestCompletionData = () => {
     try {
       const completionData = localStorage.getItem(`test_completion_${test.id}`);
-              if (!completionData) {
-          return null;
-        }
-        
-        const parsedData = JSON.parse(completionData);
-        
-        const answers = {};
-        
-        // Convert answeredQuestions array to answers object (same logic as Test Review)
-        if (parsedData.answeredQuestions && Array.isArray(parsedData.answeredQuestions)) {
-          parsedData.answeredQuestions.forEach(([questionKey, answerData]) => {
-            try {
-              let actualAnswer = answerData;
-              if (answerData && typeof answerData === 'object' && answerData.answer) {
-                actualAnswer = answerData.answer;
-              }
-              answers[questionKey] = { selectedAnswer: actualAnswer };
-            } catch (error) {
-              console.warn('Error processing answer data:', error);
+      if (!completionData) {
+        return null;
+      }
+      
+      const parsedData = JSON.parse(completionData);
+      
+      const answers = {};
+      
+      // Convert answeredQuestions array to answers object (same logic as Test Review)
+      if (parsedData.answeredQuestions && Array.isArray(parsedData.answeredQuestions)) {
+        parsedData.answeredQuestions.forEach(([questionKey, answerData]) => {
+          try {
+            let actualAnswer = answerData;
+            if (answerData && typeof answerData === 'object' && answerData.answer) {
+              actualAnswer = answerData.answer;
             }
-          });
-        }
-        
-        return { answers, parsedData };
+            answers[questionKey] = { selectedAnswer: actualAnswer };
+          } catch (error) {
+            console.warn('Error processing answer data:', error);
+          }
+        });
+      }
+      
+      return { answers, parsedData };
     } catch (error) {
       console.warn('Error loading test completion data:', error);
       return null;
     }
   };
 
+  // Optimized data loading with caching
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load test data
-        const testResponse = await testsAPI.getById(test.id);
-        setTestData(testResponse.data.test);
-        
-        // Load result data from database if available
-        if (test.resultId) {
-          try {
-            const resultResponse = await resultsAPI.getById(test.resultId);
-            setResultData(resultResponse.data.result);
-      } catch (error) {
-            console.log('No database result found, using localStorage fallback');
+        // Check cache first for test data
+        const cachedTest = ResultsCacheManager.getCachedTest(test.id);
+        if (cachedTest) {
+          setTestData(cachedTest);
+          
+          // Check cache for result data
+          if (test.resultId) {
+            const cachedResult = ResultsCacheManager.getCachedResult(test.resultId);
+            if (cachedResult) {
+              setResultData(cachedResult);
+              setLoading(false);
+              return;
+            }
           }
         }
+        
+        // Load from API if not cached
+        const [testResponse, resultResponse] = await Promise.all([
+          testsAPI.getById(test.id),
+          test.resultId ? resultsAPI.getById(test.resultId) : Promise.resolve(null)
+        ]);
+        
+        const testData = testResponse.data.test;
+        const resultData = resultResponse?.data?.result || null;
+        
+        // Cache the results
+        ResultsCacheManager.setCachedTest(test.id, testData);
+        if (resultData) {
+          ResultsCacheManager.setCachedResult(test.resultId, resultData);
+        }
+        
+        setTestData(testData);
+        setResultData(resultData);
       } catch (error) {
         logger.error('Error loading data:', error);
       } finally {
@@ -71,7 +93,7 @@ const PerformanceBreakdownChart = ({ test }) => {
     if (test.id) {
       loadData();
     }
-  }, [test.id]);
+  }, [test.id, test.resultId]);
 
   const calculatePerformanceByCategory = () => {
     if (!testData || !testData.sections) return { english: [], math: [] };
@@ -322,7 +344,7 @@ const SectionDetails = ({ test }) => {
               actualAnswer = answerData.answer;
             }
             answers[questionKey] = { selectedAnswer: actualAnswer };
-        } catch (error) {
+          } catch (error) {
             console.warn('Error processing answer data:', error);
           }
         });
@@ -334,22 +356,43 @@ const SectionDetails = ({ test }) => {
     }
   };
 
+  // Optimized data loading with caching
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load test data
-        const testResponse = await testsAPI.getById(test.id);
-        setTestData(testResponse.data.test);
-        
-        // Load result data from database if available
-        if (test.resultId) {
-          try {
-            const resultResponse = await resultsAPI.getById(test.resultId);
-            setResultData(resultResponse.data.result);
-      } catch (error) {
-            console.log('No database result found, using localStorage fallback');
+        // Check cache first for test data
+        const cachedTest = ResultsCacheManager.getCachedTest(test.id);
+        if (cachedTest) {
+          setTestData(cachedTest);
+          
+          // Check cache for result data
+          if (test.resultId) {
+            const cachedResult = ResultsCacheManager.getCachedResult(test.resultId);
+            if (cachedResult) {
+              setResultData(cachedResult);
+              setLoading(false);
+              return;
+            }
           }
         }
+        
+        // Load from API if not cached
+        const [testResponse, resultResponse] = await Promise.all([
+          testsAPI.getById(test.id),
+          test.resultId ? resultsAPI.getById(test.resultId) : Promise.resolve(null)
+        ]);
+        
+        const testData = testResponse.data.test;
+        const resultData = resultResponse?.data?.result || null;
+        
+        // Cache the results
+        ResultsCacheManager.setCachedTest(test.id, testData);
+        if (resultData) {
+          ResultsCacheManager.setCachedResult(test.resultId, resultData);
+        }
+        
+        setTestData(testData);
+        setResultData(resultData);
       } catch (error) {
         logger.error('Error loading data:', error);
       } finally {
@@ -360,7 +403,7 @@ const SectionDetails = ({ test }) => {
     if (test.id) {
       loadData();
     }
-  }, [test.id]);
+  }, [test.id, test.resultId]);
 
   const getSectionStats = () => {
     if (!testData || !testData.sections) return [];
@@ -530,7 +573,7 @@ const SectionDetails = ({ test }) => {
 
 const Results = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+
   const [testHistory, setTestHistory] = useState([]);
   const [filteredTestHistory, setFilteredTestHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -547,6 +590,13 @@ const Results = () => {
 
   useEffect(() => {
     loadTestHistory();
+    
+    // Cleanup old cache entries periodically
+    const cleanupInterval = setInterval(() => {
+      ResultsCacheManager.cleanup();
+    }, 5 * 60 * 1000); // Every 5 minutes
+    
+    return () => clearInterval(cleanupInterval);
   }, []);
 
   const loadTestHistory = async () => {
@@ -565,10 +615,14 @@ const Results = () => {
           setFilteredTestHistory(transformedResults);
           return; // Successfully loaded from database
         } else {
-          logger.warn('Database results transformed to empty array, falling back to localStorage');
+          if (process.env.NODE_ENV === 'development') {
+            logger.warn('Database results transformed to empty array, falling back to localStorage');
+          }
         }
       } else {
-        logger.info('No database results found, falling back to localStorage');
+        if (process.env.NODE_ENV === 'development') {
+          logger.info('No database results found, falling back to localStorage');
+        }
       }
       
       // Fallback to localStorage if database fails or is empty
@@ -589,65 +643,52 @@ const Results = () => {
   };
 
   const transformDatabaseResults = async (dbResults) => {
-    const transformedResults = [];
-    
-    for (const result of dbResults) {
-      try {
-        // Validate that result.test exists and is a valid ID
-        if (!result.test || result.test === 'null' || result.test === 'undefined') {
-          logger.warn(`Skipping result ${result._id} - invalid test reference:`, result.test);
-          continue;
+    try {
+      // Extract all unique test IDs
+      const testIds = [...new Set(dbResults.map(r => r.test?.toString()).filter(Boolean))];
+      
+      // Batch load all tests at once (much faster than individual calls)
+      const testsData = await ResultsCacheManager.batchLoadTests(testIds);
+      
+      // Transform results using cached test data
+      const transformedResults = dbResults.map(result => {
+        try {
+          const testId = result.test?.toString();
+          if (!testId || !testsData[testId]) {
+            return null;
+          }
+          
+          const testData = testsData[testId];
+          
+          return {
+            id: testId,
+            resultId: result._id,
+            title: testData.title || testData.testName,
+            type: testData.type || 'custom',
+            completed: result.status === 'completed',
+            status: result.status || 'incomplete',
+            score: result.percentage || null,
+            correctAnswers: result.analytics?.correctAnswers || 0,
+            incorrectAnswers: result.analytics?.incorrectAnswers || 0,
+            totalQuestions: result.analytics?.totalQuestions || 0,
+            answeredQuestions: (result.analytics?.correctAnswers || 0) + (result.analytics?.incorrectAnswers || 0),
+            completedAt: result.endTime || result.completedAt,
+            startedAt: result.startTime || result.startedAt,
+            createdAt: result.createdAt,
+            databaseResult: true,
+            attemptNumber: result.attemptNumber || 1
+          };
+        } catch (error) {
+          logger.error(`Error transforming result ${result._id}:`, error);
+          return null;
         }
-        
-        // Handle both string IDs and ObjectId objects
-        let testId;
-        if (typeof result.test === 'string') {
-          testId = result.test;
-        } else if (result.test && result.test._id) {
-          testId = result.test._id.toString();
-        } else {
-          logger.warn(`Skipping result ${result._id} - cannot extract test ID from:`, result.test);
-          continue;
-        }
-        
-        // Validate testId format
-        if (!testId || testId === 'null' || testId === 'undefined' || testId.length < 10) {
-          logger.warn(`Skipping result ${result._id} - invalid test ID format:`, testId);
-          continue;
-        }
-        
-        // Get test details
-        const testResponse = await testsAPI.getById(testId);
-        const testData = testResponse.data.test;
-        
-        // Transform the result
-        const transformedResult = {
-          id: testId,
-          resultId: result._id,
-          title: testData.title || testData.testName,
-          type: testData.type || 'custom',
-          completed: result.status === 'completed',
-          status: result.status || 'incomplete',
-          score: result.percentage || null,
-          correctAnswers: result.analytics?.correctAnswers || 0,
-          incorrectAnswers: result.analytics?.incorrectAnswers || 0,
-          totalQuestions: result.analytics?.totalQuestions || 0,
-          answeredQuestions: result.analytics?.correctAnswers + result.analytics?.incorrectAnswers || 0,
-          completedAt: result.endTime || result.completedAt,
-          startedAt: result.startTime || result.startedAt,
-          createdAt: result.createdAt,
-          databaseResult: true,
-          attemptNumber: result.attemptNumber || 1
-        };
-        
-        transformedResults.push(transformedResult);
-      } catch (error) {
-        logger.error(`Error transforming result ${result._id}:`, error);
-        // Continue with other results instead of failing completely
-      }
+      }).filter(Boolean); // Remove null results
+      
+      return transformedResults;
+    } catch (error) {
+      logger.error('Error in batch transform:', error);
+      return [];
     }
-    
-    return transformedResults;
   };
 
   const loadFromLocalStorage = async () => {
@@ -665,7 +706,9 @@ const Results = () => {
           
           // Validate completion data structure
           if (!completionData || !Array.isArray(completionData.answeredQuestions)) {
-            logger.warn('Invalid completion data structure for key:', key);
+            if (process.env.NODE_ENV === 'development') {
+              logger.warn('Invalid completion data structure for key:', key);
+            }
             continue;
           }
           
@@ -689,7 +732,9 @@ const Results = () => {
                    uniqueAnsweredQuestions.add(`${sectionIndex}-${questionNum}`);
                  }
                } catch (error) {
-                 logger.warn('Error processing questionKey:', questionKey, error);
+                 if (process.env.NODE_ENV === 'development') {
+                   logger.warn('Error processing questionKey:', questionKey, error);
+                 }
                }
              });
              const answeredCount = uniqueAnsweredQuestions.size;
@@ -722,13 +767,17 @@ const Results = () => {
                   questionId = questionKey.toString();
                 } else {
                   // Fallback for unknown formats
-                  logger.warn('Unknown questionKey format:', questionKey);
+                  if (process.env.NODE_ENV === 'development') {
+                    logger.warn('Unknown questionKey format:', questionKey);
+                  }
                   questionId = questionKey?.toString() || 'unknown';
                 }
                 
                 answers[questionId] = { selectedAnswer: actualAnswer };
               } catch (error) {
-                logger.warn('Error processing questionKey:', questionKey, error);
+                if (process.env.NODE_ENV === 'development') {
+                  logger.warn('Error processing questionKey:', questionKey, error);
+                }
                 const questionId = questionKey?.toString() || 'unknown';
                 answers[questionId] = { selectedAnswer: answerData };
               }
@@ -918,7 +967,9 @@ const Results = () => {
         if (test.databaseResult && test.resultId) {
           try {
             await resultsAPI.delete(test.resultId);
-            logger.info(`Successfully deleted database result ${test.resultId} for test ${test.id}`);
+            if (process.env.NODE_ENV === 'development') {
+              logger.info(`Successfully deleted database result ${test.resultId} for test ${test.id}`);
+            }
           } catch (dbError) {
             logger.error('Failed to delete from database:', dbError);
             // Continue with localStorage deletion even if database deletion fails
@@ -937,7 +988,9 @@ const Results = () => {
       setTestHistory(prev => prev.filter(t => t.id !== test.id));
         setFilteredTestHistory(prev => prev.filter(t => t.id !== test.id));
         
-        logger.info(`Test result deleted successfully for: ${test.title}`);
+        if (process.env.NODE_ENV === 'development') {
+          logger.info(`Test result deleted successfully for: ${test.title}`);
+        }
       } catch (error) {
         logger.error('Error deleting test result:', error);
         alert('Failed to delete test result. Please try again.');

@@ -56,15 +56,17 @@ export const getEnvironmentConfig = () => {
 
 // Log environment information for debugging
 export const logEnvironmentInfo = () => {
-  const config = getEnvironmentConfig();
-  const ipInfo = getCurrentIP();
-  
-  console.log('Environment Configuration:', {
-    ...config,
-    ipInfo,
-    userAgent: navigator.userAgent,
-    timestamp: new Date().toISOString()
-  });
+  if (process.env.NODE_ENV === 'development') {
+    const config = getEnvironmentConfig();
+    const ipInfo = getCurrentIP();
+    
+    console.log('Environment Configuration:', {
+      ...config,
+      ipInfo,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString()
+    });
+  }
 };
 
 // Check if the current environment has any restrictions

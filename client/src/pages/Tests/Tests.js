@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { FiBookOpen, FiClock, FiPlay, FiFilter, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import TestCacheManager from '../../utils/testCacheManager';
 
 const Tests = () => {
   const { user } = useAuth();
@@ -17,61 +18,47 @@ const Tests = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(9); // Show 9 tests per page (3x3 grid)
 
-  useEffect(() => {
-    loadTests();
-  }, []);
-
-  const loadTests = async () => {
+  // Define loadTests function first
+  const loadTests = useCallback(async () => {
     try {
       setLoading(true);
-      // Request all tests without pagination limit
-      const response = await testsAPI.getAll({ limit: 1000 });
       
+      // Phase 1: Load basic test metadata (fast)
+      const response = await testsAPI.getAll({ limit: 1000 });
       const testsData = response.data.tests || response.data || [];
       
-      // Transform the data to match our UI format
-      const transformedTests = testsData.map(test => {
-        // Use the test's difficulty field directly
-        const testDifficulty = test.difficulty || 'Medium';
-        
-        // Determine testType based on available fields
-        let determinedTestType = test.testType;
-        if (!determinedTestType) {
-          // If testType is not set, infer from type field
-          if (test.type === 'study-plan') {
-            determinedTestType = 'study-plan';
-          } else if (test.type === 'custom' || test.type === 'full' || test.type === 'math' || test.type === 'reading' || test.type === 'writing') {
-            determinedTestType = 'practice';
-          } else {
-            // Default fallback
-            determinedTestType = 'practice';
-          }
-        }
-
-        const transformedTest = {
-          id: test._id || test.id,
-          title: test.title,
-          description: test.description,
-          duration: test.totalTime || test.timeLimit || test.duration || 180,
-          questions: test.totalQuestions || test.questions || 0,
-          difficulty: testDifficulty, // Use the test's difficulty field
-          status: test.isActive ? 'published' : 'draft',
-          visible: test.isPublic,
-          testType: determinedTestType, // Use determined testType
-          type: test.type || 'custom', // Keep original type field
-          sections: test.sections || [], // Include sections for filtering
-          testDate: test.testDate || null,
-          category: test.category || null,
-          created: test.createdAt ? new Date(test.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        };
-        
-        return transformedTest;
-      });
+      // Phase 2: Transform tests progressively
+      const transformedTests = testsData.map(test => ({
+        id: test._id || test.id,
+        title: test.title,
+        description: test.description,
+        duration: test.totalTime || test.timeLimit || test.duration || 180,
+        questions: test.totalQuestions || test.questions || 0,
+        difficulty: test.difficulty || 'Medium',
+        status: test.isActive ? 'published' : 'draft',
+        visible: test.isPublic,
+        testType: test.testType || (test.type === 'study-plan' ? 'study-plan' : 'practice'),
+        type: test.type || 'custom',
+        sections: test.sections || [],
+        testDate: test.testDate || null,
+        category: test.category || null,
+        created: test.createdAt ? new Date(test.createdAt).toISOString().split('T')[0] : new Date().toISOString().toISOString().split('T')[0]
+      }));
       
       setTests(transformedTests);
+      
+      // Phase 3: Load attempt statuses in background (non-blocking)
+      if (transformedTests.length > 0 && user?.id) {
+                   TestCacheManager.cacheTestList(transformedTests, user.id).catch(error => {
+             if (process.env.NODE_ENV === 'development') {
+               console.warn('Failed to cache test list:', error);
+             }
+           });
+      }
+      
     } catch (error) {
       logger.error('Error loading tests:', error);
-      // Fallback to localStorage if API fails
+      // Your existing localStorage fallback
       try {
         const localTests = JSON.parse(localStorage.getItem('satTests') || '[]');
         setTests(localTests);
@@ -82,7 +69,19 @@ const Tests = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  // useEffect after function definition
+  useEffect(() => {
+    loadTests();
+    
+    // Cleanup old cache entries periodically
+    const cleanupInterval = setInterval(() => {
+      TestCacheManager.cleanup();
+    }, 5 * 60 * 1000); // Every 5 minutes
+    
+    return () => clearInterval(cleanupInterval);
+  }, [loadTests]);
 
   const getDifficultyColor = (difficulty) => {
     // Handle undefined, null, or empty difficulty
@@ -216,6 +215,14 @@ const Tests = () => {
     const [attemptStatus, setAttemptStatus] = useState(null);
     
     useEffect(() => {
+      // Use cached attempt status if available
+      const cachedStatus = TestCacheManager.getCachedAttemptStatus(test.id, user?.id);
+      if (cachedStatus) {
+        setAttemptStatus(cachedStatus);
+        return;
+      }
+      
+      // Fallback to individual API call if cache miss
       const checkAttemptStatus = async () => {
         try {
           const response = await fetch(`/api/results/attempt-status/${test.id}`, {
@@ -227,9 +234,14 @@ const Tests = () => {
           if (response.ok) {
             const data = await response.json();
             setAttemptStatus(data.data);
+            
+            // Cache the result
+            TestCacheManager.setCachedAttemptStatus(test.id, user?.id, data.data);
           }
         } catch (error) {
-          console.warn('Database check failed, using localStorage fallback:', error);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Database check failed, using localStorage fallback:', error);
+          }
         }
       };
       
@@ -239,7 +251,7 @@ const Tests = () => {
     const getButtonState = () => {
       // Use database data if available, otherwise fallback to localStorage
       if (attemptStatus) {
-        const { hasIncompleteAttempt, canAttempt, completedAttempts } = attemptStatus;
+        const { hasIncompleteAttempt, canAttempt } = attemptStatus;
         
         // Always ensure we have consistent values for maxAttempts and accountTypeLabel
         let maxAttempts = attemptStatus.maxAttempts;
@@ -265,7 +277,6 @@ const Tests = () => {
       }
       
       // Fallback to localStorage logic
-      const completedAttempts = parseInt(localStorage.getItem(`test_completed_attempts_${test.id}`) || '0');
       const hasProgress = localStorage.getItem(`test_progress_${test.id}`);
       let maxAttempts = 1;
       let accountType = 'Free';
@@ -282,7 +293,7 @@ const Tests = () => {
         text: hasProgress ? 'Continue Test' : 'Start Test',
         maxAttempts,
         accountTypeLabel: accountType,
-        canAttempt: maxAttempts === '∞' || completedAttempts < maxAttempts
+        canAttempt: maxAttempts === '∞' || 0 < maxAttempts
       };
     };
     

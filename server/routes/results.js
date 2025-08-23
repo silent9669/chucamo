@@ -1123,4 +1123,88 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
+// @route   POST /api/results/batch-attempt-status
+// @desc    Get attempt status for multiple tests at once
+// @access  Private
+router.post('/batch-attempt-status', protect, async (req, res) => {
+  try {
+    const { testIds, userId } = req.body;
+    
+    if (!testIds || !Array.isArray(testIds)) {
+      return res.status(400).json({ message: 'Test IDs array is required' });
+    }
+    
+    // Batch fetch attempt statuses
+    const attemptStatuses = await Promise.all(
+      testIds.map(async (testId) => {
+        try {
+          // Check for existing result
+          const existingResult = await Result.findOne({
+            user: userId || req.user.id,
+            test: testId
+          });
+          
+          // Check user account type for max attempts
+          const User = require('../models/User');
+          const user = await User.findById(userId || req.user.id);
+          let maxAttempts = 1;
+          let accountTypeLabel = 'Free';
+          
+          if (user?.accountType === 'admin' || user?.accountType === 'mentor' || 
+              user?.accountType === 'student' || user?.accountType === 'pro') {
+            maxAttempts = '∞';
+            accountTypeLabel = user.accountType === 'admin' ? 'Admin' : 
+                             user.accountType === 'mentor' ? 'Mentor' : 
+                             user.accountType === 'student' ? 'Student' : 'Pro';
+          }
+          
+          // Count completed attempts
+          const completedAttempts = await Result.countDocuments({
+            user: userId || req.user.id,
+            test: testId,
+            status: 'completed'
+          });
+          
+          // Check historical attempts
+          const historicalRecord = user?.historicalTestAttempts?.find(
+            h => h.testId.toString() === testId.toString()
+          );
+          const historicalAttempts = historicalRecord?.attemptsUsed || 0;
+          const totalAttempts = completedAttempts + historicalAttempts;
+          
+          return {
+            testId,
+            hasIncompleteAttempt: existingResult?.status === 'in-progress',
+            canAttempt: maxAttempts === '∞' || totalAttempts < maxAttempts,
+            completedAttempts: totalAttempts,
+            maxAttempts,
+            accountTypeLabel,
+            currentStatus: existingResult?.status || null
+          };
+        } catch (error) {
+          console.error(`Error checking attempt status for test ${testId}:`, error);
+          return {
+            testId,
+            hasIncompleteAttempt: false,
+            canAttempt: true,
+            completedAttempts: 0,
+            maxAttempts: 1,
+            accountTypeLabel: 'Free',
+            currentStatus: null
+          };
+        }
+      })
+    );
+    
+    res.json({
+      success: true,
+      attemptStatuses
+    });
+    
+  } catch (error) {
+    console.error('Batch attempt status error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router; 
