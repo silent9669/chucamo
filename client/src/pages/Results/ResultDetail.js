@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { FiFileText, FiCheckCircle, FiXCircle, FiClock, FiEye } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiClock } from 'react-icons/fi';
 import { resultsAPI } from '../../services/api';
 
 const ResultDetail = () => {

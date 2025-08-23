@@ -588,8 +588,52 @@ const Results = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Load test history on component mount
   useEffect(() => {
-    loadTestHistory();
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+        
+        // Try to fetch from database first
+        const response = await resultsAPI.getAll();
+        
+        if (response.data.results && response.data.results.length > 0) {
+          // Transform database results to match our UI format
+          const transformedResults = await transformDatabaseResults(response.data.results);
+          
+          if (transformedResults.length > 0) {
+            setTestHistory(transformedResults);
+            setFilteredTestHistory(transformedResults);
+            return; // Successfully loaded from database
+          } else {
+            if (process.env.NODE_ENV === 'development') {
+              logger.warn('Database results transformed to empty array, falling back to localStorage');
+            }
+          }
+        } else {
+          if (process.env.NODE_ENV === 'development') {
+            logger.info('No database results found, falling back to localStorage');
+          }
+        }
+        
+        // Fallback to localStorage if database fails or is empty
+        await loadFromLocalStorage();
+        
+      } catch (error) {
+        logger.error('Error loading from database:', error);
+        // Always try localStorage as fallback
+        try {
+          await loadFromLocalStorage();
+        } catch (localStorageError) {
+          logger.error('Error loading from localStorage fallback:', localStorageError);
+          setError('Failed to load test history from both database and local storage');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
     
     // Cleanup old cache entries periodically
     const cleanupInterval = setInterval(() => {
@@ -599,48 +643,7 @@ const Results = () => {
     return () => clearInterval(cleanupInterval);
   }, []);
 
-  const loadTestHistory = async () => {
-    try {
-      setLoading(true);
-      
-      // Try to fetch from database first
-      const response = await resultsAPI.getAll();
-      
-      if (response.data.results && response.data.results.length > 0) {
-        // Transform database results to match our UI format
-        const transformedResults = await transformDatabaseResults(response.data.results);
-        
-        if (transformedResults.length > 0) {
-          setTestHistory(transformedResults);
-          setFilteredTestHistory(transformedResults);
-          return; // Successfully loaded from database
-        } else {
-          if (process.env.NODE_ENV === 'development') {
-            logger.warn('Database results transformed to empty array, falling back to localStorage');
-          }
-        }
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          logger.info('No database results found, falling back to localStorage');
-        }
-      }
-      
-      // Fallback to localStorage if database fails or is empty
-      await loadFromLocalStorage();
-      
-    } catch (error) {
-      logger.error('Error loading from database:', error);
-      // Always try localStorage as fallback
-      try {
-        await loadFromLocalStorage();
-      } catch (localStorageError) {
-        logger.error('Error loading from localStorage fallback:', localStorageError);
-        setError('Failed to load test history from both database and local storage');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const transformDatabaseResults = async (dbResults) => {
     try {
@@ -912,6 +915,8 @@ const Results = () => {
     }
   };
 
+
+
   // Filter test history based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -1068,7 +1073,7 @@ const Results = () => {
           <FiXCircle className="h-12 w-12 text-red-500 mx-auto" />
           <p className="mt-4 text-red-600">{error}</p>
           <button 
-            onClick={loadTestHistory}
+            onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Try Again
