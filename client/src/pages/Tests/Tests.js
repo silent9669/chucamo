@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FiBookOpen, FiClock, FiPlay, FiFilter, FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiBookOpen, FiClock, FiPlay, FiFilter, FiSearch, FiChevronLeft, FiChevronRight, FiStar, FiArrowRight } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,52 +10,34 @@ const Tests = () => {
   const { user } = useAuth();
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [pageLoading, setPageLoading] = useState(false); // Loading state for page navigation
-  const [testTypeFilter, setTestTypeFilter] = useState('practice'); // Filter by test type: 'practice' or 'study-plan' (mock tests hidden for free users)
+  const [testTypeFilter, setTestTypeFilter] = useState('practice'); // Default to practice tests instead of 'all'
   const [searchTerm, setSearchTerm] = useState(''); // Search by test name
   const [sectionFilter, setSectionFilter] = useState('all'); // Filter by section type for mock tests: 'all', 'english', 'math'
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(9); // Show 9 tests per page (3x3 grid)
-  const [totalTests, setTotalTests] = useState(0); // Total count from server
 
-  // Define loadTests function with pagination
-  const loadTests = useCallback(async (page = 1, testType = null) => {
+  // Check if user is free account
+  const isFreeUser = !user || (user.accountType !== 'admin' && user.accountType !== 'mentor' && user.accountType !== 'student' && user.accountType !== 'pro');
+
+  // Define loadTests function with optimization for specific test types
+  const loadTests = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Calculate skip for pagination
-      const skip = (page - 1) * itemsPerPage;
-      
-      // Build query parameters
-      const queryParams = {
-        limit: itemsPerPage,
-        page: page,
-        skip: skip
-      };
-      
-      // Add test type filter if specified
-      if (testType) {
-        queryParams.type = testType === 'practice' ? 'practice' : 'study-plan';
+      // Only load tests of the selected type for better performance
+      const queryParams = { limit: 1000 };
+      if (testTypeFilter === 'practice') {
+        queryParams.testType = 'practice';
+      } else if (testTypeFilter === 'study-plan') {
+        queryParams.testType = 'study-plan';
       }
       
-      // Add section filter
-      if (sectionFilter && sectionFilter !== 'all') {
-        queryParams.section = sectionFilter;
-      }
-      
-      // Add search term
-      if (searchTerm) {
-        queryParams.search = searchTerm;
-      }
-      
-      // Load tests with pagination
       const response = await testsAPI.getAll(queryParams);
       const testsData = response.data.tests || response.data || [];
-      const totalCount = response.data.total || response.data.count || 0;
       
-      // Transform tests progressively
+      // Phase 2: Transform tests progressively
       const transformedTests = testsData.map(test => ({
         id: test._id || test.id,
         title: test.title,
@@ -73,65 +55,35 @@ const Tests = () => {
         created: test.createdAt ? new Date(test.createdAt).toISOString().split('T')[0] : new Date().toISOString().toISOString().split('T')[0]
       }));
       
-      // Filter out mock tests for free users
-      const filteredTransformedTests = user?.accountType === 'free' 
-        ? transformedTests.filter(test => test.testType !== 'study-plan')
-        : transformedTests;
+      setTests(transformedTests);
       
-      // Update tests state based on page
-      if (page === 1) {
-        // First page - replace all tests
-        setTests(filteredTransformedTests);
-      } else {
-        // Subsequent pages - append to existing tests
-        setTests(prev => {
-          // Remove any existing tests from this page to avoid duplicates
-          const existingTests = prev.filter(test => {
-            const testPage = Math.floor(prev.indexOf(test) / itemsPerPage) + 1;
-            return testPage !== page;
-          });
-          return [...existingTests, ...filteredTransformedTests];
-        });
-      }
-      
-      // Update pagination state
-      setTotalTests(totalCount);
-      
-      // Cache the tests
-      if (filteredTransformedTests.length > 0 && user?.id) {
-        TestCacheManager.cacheTestList(filteredTransformedTests, user.id).catch(error => {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Failed to cache test list:', error);
-          }
-        });
+      // Phase 3: Load attempt statuses in background (non-blocking)
+      if (transformedTests.length > 0 && user?.id) {
+                   TestCacheManager.cacheTestList(transformedTests, user.id).catch(error => {
+             if (process.env.NODE_ENV === 'development') {
+               console.warn('Failed to cache test list:', error);
+             }
+           });
       }
       
     } catch (error) {
       logger.error('Error loading tests:', error);
-      // Fallback to localStorage for first page only
-      if (page === 1) {
-        try {
-          const localTests = JSON.parse(localStorage.getItem('satTests') || '[]');
-          const filteredLocalTests = user?.accountType === 'free' 
-            ? localTests.filter(test => test.testType !== 'study-plan')
-            : localTests;
-          setTests(filteredLocalTests.slice(0, itemsPerPage));
-          setTotalTests(filteredLocalTests.length);
-        } catch (localError) {
-          logger.error('Error loading from localStorage:', localError);
-          setTests([]);
-          setTotalTests(0);
-        }
+      // Your existing localStorage fallback
+      try {
+        const localTests = JSON.parse(localStorage.getItem('satTests') || '[]');
+        setTests(localTests);
+      } catch (localError) {
+        logger.error('Error loading from localStorage:', localError);
+        setTests([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.accountType, itemsPerPage, sectionFilter, searchTerm]);
+  }, [user?.id, testTypeFilter]); // Added testTypeFilter dependency
 
   // useEffect after function definition
   useEffect(() => {
-    // Load first page of tests initially
-    loadTests(1);
+    loadTests();
     
     // Cleanup old cache entries periodically
     const cleanupInterval = setInterval(() => {
@@ -140,51 +92,6 @@ const Tests = () => {
     
     return () => clearInterval(cleanupInterval);
   }, [loadTests]);
-
-  // Validate and set filter state
-  const setValidTestTypeFilter = useCallback((filter) => {
-    // Ensure free users can't access mock tests
-    if (user?.accountType === 'free' && filter === 'study-plan') {
-      setTestTypeFilter('practice');
-      return;
-    }
-    setTestTypeFilter(filter);
-  }, [user?.accountType]);
-
-  // Ensure free users can't access mock tests
-  useEffect(() => {
-    if (user?.accountType === 'free' && testTypeFilter === 'study-plan') {
-      setValidTestTypeFilter('practice');
-    }
-  }, [user?.accountType, testTypeFilter, setValidTestTypeFilter]);
-
-  // Clear invalid filter states for free users
-  useEffect(() => {
-    if (user?.accountType === 'free') {
-      // Clear any localStorage filter state that might be invalid
-      const savedFilter = localStorage.getItem('testTypeFilter');
-      if (savedFilter === 'study-plan') {
-        localStorage.removeItem('testTypeFilter');
-      }
-    }
-  }, [user?.accountType]);
-
-  // Save filter state to localStorage
-  useEffect(() => {
-    if ((testTypeFilter && testTypeFilter !== 'study-plan') || user?.accountType !== 'free') {
-      localStorage.setItem('testTypeFilter', testTypeFilter);
-    }
-  }, [testTypeFilter, user?.accountType]);
-
-  // Restore filter state from localStorage on component load
-  useEffect(() => {
-    if (user) {
-      const savedFilter = localStorage.getItem('testTypeFilter');
-      if (savedFilter && (savedFilter !== 'study-plan' || user.accountType !== 'free')) {
-        setValidTestTypeFilter(savedFilter);
-      }
-    }
-  }, [user, setValidTestTypeFilter]);
 
   const getDifficultyColor = (difficulty) => {
     // Handle undefined, null, or empty difficulty
@@ -249,30 +156,56 @@ const Tests = () => {
     }
   };
 
-  // Pagination calculations
-  const { totalPages, startIndex, endIndex, currentTests } = useMemo(() => {
-    const totalPages = Math.ceil(totalTests / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentTests = tests.slice(startIndex, endIndex);
-    
-    return { totalPages, startIndex, endIndex, currentTests };
-  }, [tests, currentPage, itemsPerPage, totalTests]);
-
-  const handlePageChange = async (page) => {
-    setCurrentPage(page);
-    
-    // Load tests for the new page if not already loaded
-    const testsForPage = tests.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-    if (testsForPage.length === 0 || testsForPage.some(test => !test)) {
-      setPageLoading(true);
-      try {
-        await loadTests(page);
-      } finally {
-        setPageLoading(false);
+  // Filter tests based on current filters
+  const filteredTests = tests.filter(test => {
+    // First filter by test type
+    if (testTypeFilter === 'practice') {
+      // For real tests, filter by testType field (which should be 'practice' for real tests)
+      if (test.testType !== 'practice') {
+        return false;
+      }
+      
+      // Apply section filtering to real tests as well
+      if (sectionFilter !== 'all') {
+        // Check if test has sections that match the filter
+        const hasEnglishSection = test.sections && test.sections.some(section => section.type === 'english');
+        const hasMathSection = test.sections && test.sections.some(section => section.type === 'math');
+        
+        if (sectionFilter === 'english' && !hasEnglishSection) return false;
+        if (sectionFilter === 'math' && !hasMathSection) return false;
+      }
+    } else if (testTypeFilter === 'study-plan') {
+      // For mock tests, filter by testType field (which should be 'study-plan' for mock tests)
+      if (test.testType !== 'study-plan') {
+        return false;
+      }
+      
+      if (sectionFilter !== 'all') {
+        // Check if test has sections that match the filter
+        const hasEnglishSection = test.sections && test.sections.some(section => section.type === 'english');
+        const hasMathSection = test.sections && test.sections.some(section => section.type === 'math');
+        
+        if (sectionFilter === 'english' && !hasEnglishSection) return false;
+        if (sectionFilter === 'math' && !hasMathSection) return false;
       }
     }
     
+    // Then filter by search term (applies to all test types)
+    if (searchTerm && !test.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTests.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentTests = filteredTests.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
     // Scroll to top of the tests section
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -286,6 +219,13 @@ const Tests = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [testTypeFilter, searchTerm, sectionFilter]);
+
+  // Prevent free users from accessing mock tests
+  useEffect(() => {
+    if (isFreeUser && testTypeFilter === 'study-plan') {
+      setTestTypeFilter('practice');
+    }
+  }, [isFreeUser, testTypeFilter]);
 
   const TestCard = ({ test }) => {
     const [attemptStatus, setAttemptStatus] = useState(null);
@@ -455,11 +395,40 @@ const Tests = () => {
     );
   }
 
-  // Check if current test type is loading
-  const isCurrentTypeLoading = loading || pageLoading;
-
   return (
     <div className="space-y-6">
+      {/* Marketing Banner for Free Users */}
+      {isFreeUser && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <FiStar className="text-yellow-500" size={20} />
+                <h3 className="text-lg font-semibold text-gray-900">Feeling lost without guidance?</h3>
+              </div>
+              <p className="text-gray-700 mb-3">
+                Struggling with SAT preparation? Lacking structured study plans and comprehensive mock tests? 
+                Upgrade to Pro and unlock unlimited access to our complete test bank, personalized study plans, 
+                and expert guidance to boost your SAT score!
+              </p>
+              <Link
+                to="/upgrade-plan"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Upgrade to Pro
+                <FiArrowRight size={16} />
+              </Link>
+            </div>
+            <div className="hidden md:block ml-6">
+              <div className="text-right">
+                <div className="text-3xl font-bold text-blue-600">∞</div>
+                <div className="text-sm text-gray-600">Unlimited Tests</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
           {testTypeFilter === 'practice' ? 'Real Tests' : 'Mock Tests'}
@@ -484,11 +453,9 @@ const Tests = () => {
           <div className="flex gap-2">
             <button
               onClick={() => {
-                setValidTestTypeFilter('practice');
+                setTestTypeFilter('practice');
                 setSearchTerm('');
                 setSectionFilter('all');
-                setCurrentPage(1); // Reset to first page
-                loadTests(1); // Load first page of real tests
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 testTypeFilter === 'practice'
@@ -498,14 +465,12 @@ const Tests = () => {
             >
               Real Tests
             </button>
-            {user?.accountType !== 'free' && (
+            {!isFreeUser && (
               <button
                 onClick={() => {
-                  setValidTestTypeFilter('study-plan');
+                  setTestTypeFilter('study-plan');
                   setSearchTerm('');
                   setSectionFilter('all');
-                  setCurrentPage(1); // Reset to first page
-                  loadTests(1, 'study-plan'); // Load first page of mock tests
                 }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   testTypeFilter === 'study-plan'
@@ -525,32 +490,18 @@ const Tests = () => {
             <FiSearch size={16} className="text-gray-500" />
             <span className="text-sm font-medium text-gray-700">Search by name:</span>
           </div>
-          <div className="flex-1 max-w-md flex gap-2">
+          <div className="flex-1 max-w-md">
             <input
               type="text"
               placeholder="Search tests by name..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when searching
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  loadTests(1, testTypeFilter === 'study-plan' ? 'study-plan' : null);
-                }
-              }}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <button
-              onClick={() => loadTests(1, testTypeFilter === 'study-plan' ? 'study-plan' : null)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Search
-            </button>
           </div>
         </div>
 
-        {(testTypeFilter === 'study-plan' && user?.accountType !== 'free') || testTypeFilter === 'practice' ? (
+        {(testTypeFilter === 'study-plan' || testTypeFilter === 'practice') && (
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <FiFilter size={16} className="text-gray-500" />
@@ -558,11 +509,7 @@ const Tests = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  setSectionFilter('all');
-                  setCurrentPage(1); // Reset to first page
-                  loadTests(1, testTypeFilter === 'study-plan' ? 'study-plan' : null);
-                }}
+                onClick={() => setSectionFilter('all')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sectionFilter === 'all'
                     ? testTypeFilter === 'practice' 
@@ -574,11 +521,7 @@ const Tests = () => {
                 All Sections
               </button>
               <button
-                onClick={() => {
-                  setSectionFilter('english');
-                  setCurrentPage(1); // Reset to first page
-                  loadTests(1, testTypeFilter === 'study-plan' ? 'study-plan' : null);
-                }}
+                onClick={() => setSectionFilter('english')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sectionFilter === 'english'
                     ? testTypeFilter === 'practice' 
@@ -590,105 +533,56 @@ const Tests = () => {
                 English Section Only
               </button>
               <button
-                onClick={() => {
-                  setSectionFilter('math');
-                  setCurrentPage(1); // Reset to first page
-                  loadTests(1, testTypeFilter === 'study-plan' ? 'study-plan' : null);
-                }}
+                onClick={() => setSectionFilter('math')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sectionFilter === 'math'
                     ? testTypeFilter === 'practice' 
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-green-100 text-green-700'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 Math Section Only
               </button>
             </div>
           </div>
-        ) : null}
+        )}
       </div>
 
-      {/* Loading progress indicator */}
-      {(loading || pageLoading) && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-            <div className="flex-1">
-              <p className="text-sm text-blue-700">
-                {loading ? 'Loading tests...' : 'Loading page...'}
-              </p>
-              <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
-                <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tests.length === 0 ? (
+      {filteredTests.length === 0 ? (
         <div className="text-center py-12">
-          {isCurrentTypeLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Loading {testTypeFilter === 'practice' ? 'Real' : 'Mock'} Tests...
-              </h3>
-              <p className="text-gray-600">
-                Please wait while we load the {testTypeFilter === 'practice' ? 'real' : 'mock'} tests for you.
+          <FiBookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No {testTypeFilter === 'practice' ? 'real' : 'mock'} tests found
+            {sectionFilter !== 'all' && (testTypeFilter === 'practice' || testTypeFilter === 'study-plan') 
+              ? ` with ${sectionFilter} sections` 
+              : ''
+            }
+          </h3>
+          <p className="text-gray-600">
+            {testTypeFilter === 'practice' 
+              ? sectionFilter !== 'all' 
+                ? `No real tests with ${sectionFilter} sections match your current filters.`
+                : 'No real tests match your current filters.'
+              : sectionFilter !== 'all'
+                ? `No mock tests with ${sectionFilter} sections match your current filters.`
+                : 'No mock tests match your current filters.'
+            }
+          </p>
+          {isFreeUser && testTypeFilter === 'study-plan' && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm">
+                Mock tests are available for Pro users. Upgrade your plan to access comprehensive study materials and mock tests.
               </p>
-            </>
-          ) : (
-            <>
-              <FiBookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {user?.accountType === 'free' && testTypeFilter === 'study-plan' 
-                  ? 'Mock Tests Not Available'
-                  : `No ${testTypeFilter === 'practice' ? 'real' : 'mock'} tests found`
-                }
-                {sectionFilter !== 'all' && (testTypeFilter === 'practice' || testTypeFilter === 'study-plan') 
-                  ? ` with ${sectionFilter} sections` 
-                  : ''
-                }
-              </h3>
-              <p className="text-gray-600">
-                {user?.accountType === 'free' && testTypeFilter === 'study-plan'
-                  ? 'Mock tests are only available for premium users. Please upgrade your plan to access comprehensive study materials.'
-                  : testTypeFilter === 'practice' 
-                  ? sectionFilter !== 'all' 
-                    ? `No real tests with ${sectionFilter} sections match your current filters.`
-                    : 'No real tests match your current filters.'
-                  : sectionFilter !== 'all'
-                    ? `No mock tests with ${sectionFilter} sections match your current filters.`
-                    : 'No mock tests match your current filters.'
-                }
-              </p>
-            </>
+            </div>
           )}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isCurrentTypeLoading ? (
-              // Skeleton loading state
-              Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className="bg-white border rounded-lg p-6 shadow-sm animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded mb-3"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-4 w-3/4"></div>
-                  <div className="flex gap-2 mb-4">
-                    <div className="h-3 bg-gray-200 rounded w-16"></div>
-                    <div className="h-3 bg-gray-200 rounded w-20"></div>
-                  </div>
-                  <div className="h-8 bg-gray-200 rounded"></div>
-                </div>
-              ))
-            ) : (
-              currentTests.map((test) => (
-                <TestCard key={test.id} test={test} />
-              ))
-            )}
+            {currentTests.map((test) => (
+              <TestCard key={test.id} test={test} />
+            ))}
           </div>
 
           {/* Pagination Controls */}
@@ -698,9 +592,9 @@ const Tests = () => {
                 {/* First Page Button */}
                 <button
                   onClick={goToFirstPage}
-                  disabled={currentPage === 1 || pageLoading}
+                  disabled={currentPage === 1}
                   className={`p-2 rounded-md text-sm font-medium transition-colors ${
-                    currentPage === 1 || pageLoading
+                    currentPage === 1
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
@@ -711,18 +605,14 @@ const Tests = () => {
                 {/* Previous Page Button */}
                 <button
                   onClick={goToPreviousPage}
-                  disabled={currentPage === 1 || pageLoading}
+                  disabled={currentPage === 1}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    currentPage === 1 || pageLoading
+                    currentPage === 1
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  {pageLoading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mx-auto"></div>
-                  ) : (
-                    'Previous'
-                  )}
+                  Previous
                 </button>
                 
                 {/* Page Numbers */}
@@ -743,7 +633,6 @@ const Tests = () => {
                       <button
                         key={pageNum}
                         onClick={() => handlePageChange(pageNum)}
-                        disabled={pageLoading}
                         className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                           currentPage === pageNum
                             ? 'bg-blue-600 text-white'
@@ -759,26 +648,22 @@ const Tests = () => {
                 {/* Next Page Button */}
                 <button
                   onClick={goToNextPage}
-                  disabled={currentPage === totalPages || pageLoading}
+                  disabled={currentPage === totalPages}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    currentPage === totalPages || pageLoading
+                    currentPage === totalPages
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  {pageLoading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mx-auto"></div>
-                  ) : (
-                    'Next'
-                  )}
+                  Next
                 </button>
                 
                 {/* Last Page Button */}
                 <button
                   onClick={goToLastPage}
-                  disabled={currentPage === totalPages || pageLoading}
+                  disabled={currentPage === totalPages}
                   className={`p-2 rounded-md text-sm font-medium transition-colors ${
-                    currentPage === totalPages || pageLoading
+                    currentPage === totalPages
                       ? 'text-gray-400 cursor-not-allowed'
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                   }`}
@@ -789,7 +674,7 @@ const Tests = () => {
               
               {/* Page Info */}
               <div className="ml-6 text-sm text-gray-600">
-                Showing {startIndex + 1} to {Math.min(endIndex, totalTests)} of {totalTests} tests
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredTests.length)} of {filteredTests.length} {testTypeFilter === 'practice' ? 'real' : 'mock'} tests
               </div>
             </div>
           )}
