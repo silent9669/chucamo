@@ -11,7 +11,7 @@ const router = express.Router();
 // @access  Private
 router.get('/', protect, async (req, res) => {
   try {
-    const { type, difficulty, page = 1, limit = 10, search } = req.query;
+    const { type, difficulty, page = 1, limit = 10, search, section } = req.query;
     
     // Build query based on user account type and test visibility
     let query = { 
@@ -31,8 +31,19 @@ router.get('/', protect, async (req, res) => {
       ]
     };
 
+    // Hide mock tests from free users
+    if (req.user.accountType === 'free') {
+      query.testType = { $ne: 'study-plan' };
+    }
+
     if (type) query.type = type;
     if (difficulty) query.difficulty = difficulty;
+    
+    // Add section filtering
+    if (section && section !== 'all') {
+      query['sections.type'] = section;
+    }
+    
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -93,6 +104,11 @@ router.get('/:id', protect, async (req, res) => {
     
     if (!isOwnTest && !isVisibleToUser) {
       return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Prevent free users from accessing mock tests
+    if (req.user.accountType === 'free' && test.testType === 'study-plan') {
+      return res.status(403).json({ message: 'Mock tests are only available for premium users' });
     }
 
     logger.debug('=== GETTING TEST ===');
@@ -368,6 +384,11 @@ router.get('/:id/questions', protect, async (req, res) => {
     // Check if user can access this test
     if (!test.isPublic && test.createdBy.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Prevent free users from accessing mock test questions
+    if (req.user.accountType === 'free' && test.testType === 'study-plan') {
+      return res.status(403).json({ message: 'Mock tests are only available for premium users' });
     }
 
     const Question = require('../models/Question');
