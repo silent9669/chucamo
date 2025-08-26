@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX, FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
 import { testsAPI, resultsAPI } from '../../services/api';
 import logger from '../../utils/logger';
-
 import ResultsCacheManager from '../../utils/resultsCacheManager';
+import ContentSearch from '../../components/UI/ContentSearch';
 
 // Performance Breakdown Chart Component
 const PerformanceBreakdownChart = ({ test }) => {
@@ -582,7 +582,9 @@ const Results = () => {
   const [showScoreModal, setShowScoreModal] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [showTestDetails, setShowTestDetails] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [searchTerm, setSearchTerm] = useState('');
+  const [showContentSearch, setShowContentSearch] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -641,6 +643,19 @@ const Results = () => {
     }, 5 * 60 * 1000); // Every 5 minutes
     
     return () => clearInterval(cleanupInterval);
+  }, []);
+
+  // Keyboard shortcut for content search (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        setShowContentSearch(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
 
@@ -1094,7 +1109,19 @@ const Results = () => {
               <h1 className="text-2xl font-bold text-gray-900">Results & Analytics</h1>
             </div>
             <div className="flex items-center space-x-3">
-
+              <div className="text-center">
+                <button
+                  onClick={() => setShowContentSearch(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  title="Search through test content (Ctrl+K)"
+                >
+                  <FiSearch className="h-4 w-4" />
+                  <span>Content Search</span>
+                </button>
+                <div className="text-xs text-gray-500 mt-1">
+                  Ctrl+K
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1147,28 +1174,19 @@ const Results = () => {
 
         {/* Test History */}
         <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900">Test History</h2>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Search tests by name or type..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <FiXCircle size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+                     <div className="px-6 py-4 border-b border-gray-200">
+             <div className="flex justify-between items-center">
+               <h2 className="text-lg font-semibold text-gray-900">Test History</h2>
+               <div className="text-xs text-gray-500 text-center">
+                 Use <button 
+                   onClick={() => setShowContentSearch(true)}
+                   className="text-blue-600 hover:text-blue-800 underline"
+                 >
+                   Content Search
+                 </button> for reading passages & questions
+               </div>
+             </div>
+           </div>
 
           {filteredTestHistory.length === 0 ? (
             <div className="p-8 text-center">
@@ -1424,6 +1442,12 @@ const Results = () => {
            </div>
          </div>
        )}
+
+      {/* Content Search Modal */}
+      <ContentSearch 
+        isOpen={showContentSearch} 
+        onClose={() => setShowContentSearch(false)} 
+      />
     </div>
   );
 };
