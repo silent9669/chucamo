@@ -61,6 +61,12 @@ const lessonSchema = new mongoose.Schema({
     default: 'draft'
   },
 
+  visibleTo: {
+    type: [String],
+    enum: ['free', 'student', 'pro'],
+    default: ['free', 'student', 'pro']
+  },
+
   views: {
     type: Number,
     default: 0

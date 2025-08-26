@@ -10,7 +10,8 @@ const LessonCreator = ({ isOpen, onClose, onLessonCreated, editingLesson = null 
     youtubeUrl: '',
     pdfUrl: '',
     type: 'general',
-    thumbnail: '📚'
+    thumbnail: '📚',
+    visibleTo: ['free', 'student', 'pro']
   });
   const [loading, setLoading] = useState(false);
   const [youtubePreview, setYoutubePreview] = useState('');
@@ -39,7 +40,8 @@ const LessonCreator = ({ isOpen, onClose, onLessonCreated, editingLesson = null 
         youtubeUrl: editingLesson.youtubeUrl || '',
         pdfUrl: editingLesson.pdfUrl || '',
         type: editingLesson.type || 'general',
-        thumbnail: editingLesson.thumbnail || '📚'
+        thumbnail: editingLesson.thumbnail || '📚',
+        visibleTo: editingLesson.visibleTo || ['free', 'student', 'pro']
       });
       if (editingLesson.youtubeUrl) {
         generateYoutubePreview(editingLesson.youtubeUrl);
@@ -96,11 +98,23 @@ const LessonCreator = ({ isOpen, onClose, onLessonCreated, editingLesson = null 
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const { name, value, checked } = e.target;
+    
+    if (name === 'visibleTo') {
+      // Handle checkbox changes for visibleTo array
+      setFormData(prev => ({
+        ...prev,
+        visibleTo: checked 
+          ? [...prev.visibleTo, value]
+          : prev.visibleTo.filter(v => v !== value)
+      }));
+    } else {
+      // Handle regular input changes
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
 
     // Clear error when user starts typing
     if (errors[name]) {
@@ -186,7 +200,8 @@ const LessonCreator = ({ isOpen, onClose, onLessonCreated, editingLesson = null 
       youtubeUrl: '',
       pdfUrl: '',
       type: 'general',
-      thumbnail: '📚'
+      thumbnail: '📚',
+      visibleTo: ['free', 'student', 'pro']
     });
     setYoutubePreview('');
     setPdfPreview('');
@@ -357,6 +372,54 @@ const LessonCreator = ({ isOpen, onClose, onLessonCreated, editingLesson = null 
                  )}
                </div>
 
+               {/* Visible To */}
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                   Visible To
+                 </label>
+                 <div className="flex flex-wrap gap-3">
+                   <label className="flex items-center">
+                     <input
+                       type="checkbox"
+                       name="visibleTo"
+                       value="free"
+                       checked={formData.visibleTo.includes('free')}
+                       onChange={handleInputChange}
+                       className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                     />
+                     Free Users
+                   </label>
+                   <label className="flex items-center">
+                     <input
+                       type="checkbox"
+                       name="visibleTo"
+                       value="student"
+                       checked={formData.visibleTo.includes('student')}
+                       onChange={handleInputChange}
+                       className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                     />
+                     Student Users
+                   </label>
+                   <label className="flex items-center">
+                     <input
+                       type="checkbox"
+                       name="visibleTo"
+                       value="pro"
+                       checked={formData.visibleTo.includes('pro')}
+                       onChange={handleInputChange}
+                       className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                     />
+                     Pro Users
+                   </label>
+                 </div>
+                 {errors.visibleTo && (
+                   <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                     <AlertCircle className="w-4 h-4" />
+                     {errors.visibleTo}
+                   </p>
+                 )}
+               </div>
+
               
 
               
@@ -472,6 +535,9 @@ const LessonCreator = ({ isOpen, onClose, onLessonCreated, editingLesson = null 
                                              <p className="text-sm text-gray-500">
                          {formData.type || 'Type'}
                        </p>
+                      <p className="text-sm text-gray-500">
+                        {formData.visibleTo.length === 0 ? 'No users' : formData.visibleTo.map(v => v.charAt(0).toUpperCase() + v.slice(1)).join(', ')}
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm text-gray-600">

@@ -5,7 +5,7 @@ const { protect } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 // Get all lessons with filtering and pagination
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -24,6 +24,15 @@ router.get('/', async (req, res) => {
     if (status && status !== 'all') filter.status = status;
     if (category) filter.category = category;
     if (instructor) filter.instructor = instructor;
+
+    // Apply visibility filter based on user's account type
+    if (req.user.role !== 'admin') {
+      // Non-admin users can only see lessons they have access to
+      const userAccountType = req.user.accountType || 'free';
+      
+      // Filter lessons where the user's account type is included in the visibleTo array
+      filter.visibleTo = userAccountType;
+    }
 
     // Apply search
     if (search) {
@@ -89,7 +98,8 @@ router.post('/', protect, async (req, res) => {
           youtubeUrl,
           pdfUrl,
           type,
-          thumbnail
+          thumbnail,
+          visibleTo
         } = req.body;
 
           // Validate required fields
@@ -108,6 +118,7 @@ router.post('/', protect, async (req, res) => {
       pdfUrl,
       type,
       thumbnail: thumbnail || '📚',
+      visibleTo: visibleTo || ['free', 'student', 'pro'],
       createdBy: req.user.id
     });
 

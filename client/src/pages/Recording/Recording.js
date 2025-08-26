@@ -4,8 +4,10 @@ import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import lessonAPI from '../../services/lessonAPI';
 import LessonViewer from '../../components/UI/LessonViewer';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Recording = () => {
+  const { user } = useAuth();
   const [recordings, setRecordings] = useState([]);
   const [filteredRecordings, setFilteredRecordings] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,14 +20,28 @@ const Recording = () => {
     try {
       setLoading(true);
       const response = await lessonAPI.getLessons({ limit: 50 });
-      setRecordings(response.data.docs || []);
+      const allRecordings = response.data.docs || [];
+      
+      // Filter recordings based on user's account type and lesson visibility
+      const accessibleRecordings = allRecordings.filter(recording => {
+        const lessonVisibility = recording.visibleTo || ['free', 'student', 'pro'];
+        
+        // If user is admin, show all lessons
+        if (user?.role === 'admin') return true;
+        
+        // Check if user's account type is included in the lesson's visibleTo array
+        const userAccountType = user?.accountType || 'free';
+        return lessonVisibility.includes(userAccountType);
+      });
+      
+      setRecordings(accessibleRecordings);
       setLoading(false);
     } catch (error) {
       logger.error('Error loading recordings:', error);
       toast.error('Failed to load recordings');
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   const filterRecordings = useCallback(() => {
     let filtered = recordings;

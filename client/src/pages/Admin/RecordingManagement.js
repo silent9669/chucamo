@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Filter, BookOpen, Edit, Trash2, Youtube, FileText } from 'lucide-react';
+import { Plus, Search, Filter, BookOpen, Edit, Trash2, Youtube, FileText, Eye } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import lessonAPI from '../../services/lessonAPI';
@@ -73,6 +73,29 @@ const RecordingManagement = () => {
     }
   };
 
+  const toggleLessonVisibility = async (lessonId, newVisibility) => {
+    try {
+      await lessonAPI.updateLesson(lessonId, { visibleTo: newVisibility });
+      toast.success(`Lesson visibility updated to ${newVisibility === 'all' ? 'all users' : newVisibility} users`);
+      loadLessons();
+    } catch (error) {
+      logger.error('Error toggling lesson visibility:', error);
+      toast.error('Failed to update lesson visibility. Please try again.');
+    }
+  };
+
+  const getVisibilityText = (visibility) => {
+    if (!visibility || visibility.length === 0) return 'No Users';
+    if (visibility.length === 3) return 'All Users';
+    return visibility.map(v => v.charAt(0).toUpperCase() + v.slice(1)).join(', ');
+  };
+
+  const getVisibilityColor = (visibility) => {
+    if (!visibility || visibility.length === 0) return 'bg-red-100 text-red-800 border-red-200';
+    if (visibility.length === 3) return 'bg-green-100 text-green-800 border-green-200';
+    if (visibility.length === 2) return 'bg-blue-100 text-blue-800 border-blue-200';
+    return 'bg-purple-100 text-purple-800 border-purple-200';
+  };
 
 
   const handleLessonCreated = (lesson) => {
@@ -187,9 +210,12 @@ const RecordingManagement = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Lesson
                     </th>
-                                                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                       Type
-                     </th>
+                                                                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Visibility
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created Date
                     </th>
@@ -232,6 +258,49 @@ const RecordingManagement = () => {
                            {getTypeLabel(lesson.type)}
                          </span>
                        </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getVisibilityColor(lesson.visibleTo || 'all')}`}>
+                            {getVisibilityText(lesson.visibleTo || 'all')}
+                          </span>
+                          <button
+                            onClick={() => {
+                              const currentVisibility = lesson.visibleTo || ['free', 'student', 'pro'];
+                              let newVisibility;
+                              
+                              // Cycle through different visibility combinations
+                              if (currentVisibility.length === 3) {
+                                // All users -> Only free users
+                                newVisibility = ['free'];
+                              } else if (currentVisibility.length === 1 && currentVisibility.includes('free')) {
+                                // Only free -> Only student
+                                newVisibility = ['student'];
+                              } else if (currentVisibility.length === 1 && currentVisibility.includes('student')) {
+                                // Only student -> Only pro
+                                newVisibility = ['pro'];
+                              } else if (currentVisibility.length === 1 && currentVisibility.includes('pro')) {
+                                // Only pro -> Free + Student
+                                newVisibility = ['free', 'student'];
+                              } else if (currentVisibility.length === 2 && currentVisibility.includes('free') && currentVisibility.includes('student')) {
+                                // Free + Student -> Free + Pro
+                                newVisibility = ['free', 'pro'];
+                              } else if (currentVisibility.length === 2 && currentVisibility.includes('free') && currentVisibility.includes('pro')) {
+                                // Free + Pro -> Student + Pro
+                                newVisibility = ['student', 'pro'];
+                              } else {
+                                // Student + Pro -> All users
+                                newVisibility = ['free', 'student', 'pro'];
+                              }
+                              
+                              toggleLessonVisibility(lesson._id, newVisibility);
+                            }}
+                            className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-50"
+                            title="Change Visibility"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(lesson.createdAt).toLocaleDateString()}
                       </td>
