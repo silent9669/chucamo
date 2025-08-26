@@ -153,7 +153,7 @@ const DeepSeaSATUpgrade = () => {
         window.location.href = '/dashboard';
       } else if (plan === 'halfAccess') {
         // Open registration form in new tab
-        window.open('https://forms.gle/kb1poxTPUbwpwcyA7', '_blank');
+        window.open('https://docs.google.com/forms/d/e/1FAIpQLScz9AmDACRbjQ8rS4r1mHNw2Bj_qnEATGy7zSLjhPsGHGDVMw/viewform', '_blank');
       } else {
         // Open registration form in new tab
         window.open('https://forms.gle/kb1poxTPUbwpwcyA7', '_blank');
@@ -1095,7 +1095,7 @@ const DeepSeaSATUpgrade = () => {
             </div>
             
             <div className="price-display">
-              <div className="price half-access-price">$25</div>
+              <div className="price half-access-price">$3.99</div>
               <div className="price-note">Per month</div>
             </div>
 
