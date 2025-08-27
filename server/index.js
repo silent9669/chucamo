@@ -444,6 +444,15 @@ process.on('SIGINT', () => {
 
 // Start server immediately for Railway health check
 logger.critical('🚀 Starting server immediately for Railway...');
+
+// Add Railway-specific startup logging
+if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_URL) {
+  console.log('🚂 Railway deployment detected');
+  console.log('🌍 Environment:', process.env.NODE_ENV);
+  console.log('🔌 Port:', process.env.PORT);
+  console.log('📁 Working directory:', process.cwd());
+}
+
 startServer();
 
 // Connect to MongoDB in background

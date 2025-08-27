@@ -11,6 +11,7 @@
     "build:prod": "cd client && npm run build",
     "install-all": "npm install && cd client && npm install",
     "start": "node start.js",
+    "server:prod": "node server/index.js",
     "postinstall": "cd client && npm install",
     "heroku-postbuild": "npm run build:prod",
     "create-admin": "node server/scripts/createAdmin.js",
