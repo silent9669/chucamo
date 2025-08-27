@@ -79,10 +79,17 @@ router.post('/register', [
     // Generate token
     const token = generateToken(user._id);
 
+    // Set JWT as httpOnly cookie for security
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
       user: {
         id: user._id,
         username: user.username,
@@ -200,10 +207,17 @@ router.post('/login', [
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
+    // Set JWT as httpOnly cookie for security
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.json({
       success: true,
       message: 'Login successful',
-      token,
       user: {
         id: user._id,
         username: user.username,
@@ -382,6 +396,14 @@ router.post('/logout', checkSession, async (req, res) => {
     if (req.session && req.session.sessionId) {
       await Session.deleteOne({ sessionId: req.session.sessionId });
     }
+    
+    // Clear JWT cookie
+    res.clearCookie('jwt', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+    
     res.json({ 
       success: true,
       message: 'Logged out successfully' 

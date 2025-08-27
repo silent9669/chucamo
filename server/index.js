@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const cookieParser = require('cookie-parser');
 const logger = require('./utils/logger');
 require('dotenv').config();
 
@@ -24,6 +25,9 @@ const PORT = process.env.PORT || 5000;
 
 // Trust proxy for rate limiting
 app.set('trust proxy', 1);
+
+// Cookie parser middleware - required for JWT authentication
+app.use(cookieParser());
 
 // Security middleware
 const isDevelopment = process.env.NODE_ENV === 'development';
