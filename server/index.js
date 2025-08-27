@@ -121,31 +121,42 @@ const corsOptions = {
     const normalizedAllowedOrigins = allowedOrigins.map(o => o.toLowerCase().replace(/^https?:\/\//, ''));
     
     if (allowedOrigins.indexOf(origin) !== -1 || normalizedAllowedOrigins.indexOf(normalizedOrigin) !== -1) {
-          // Only log in development to reduce Railway logs and prevent information disclosure
-    if (process.env.NODE_ENV === 'development') {
-      logger.debug('CORS: Allowing request from', origin);
+      // Only log in development to reduce Railway logs and prevent information disclosure
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('CORS: Allowing request from', origin);
+      }
+      callback(null, true);
+    } else {
+      // Only log in development to reduce Railway logs and prevent information disclosure
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('CORS: Blocking request from', origin);
+      }
+      callback(new Error('Not allowed by CORS'));
     }
-    callback(null, true);
-  } else {
-    // Only log in development to reduce Railway logs and prevent information disclosure
-    if (process.env.NODE_ENV === 'development') {
-      logger.debug('CORS: Blocking request from', origin);
-    }
-    callback(new Error('Not allowed by CORS'));
-  }
   },
   credentials: true
 };
 
 app.use(cors(corsOptions));
 
+// Log CORS configuration in production
+if (process.env.NODE_ENV === 'production') {
+  console.log('=== CORS CONFIGURATION ===');
+  console.log('Allowed origins:', allowedOrigins);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('=======================');
+}
+
 // Rate limiting for authentication routes only (DDoS protection)
+const rateLimitWindow = parseInt(process.env.RATE_LIMIT_WINDOW) || 15;
+const rateLimitMax = parseInt(process.env.RATE_LIMIT_MAX) || 50;
+
 const authLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000 || 15 * 60 * 1000, // 15 minutes default
-  max: parseInt(process.env.RATE_LIMIT_MAX) || 50, // limit each IP to 50 login attempts per window
+  windowMs: rateLimitWindow * 60 * 1000, // Convert minutes to milliseconds
+  max: rateLimitMax, // limit each IP to max attempts per window
   message: { 
     error: 'Too many login attempts, please try again later.',
-    retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 / 60) // minutes
+    retryAfter: rateLimitWindow // minutes
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -155,6 +166,14 @@ const authLimiter = rateLimit({
     return req.ip + ':' + (req.body.username || req.body.email || 'unknown');
   }
 });
+
+// Log rate limiting configuration in production
+if (process.env.NODE_ENV === 'production') {
+  console.log('=== RATE LIMITING CONFIGURATION ===');
+  console.log('Window (minutes):', rateLimitWindow);
+  console.log('Max attempts:', rateLimitMax);
+  console.log('===============================');
+}
 
 // Body parsing middleware (must come before rate limiting)
 app.use(express.json({ limit: '10mb' }));
@@ -209,9 +228,20 @@ app.get('/', (req, res) => {
     status: 'OK', 
     message: 'Bluebook SAT Simulator API is running',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    cors: {
+      allowedOrigins: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').length : 0,
+      configured: !!process.env.ALLOWED_ORIGINS
+    },
+    security: {
+      rateLimiting: !!process.env.RATE_LIMIT_WINDOW,
+      jwtCookies: true,
+      helmet: true
+    }
   });
 });
+
+
 
 // Health check endpoints
 app.get('/health', (req, res) => {
@@ -299,6 +329,14 @@ if (process.env.NODE_ENV === 'development') {
     'https://railway.com'
   ]);
   console.log('================================');
+} else {
+  // Production logging
+  console.log('=== PRODUCTION SERVER STARTUP ===');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Environment:', process.env.NODE_ENV || 'unknown');
+  console.log('CORS origins configured:', process.env.ALLOWED_ORIGINS ? 'Yes' : 'No');
+  console.log('Rate limiting configured:', process.env.RATE_LIMIT_WINDOW ? 'Yes' : 'No');
+  console.log('================================');
 }
 
 // If no MONGODB_URI is set, use a fallback for development
@@ -325,12 +363,25 @@ const isValidMongoURI = (uri) => {
 // Start server even if database connection fails (for healthcheck)
 const startServer = () => {
   try {
+    // Validate production environment variables
+    if (process.env.NODE_ENV === 'production') {
+      const requiredVars = ['MONGODB_URI', 'JWT_SECRET', 'ALLOWED_ORIGINS'];
+      const missingVars = requiredVars.filter(varName => !process.env[varName]);
+      
+      if (missingVars.length > 0) {
+        console.error('❌ Missing required production environment variables:', missingVars);
+        console.error('Please check your Railway environment configuration');
+      } else {
+        console.log('✅ All required production environment variables are set');
+      }
+    }
+    
     const server = app.listen(PORT, '0.0.0.0', () => {
-  logger.critical(`✅ Server running on port ${PORT}`);
-  logger.info(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`✅ Health check available at: http://localhost:${PORT}/`);
-  logger.info(`✅ Server ready to accept connections`);
-});
+      logger.critical(`✅ Server running on port ${PORT}`);
+      logger.info(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`✅ Health check available at: http://localhost:${PORT}/`);
+      logger.info(`✅ Server ready to accept connections`);
+    });
 
     // Handle server errors
 server.on('error', (error) => {

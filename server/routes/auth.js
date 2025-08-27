@@ -391,12 +391,8 @@ router.post('/change-password', protect, [
 // @route   POST /api/auth/logout
 // @desc    Logout user and remove session
 // @access  Private
-router.post('/logout', checkSession, async (req, res) => {
+router.post('/logout', protect, async (req, res) => {
   try {
-    if (req.session && req.session.sessionId) {
-      await Session.deleteOne({ sessionId: req.session.sessionId });
-    }
-    
     // Clear JWT cookie
     res.clearCookie('jwt', {
       httpOnly: true,
