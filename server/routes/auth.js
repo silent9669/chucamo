@@ -79,7 +79,7 @@ router.post('/register', [
     // Generate token
     const token = generateToken(user._id);
 
-    // Set JWT as httpOnly cookie for security
+    // Set JWT as httpOnly cookie for security (primary method)
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -87,9 +87,11 @@ router.post('/register', [
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
+    // ALSO send token in response for backward compatibility (fallback method)
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      token: token, // Keep for backward compatibility
       user: {
         id: user._id,
         username: user.username,
@@ -207,7 +209,7 @@ router.post('/login', [
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
-    // Set JWT as httpOnly cookie for security
+    // Set JWT as httpOnly cookie for security (primary method)
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -215,9 +217,11 @@ router.post('/login', [
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
+    // ALSO send token in response for backward compatibility (fallback method)
     res.json({
       success: true,
       message: 'Login successful',
+      token: token, // Keep for backward compatibility
       user: {
         id: user._id,
         username: user.username,
