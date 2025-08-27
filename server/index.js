@@ -121,59 +121,54 @@ const corsOptions = {
     const normalizedAllowedOrigins = allowedOrigins.map(o => o.toLowerCase().replace(/^https?:\/\//, ''));
     
     if (allowedOrigins.indexOf(origin) !== -1 || normalizedAllowedOrigins.indexOf(normalizedOrigin) !== -1) {
-      // Only log in development to reduce Railway logs
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug('CORS: Allowing request from', origin);
-      }
-      callback(null, true);
-    } else {
-      // Only log in development to reduce Railway logs
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug('CORS: Blocking request from', origin);
-      }
-      callback(new Error('Not allowed by CORS'));
+          // Only log in development to reduce Railway logs and prevent information disclosure
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('CORS: Allowing request from', origin);
     }
+    callback(null, true);
+  } else {
+    // Only log in development to reduce Railway logs and prevent information disclosure
+    if (process.env.NODE_ENV === 'development') {
+      logger.debug('CORS: Blocking request from', origin);
+    }
+    callback(new Error('Not allowed by CORS'));
+  }
   },
   credentials: true
 };
 
 app.use(cors(corsOptions));
 
-// Rate limiting removed - no limits for users
-// const authLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 50, // limit each IP to 50 login attempts per 15 minutes
-//   message: 'Too many login attempts, please try again later.',
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
+// Rate limiting for authentication routes only (DDoS protection)
+const authLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW) * 60 * 1000 || 15 * 60 * 1000, // 15 minutes default
+  max: parseInt(process.env.RATE_LIMIT_MAX) || 50, // limit each IP to 50 login attempts per window
+  message: { 
+    error: 'Too many login attempts, please try again later.',
+    retryAfter: Math.ceil((parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 / 60) // minutes
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful logins
+  keyGenerator: (req) => {
+    // Use IP + username for more targeted rate limiting
+    return req.ip + ':' + (req.body.username || req.body.email || 'unknown');
+  }
+});
 
-// Rate limiting - General API routes
-// const generalLimiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limit each IP to 1000 requests per windowMs
-//   message: 'Too many requests from this IP, please try again later.',
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
-
-// Rate limiting removed - no limits applied
-// app.use('/api/auth', authLimiter);
-// app.use('/api/users', generalLimiter);
-// app.use('/api/tests', generalLimiter);
-// app.use('/api/questions', generalLimiter);
-// app.use('/api/results', generalLimiter);
-// app.use('/api/upload', generalLimiter);
-
-// Body parsing middleware
+// Body parsing middleware (must come before rate limiting)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Apply rate limiting only to authentication routes
+app.use('/api/auth', authLimiter);
 
 // Static files
 app.use('/uploads', express.static('uploads'));
 
 // Global error handler middleware
 app.use((err, req, res, next) => {
+  // Log full error details for debugging (but don't expose to client)
   logger.error('Global error handler caught:', {
     error: err.message,
     stack: err.stack,
@@ -183,7 +178,7 @@ app.use((err, req, res, next) => {
     userAgent: req.headers['user-agent']
   });
   
-  // Don't expose internal errors in production
+  // Don't expose internal errors or stack traces in production
   const message = process.env.NODE_ENV === 'production' 
     ? 'Internal server error' 
     : err.message;
@@ -191,6 +186,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     message: message,
+    // Stack traces only in development to prevent information disclosure
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
@@ -206,6 +202,16 @@ app.use('/api/articles', articleRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
 app.use('/api/vocab-quizzes', vocabQuizRoutes);
 app.use('/api/lessons', lessonRoutes);
+
+// Root health check endpoint for Railway
+app.get('/', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Bluebook SAT Simulator API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Health check endpoints
 app.get('/health', (req, res) => {
@@ -261,10 +267,12 @@ if (process.env.NODE_ENV === 'production' || isRailway || buildExists) {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  // Log full error details for debugging (but don't expose to client)
   logger.error('Server error:', err.message);
   if (process.env.NODE_ENV === 'development') {
     logger.error(err.stack);
   }
+  // Generic error message in production to prevent information disclosure
   res.status(500).json({ message: 'Internal server error' });
 });
 
@@ -277,19 +285,21 @@ logger.debug('- NODE_ENV:', process.env.NODE_ENV);
 logger.debug('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
 logger.debug('- MONGODB_URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
 
-// Add console logs for development debugging
-console.log('=== SERVER STARTUP DEBUG ===');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('isDevelopment:', process.env.NODE_ENV === 'development');
-console.log('CORS origins allowed:', [
-  'http://localhost:3000',
-  'http://localhost:3001', 
-  'http://localhost:5000',
-  'http://localhost:5173',
-        process.env.ALLOWED_ORIGIN || 'https://yourdomain.com',
-  'https://railway.com'
-]);
-console.log('================================');
+// Add console logs for development debugging only
+if (process.env.NODE_ENV === 'development') {
+  console.log('=== SERVER STARTUP DEBUG ===');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('isDevelopment:', process.env.NODE_ENV === 'development');
+  console.log('CORS origins allowed:', [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    'http://localhost:5000',
+    'http://localhost:5173',
+    process.env.ALLOWED_ORIGIN || 'https://yourdomain.com',
+    'https://railway.com'
+  ]);
+  console.log('================================');
+}
 
 // If no MONGODB_URI is set, use a fallback for development
 if (!MONGODB_URI) {
