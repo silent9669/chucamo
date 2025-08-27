@@ -44,7 +44,7 @@ router.get('/', protect, async (req, res) => {
                 }
               ]
             } :
-            // For student accounts, show student-accessible tests
+            // For student accounts, show student-accessible tests including mock tests
             req.user.accountType === 'student' ? {
               $or: [
                 { visibleTo: 'all' },
@@ -53,7 +53,9 @@ router.get('/', protect, async (req, res) => {
                 { 
                   visibleTo: { $exists: false },
                   isPublic: true
-                }
+                },
+                // Allow student accounts to access mock tests (study-plan)
+                { testType: 'study-plan' }
               ]
             } :
             // For mentor/admin accounts, show all tests
@@ -156,7 +158,9 @@ router.get('/:id', protect, async (req, res) => {
         hasAccess = test.visibleTo === 'all' || 
                    test.visibleTo === 'student' ||
                    test.visibleTo === 'free' ||
-                   (test.visibleTo === undefined && test.isPublic);
+                   (test.visibleTo === undefined && test.isPublic) ||
+                   // Allow student accounts to access mock tests (study-plan)
+                   test.testType === 'study-plan';
       } else if (req.user.accountType === 'mentor' || req.user.accountType === 'admin') {
         hasAccess = test.visibleTo === 'all' || 
                    test.visibleTo === req.user.accountType ||
