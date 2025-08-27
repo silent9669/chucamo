@@ -1,0 +1,49 @@
+MIT License
+
+Copyright (c) 2024-2025 Bluebook SAT Simulator
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+ADDITIONAL TERMS AND CONDITIONS:
+
+1. EDUCATIONAL USE: This software is designed for educational purposes related to SAT preparation and testing. Users are responsible for ensuring compliance with educational standards and regulations in their jurisdiction.
+
+2. CONTENT RESPONSIBILITY: Users are responsible for the accuracy and appropriateness of any content they create, upload, or share through this platform. The developers are not responsible for user-generated content.
+
+3. PRIVACY AND SECURITY: This software implements security measures to protect user data, but users should be aware that no system is completely secure. Users are responsible for maintaining the confidentiality of their account credentials.
+
+4. THIRD-PARTY INTEGRATIONS: This software may integrate with third-party services (e.g., Desmos, Google services). Users are subject to the terms of service of these third-party providers.
+
+5. MODIFICATIONS: Users may modify this software for their own use, but modified versions must retain the original copyright notice and license terms.
+
+6. ATTRIBUTION: Any distribution of this software must include proper attribution to the original authors and maintain the license terms.
+
+7. NO WARRANTY: The software is provided without any warranty. The developers are not responsible for any damages, data loss, or other issues that may arise from the use of this software.
+
+8. COMPLIANCE: Users must comply with all applicable laws and regulations when using this software, including but not limited to data protection, privacy, and educational regulations.
+
+9. SUPPORT: This is open-source software provided as-is. While the developers may provide support through community channels, there is no guarantee of technical support or maintenance.
+
+10. UPDATES: The developers may release updates and modifications to this software. Users are responsible for keeping their installations up to date.
+
+By using this software, you agree to these terms and conditions. If you do not agree with any of these terms, you must not use this software.
+
+For questions about this license or the software, please contact the development team through the project repository.
+
+Last updated: August 27, 2025
