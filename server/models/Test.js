@@ -161,8 +161,15 @@ const testSchema = new mongoose.Schema({
   },
   visibleTo: {
     type: String,
-    enum: ['all', 'free', 'student'],
-    default: 'all'
+    enum: ['all', 'free', 'premium', 'student', 'mentor', 'admin'],
+    default: 'premium', // Default to premium instead of 'all'
+    // Visibility levels:
+    // 'free' - Accessible to all users (basic practice tests)
+    // 'premium' - Requires premium account or higher
+    // 'student' - Accessible to student accounts and higher
+    // 'mentor' - Accessible to mentor accounts and higher
+    // 'admin' - Accessible to admin accounts only
+    // 'all' - Accessible to all account types (legacy support)
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -245,6 +252,7 @@ testSchema.pre('save', function(next) {
 // Index for better query performance
 testSchema.index({ type: 1, difficulty: 1, isActive: 1 });
 testSchema.index({ testType: 1, isActive: 1 });
+testSchema.index({ visibleTo: 1, isActive: 1 }); // Add index for visibility queries
 testSchema.index({ createdBy: 1 });
 testSchema.index({ tags: 1 });
 

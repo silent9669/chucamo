@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiX, FiEye, FiFileText, FiBookOpen } from 'react-icons/fi';
+import { FiSearch, FiX, FiEye, FiFileText, FiBookOpen, FiInfo } from 'react-icons/fi';
 import { testsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import logger from '../../utils/logger';
 
 const ContentSearch = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [allTests, setAllTests] = useState([]);
+  const [accessibleTests, setAccessibleTests] = useState([]);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [activeFilters, setActiveFilters] = useState({
     title: true,
-    description: true,
-    section: true,
     question: true,
     passage: true,
     explanation: true,
@@ -26,15 +26,16 @@ const ContentSearch = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       console.log('🔍 ContentSearch modal opened');
+      console.log('👤 Current user:', user?.username, 'Account type:', user?.accountType);
       console.log('📊 Current state:', {
-        allTestsCount: allTests.length,
+        accessibleTestsCount: accessibleTests.length,
         searchTerm,
         searchResultsCount: searchResults.length,
         activeFilters,
         sortBy
       });
     }
-  }, [isOpen, allTests.length, searchTerm, searchResults.length, activeFilters, sortBy]);
+  }, [isOpen, accessibleTests.length, searchTerm, searchResults.length, activeFilters, sortBy, user]);
 
   // Debounce search term to avoid excessive API calls
   useEffect(() => {
@@ -45,26 +46,27 @@ const ContentSearch = ({ isOpen, onClose }) => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Load all tests for searching with optimization
+  // Load accessible tests for searching with optimization
   useEffect(() => {
-    const loadTests = async () => {
+    const loadAccessibleTests = async () => {
       try {
         setLoading(true);
         
         // Check if we already have tests loaded
-        if (allTests.length > 0) {
-          console.log('✅ Tests already loaded, skipping API call');
+        if (accessibleTests.length > 0) {
+          console.log('✅ Accessible tests already loaded, skipping API call');
           setLoading(false);
           return;
         }
         
-        console.log('🔍 Loading tests for content search...');
+        console.log('🔍 Loading accessible tests for content search...');
+        console.log('👤 User account type:', user?.accountType);
         
-        // Load tests in batches for better performance
+        // Load tests that the user can access (server handles access control)
         const response = await testsAPI.getAll({ limit: 1000 });
         const tests = response.data.tests || [];
         
-        console.log(`📚 Loaded ${tests.length} tests from API`);
+        console.log(`📚 Loaded ${tests.length} accessible tests from API`);
         
         // Pre-process tests for faster searching
         const processedTests = tests.map(test => {
@@ -73,10 +75,8 @@ const ContentSearch = ({ isOpen, onClose }) => {
               ...test,
               searchIndex: {
                 title: test.title?.toLowerCase() || '',
-                description: test.description?.toLowerCase() || '',
                 sections: test.sections?.map(section => ({
                   ...section,
-                  name: section.name?.toLowerCase() || '',
                   questions: section.questions?.map(question => ({
                     ...question,
                     question: question.question?.toLowerCase() || '',
@@ -96,20 +96,20 @@ const ContentSearch = ({ isOpen, onClose }) => {
           }
         });
         
-        console.log('✅ Search index created successfully');
-        setAllTests(processedTests);
+        console.log('✅ Search index created successfully for accessible tests');
+        setAccessibleTests(processedTests);
       } catch (error) {
-        console.error('❌ Error loading tests for search:', error);
-        logger.error('Error loading tests for search:', error);
+        console.error('❌ Error loading accessible tests for search:', error);
+        logger.error('Error loading accessible tests for search:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (isOpen) {
-      loadTests();
+    if (isOpen && user) {
+      loadAccessibleTests();
     }
-  }, [isOpen, allTests.length]);
+  }, [isOpen, accessibleTests.length, user]);
 
   // Perform search when debounced search term changes
   useEffect(() => {
@@ -122,17 +122,17 @@ const ContentSearch = ({ isOpen, onClose }) => {
     
     // Define performSearch inline to avoid dependency issues
     const performSearch = (term) => {
-      if (!term.trim() || allTests.length === 0) {
+      if (!term.trim() || accessibleTests.length === 0) {
         setSearchResults([]);
         return;
       }
 
-      console.log('🔍 Starting search with:', { term, allTestsLength: allTests.length, activeFilters });
+      console.log('🔍 Starting search with:', { term, accessibleTestsLength: accessibleTests.length, activeFilters });
       
       const lowerTerm = term.toLowerCase();
       const results = [];
 
-      allTests.forEach((test, testIndex) => {
+      accessibleTests.forEach((test, testIndex) => {
         const testMatches = [];
         
         try {
@@ -157,37 +157,14 @@ const ContentSearch = ({ isOpen, onClose }) => {
             });
           }
 
-          // Search in test description (only if filter is active)
-          if (activeFilters.description && searchIndex.description && searchIndex.description.includes(lowerTerm)) {
-            testMatches.push({
-              type: 'description',
-              field: 'description',
-              content: test.description,
-              testId: test._id,
-              testTitle: test.title,
-              section: null,
-              question: null
-            });
-          }
+          
 
           // Search in sections and questions using pre-processed index
           if (searchIndex.sections) {
             searchIndex.sections.forEach((sectionIndex, sectionIndexIdx) => {
               const section = test.sections[sectionIndexIdx];
               
-                        // Search in section name (only if filter is active)
-          if (activeFilters.section && sectionIndex.name && sectionIndex.name.includes(lowerTerm)) {
-            testMatches.push({
-              type: 'section',
-              field: 'sectionName',
-              content: section.name,
-              testId: test._id,
-              testTitle: test.title,
-              section: section.name,
-              question: null,
-              sectionIndex: sectionIndexIdx + 1
-            });
-          }
+              
 
               // Search in questions
               if (sectionIndex.questions) {
@@ -283,7 +260,7 @@ const ContentSearch = ({ isOpen, onClose }) => {
     };
 
     performSearch(debouncedSearchTerm);
-  }, [debouncedSearchTerm, allTests, activeFilters, sortBy]);
+  }, [debouncedSearchTerm, accessibleTests, activeFilters, sortBy]);
 
   const sortSearchResults = (results, sortOption) => {
     console.log('🔄 Sorting results by:', sortOption);
@@ -333,10 +310,6 @@ const ContentSearch = ({ isOpen, onClose }) => {
     switch (type) {
       case 'title':
         return <FiFileText className="h-4 w-4 text-blue-600" />;
-      case 'description':
-        return <FiFileText className="h-4 w-4 text-green-600" />;
-      case 'section':
-        return <FiBookOpen className="h-4 w-4 text-purple-600" />;
       case 'question':
         return <FiFileText className="h-4 w-4 text-orange-600" />;
       case 'passage':
@@ -354,10 +327,6 @@ const ContentSearch = ({ isOpen, onClose }) => {
     switch (type) {
       case 'title':
         return 'Test Title';
-      case 'description':
-        return 'Test Description';
-      case 'section':
-        return 'Section Name';
       case 'question':
         return 'Question';
       case 'passage':
@@ -392,7 +361,7 @@ const ContentSearch = ({ isOpen, onClose }) => {
       const suggestions = new Set();
       const lowerTerm = searchTerm.toLowerCase();
       
-      allTests.forEach(test => {
+      accessibleTests.forEach(test => {
         const searchIndex = test.searchIndex;
         
         if (!searchIndex) return;
@@ -401,18 +370,6 @@ const ContentSearch = ({ isOpen, onClose }) => {
         if (searchIndex.title && searchIndex.title.includes(lowerTerm)) {
           suggestions.add(test.title);
         }
-        
-        // Add section name suggestions
-        if (searchIndex.sections) {
-          searchIndex.sections.forEach(sectionIndex => {
-            if (sectionIndex.name && sectionIndex.name.includes(lowerTerm)) {
-              const section = test.sections.find(s => s.name.toLowerCase() === sectionIndex.name);
-              if (section) {
-                suggestions.add(section.name);
-              }
-            }
-          });
-        }
       });
       
       return Array.from(suggestions).slice(0, 5); // Limit to 5 suggestions
@@ -420,6 +377,41 @@ const ContentSearch = ({ isOpen, onClose }) => {
       console.error('❌ Error getting search suggestions:', error);
       return [];
     }
+  };
+
+  // Get account type display info
+  const getAccountTypeInfo = () => {
+    if (!user) return null;
+    
+    const accountType = user.accountType;
+    let info = '';
+    let color = 'text-gray-600';
+    
+    switch (accountType) {
+      case 'free':
+        info = 'Free users can only access basic practice tests';
+        color = 'text-blue-600';
+        break;
+      case 'premium':
+      case 'pro':
+        info = 'Premium users have access to all content including study plans';
+        color = 'text-green-600';
+        break;
+      case 'student':
+        info = 'Student accounts have access to study materials and practice tests';
+        color = 'text-purple-600';
+        break;
+      case 'mentor':
+      case 'admin':
+        info = 'Mentors and admins have access to all content';
+        color = 'text-indigo-600';
+        break;
+      default:
+        info = `Account type: ${accountType}`;
+        color = 'text-gray-600';
+    }
+    
+    return { info, color };
   };
 
   const suggestions = getSearchSuggestions();
@@ -439,6 +431,15 @@ const ContentSearch = ({ isOpen, onClose }) => {
                 <p className="text-sm text-gray-600 mt-1">
                   Searching for: <span className="font-medium text-blue-600">"{searchTerm}"</span>
                 </p>
+              )}
+              {/* Account type and access info */}
+              {user && (
+                <div className="flex items-center space-x-2 mt-2">
+                  <FiInfo className="h-4 w-4 text-gray-500" />
+                  <span className={`text-xs ${getAccountTypeInfo()?.color}`}>
+                    {getAccountTypeInfo()?.info}
+                  </span>
+                </div>
               )}
             </div>
           </div>
@@ -494,7 +495,12 @@ const ContentSearch = ({ isOpen, onClose }) => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Test count info */}
             <div className="text-xs text-gray-500 mb-2">
-              Loaded {allTests.length} test{allTests.length !== 1 ? 's' : ''} for searching
+              Loaded {accessibleTests.length} accessible test{accessibleTests.length !== 1 ? 's' : ''} for searching
+              {user && (
+                <span className="ml-2 text-blue-600">
+                  (Based on your {user.accountType} account access)
+                </span>
+              )}
             </div>
             
             {/* Warning when no filters are active */}
@@ -522,20 +528,18 @@ const ContentSearch = ({ isOpen, onClose }) => {
                   </span>
                 </label>
               ))}
-              <button
-                onClick={() => setActiveFilters({
-                  title: true,
-                  description: true,
-                  section: true,
-                  question: true,
-                  passage: true,
-                  explanation: true,
-                  option: true
-                })}
-                className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
-              >
-                Reset All
-              </button>
+                      <button
+          onClick={() => setActiveFilters({
+            title: true,
+            question: true,
+            passage: true,
+            explanation: true,
+            option: true
+          })}
+          className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+        >
+          Reset All
+        </button>
             </div>
 
             {/* Sort Controls */}
@@ -561,10 +565,10 @@ const ContentSearch = ({ isOpen, onClose }) => {
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
                 <div className="text-gray-600 mb-2">
-                  {searchTerm ? `Searching for "${searchTerm}"...` : 'Loading tests...'}
+                  {searchTerm ? `Searching for "${searchTerm}"...` : 'Loading accessible tests...'}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {allTests.length > 0 ? `Loaded ${allTests.length} tests` : 'Preparing search index...'}
+                  {accessibleTests.length > 0 ? `Loaded ${accessibleTests.length} accessible tests` : 'Preparing search index for accessible content...'}
                 </div>
               </div>
             </div>
@@ -596,11 +600,16 @@ const ContentSearch = ({ isOpen, onClose }) => {
           ) : searchTerm && searchResults.length > 0 ? (
             <div className="space-y-6">
               <div className="text-sm text-gray-600 mb-4">
-                Found {searchResults.length} test{searchResults.length !== 1 ? 's' : ''} with {searchResults.reduce((total, result) => total + result.matches.length, 0)} match{searchResults.reduce((total, result) => total + result.matches.length, 0) !== 1 ? 'es' : ''} for <span className="font-medium text-blue-600">"{searchTerm}"</span>
+                Found {searchResults.length} accessible test{searchResults.length !== 1 ? 's' : ''} with {searchResults.reduce((total, result) => total + result.matches.length, 0)} match{searchResults.reduce((total, result) => total + result.matches.length, 0) !== 1 ? 'es' : ''} for <span className="font-medium text-blue-600">"{searchTerm}"</span>
                 {searchResults.length > 50 && (
                   <span className="text-xs text-gray-500 ml-2">
                     (Showing first 50 results for performance)
                   </span>
+                )}
+                {user && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    Searching through content accessible with your {user.accountType} account
+                  </div>
                 )}
               </div>
 
@@ -699,7 +708,31 @@ const ContentSearch = ({ isOpen, onClose }) => {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <FiSearch className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p>Start typing to search through your test content</p>
+              <p>Start typing to search through your accessible test content</p>
+              
+              {/* Access information notice */}
+              {user && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FiInfo className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Content Access</span>
+                  </div>
+                  <p className="text-xs text-blue-700 text-left">
+                    You can search through {accessibleTests.length} test{accessibleTests.length !== 1 ? 's' : ''} that are accessible with your <span className="font-medium">{user.accountType}</span> account. 
+                    {user.accountType === 'free' && (
+                      <span className="block mt-1 font-medium text-blue-800">
+                        Free accounts can only access basic practice tests. Upgrade to premium for full access to study plans and advanced content.
+                      </span>
+                    )}
+                    {user.accountType === 'premium' && (
+                      <span className="block mt-1 text-green-700">
+                        Premium accounts have access to all available content including study plans and advanced tests.
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+              
               <div className="mt-4 p-4 bg-gray-50 rounded-lg max-w-md mx-auto">
                 <p className="text-sm font-medium text-gray-700 mb-2">Search Tips:</p>
                 <ul className="text-xs text-gray-600 space-y-1 text-left">
@@ -707,6 +740,7 @@ const ContentSearch = ({ isOpen, onClose }) => {
                   <li>• Use the filters to focus on specific content types</li>
                   <li>• Try different search terms if no results are found</li>
                   <li>• Use Ctrl+K (or Cmd+K) to quickly open this search</li>
+                  <li>• Results are limited to content you can access based on your account type</li>
                 </ul>
               </div>
             </div>

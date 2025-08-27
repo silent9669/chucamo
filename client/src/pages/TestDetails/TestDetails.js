@@ -721,8 +721,8 @@ const TestDetails = () => {
                           })}
                         </div>
                         
-                        {/* Show correct answer and explanation for unanswered multiple choice questions */}
-                        {showAnswers && testResults && !getQuestionResult(`${currentSection}-${currentQuestion}`) && (
+                        {/* Show correct answer and explanation for multiple choice questions */}
+                        {showAnswers && (
                           <div className="mt-4 space-y-4">
                             {/* Correct Answer */}
                             {currentQuestionData.correctAnswer && (
@@ -735,8 +735,7 @@ const TestDetails = () => {
                                 </div>
                               </div>
                             )}
-                            
-                            {/* Explanation */}
+                            {/* Show explanation if available */}
                             {currentQuestionData.explanation && (
                               <div>
                                 <h4 className="font-medium text-blue-900 mb-3">Explanation</h4>
@@ -754,6 +753,8 @@ const TestDetails = () => {
                                 </div>
                               </div>
                             )}
+                            
+
                           </div>
                         )}
                       </div>
@@ -796,8 +797,8 @@ const TestDetails = () => {
                           </div>
                         )}
                         
-                        {/* Always show correct answers for written questions when test is completed */}
-                        {showAnswers && testResults && (
+                        {/* Always show correct answers for written questions */}
+                        {showAnswers && (
                           <div className="mt-4">
                             <h4 className="font-medium text-gray-900 mb-3">Correct Answer(s)</h4>
                             <div className="p-4 bg-green-50 border-2 border-green-300 rounded-lg">

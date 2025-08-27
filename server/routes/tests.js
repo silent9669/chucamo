@@ -19,12 +19,58 @@ router.get('/', protect, async (req, res) => {
         { createdBy: req.user.id }, // User's own tests
         { 
           isActive: true,
-          $or: [
-            { visibleTo: 'all' }, // Visible to all users
-            { visibleTo: req.user.accountType }, // Visible to user's account type
-            { 
-              visibleTo: { $exists: false }, // Legacy tests without visibleTo field
-              isPublic: true 
+          $and: [
+            // For free users, only show tests explicitly marked as free or basic practice tests
+            req.user.accountType === 'free' ? {
+              $or: [
+                { visibleTo: 'free' },
+                { 
+                  visibleTo: { $exists: false },
+                  isPublic: true,
+                  testType: 'practice' // Only practice tests for free users
+                }
+              ]
+            } : 
+            // For premium/pro users, show all available tests
+            req.user.accountType === 'premium' || req.user.accountType === 'pro' ? {
+              $or: [
+                { visibleTo: 'all' },
+                { visibleTo: req.user.accountType },
+                { visibleTo: 'free' },
+                { visibleTo: 'student' },
+                { 
+                  visibleTo: { $exists: false },
+                  isPublic: true
+                }
+              ]
+            } :
+            // For student accounts, show student-accessible tests
+            req.user.accountType === 'student' ? {
+              $or: [
+                { visibleTo: 'all' },
+                { visibleTo: 'student' },
+                { visibleTo: 'free' },
+                { 
+                  visibleTo: { $exists: false },
+                  isPublic: true
+                }
+              ]
+            } :
+            // For mentor/admin accounts, show all tests
+            req.user.accountType === 'mentor' || req.user.accountType === 'admin' ? {
+              $or: [
+                { visibleTo: 'all' },
+                { visibleTo: req.user.accountType },
+                { visibleTo: 'free' },
+                { visibleTo: 'student' },
+                { 
+                  visibleTo: { $exists: false },
+                  isPublic: true
+                }
+              ]
+            } : {
+              // Default fallback for unknown account types
+              visibleTo: 'free'
             }
           ]
         }
@@ -45,6 +91,8 @@ router.get('/', protect, async (req, res) => {
     const skip = (page - 1) * limit;
     
     logger.debug('Tests query:', Object.keys(query).length, 'items', { search, type, testType, difficulty, page, limit });
+    logger.debug('User account type:', req.user.accountType);
+    logger.debug('Query structure:', JSON.stringify(query, null, 2));
     
     const tests = await Test.find(query)
       .populate('createdBy', 'firstName lastName')
@@ -88,12 +136,48 @@ router.get('/:id', protect, async (req, res) => {
 
     // Check if user can access this test
     const isOwnTest = test.createdBy._id.toString() === req.user.id;
-    const isVisibleToUser = test.visibleTo === 'all' || 
-                           test.visibleTo === req.user.accountType ||
-                           (test.visibleTo === undefined && test.isPublic);
     
-    if (!isOwnTest && !isVisibleToUser) {
-      return res.status(403).json({ message: 'Access denied' });
+    if (isOwnTest) {
+      // User can always access their own tests
+    } else {
+      // Check access based on account type
+      let hasAccess = false;
+      
+      if (req.user.accountType === 'free') {
+        hasAccess = test.visibleTo === 'free' || 
+                   (test.visibleTo === undefined && test.isPublic && test.testType === 'practice');
+      } else if (req.user.accountType === 'premium' || req.user.accountType === 'pro') {
+        hasAccess = test.visibleTo === 'all' || 
+                   test.visibleTo === req.user.accountType ||
+                   test.visibleTo === 'free' ||
+                   test.visibleTo === 'student' ||
+                   (test.visibleTo === undefined && test.isPublic);
+      } else if (req.user.accountType === 'student') {
+        hasAccess = test.visibleTo === 'all' || 
+                   test.visibleTo === 'student' ||
+                   test.visibleTo === 'free' ||
+                   (test.visibleTo === undefined && test.isPublic);
+      } else if (req.user.accountType === 'mentor' || req.user.accountType === 'admin') {
+        hasAccess = test.visibleTo === 'all' || 
+                   test.visibleTo === req.user.accountType ||
+                   test.visibleTo === 'free' ||
+                   test.visibleTo === 'student' ||
+                   (test.visibleTo === undefined && test.isPublic);
+      } else {
+        hasAccess = test.visibleTo === 'free';
+      }
+      
+      if (!hasAccess) {
+        logger.debug('Access denied for test:', {
+          testId: test._id,
+          testTitle: test.title,
+          testVisibleTo: test.visibleTo,
+          testType: test.testType,
+          isPublic: test.isPublic,
+          userAccountType: req.user.accountType
+        });
+        return res.status(403).json({ message: 'Access denied. This content requires a higher account tier.' });
+      }
     }
 
     logger.debug('=== GETTING TEST ===');
