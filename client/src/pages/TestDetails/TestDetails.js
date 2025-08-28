@@ -948,11 +948,11 @@ const TestDetails = () => {
             pointerEvents: 'none',
             zIndex: 1
           }}>
-            <img 
-              src="/apple.png" 
-              alt="Watermark" 
-              className="w-80 h-80 object-contain rounded-xl opacity-10"
-            />
+                         <img 
+               src="/chucamo.png" 
+               alt="Watermark" 
+               className="w-[500px] h-[500px] object-contain rounded-xl opacity-10"
+             />
           </div>
         </div>
         

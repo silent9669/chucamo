@@ -14,9 +14,9 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
           zIndex: 1
         }}>
           <img 
-            src="/apple.png" 
+            src="/chucamo.png" 
             alt="Watermark" 
-            className="w-80 h-80 object-contain rounded-xl opacity-10"
+            className="w-[500px] h-[500px] object-contain rounded-xl opacity-10"
           />
         </div>
       )}
@@ -32,9 +32,9 @@ const Watermark = ({ userEmail, className = "", hasImages = false, isMathSection
           zIndex: 1
         }}>
           <img 
-            src="/apple.png" 
+            src="/chucamo.png" 
             alt="Watermark" 
-            className="w-64 h-64 object-contain rounded-xl opacity-10"
+            className="w-96 h-96 object-contain rounded-xl opacity-10"
           />
         </div>
       )}

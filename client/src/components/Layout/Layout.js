@@ -209,7 +209,7 @@ const Layout = ({ children, hideNavigation = false }) => {
             <Link to="/dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center overflow-hidden">
                 <img 
-                  src="/apple.png" 
+                  src="/chucamo.png" 
                   alt="chucamo logo" 
                   className="w-full h-full object-cover"
                 />
@@ -304,7 +304,7 @@ const Layout = ({ children, hideNavigation = false }) => {
                 <Link to="/dashboard" className="flex items-center space-x-2 lg:hidden">
                   <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center overflow-hidden">
                     <img 
-                      src="/apple.png" 
+                      src="/chucamo.png" 
                       alt="chucamo logo" 
                       className="w-full h-full object-cover"
                     />
