@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../../contexts/AuthContext';
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  const handleOAuthSuccess = useCallback(async (token, provider) => {
+    setLoading(true);
+    try {
+      // Store the token and redirect to dashboard
+      localStorage.setItem('token', token);
+      toast.success(`Successfully logged in with ${provider}!`);
+      navigate('/dashboard');
+    } catch (error) {
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
 
   // Handle OAuth callback with token
   useEffect(() => {
@@ -22,21 +35,7 @@ const Login = () => {
     if (token && provider) {
       handleOAuthSuccess(token, provider);
     }
-  }, [searchParams]);
-
-  const handleOAuthSuccess = async (token, provider) => {
-    setLoading(true);
-    try {
-      // Store the token and redirect to dashboard
-      localStorage.setItem('token', token);
-      toast.success(`Successfully logged in with ${provider}!`);
-      navigate('/dashboard');
-    } catch (error) {
-      toast.error('Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchParams, handleOAuthSuccess]);
 
   const handleGoogleLogin = () => {
     setLoading(true);
