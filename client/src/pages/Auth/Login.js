@@ -40,6 +40,38 @@ const Login = () => {
     }
   }, [searchParams, handleOAuthSuccess]);
 
+  const handleGoogleSuccess = useCallback(async (response) => {
+    setLoading(true);
+    try {
+      // Send the ID token to your backend
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const result = await fetch(`${apiUrl}/auth/google/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id_token: response.credential,
+        }),
+      });
+
+      const data = await result.json();
+      
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        toast.success('Successfully logged in with Google!');
+        navigate('/dashboard');
+      } else {
+        toast.error(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
   // Initialize Google OAuth
   useEffect(() => {
     console.log('🔍 Initializing Google OAuth...');
@@ -90,39 +122,7 @@ const Login = () => {
         document.head.removeChild(script);
       }
     };
-  }, []);
-
-  const handleGoogleSuccess = async (response) => {
-    setLoading(true);
-    try {
-      // Send the ID token to your backend
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-      const result = await fetch(`${apiUrl}/auth/google/token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id_token: response.credential,
-        }),
-      });
-
-      const data = await result.json();
-      
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        toast.success('Successfully logged in with Google!');
-        navigate('/dashboard');
-      } else {
-        toast.error(data.message || 'Login failed');
-      }
-    } catch (error) {
-      console.error('Google OAuth error:', error);
-      toast.error('Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [handleGoogleSuccess]);
 
   const handleGoogleLogin = () => {
     console.log('🔘 Google login button clicked');
