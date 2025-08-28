@@ -6,7 +6,11 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./utils/logger');
-require('dotenv').config();
+// Load environment variables from multiple possible locations
+const envPath = path.join(__dirname, '.env');
+const rootEnvPath = path.join(__dirname, '..', '.env');
+require('dotenv').config({ path: envPath });
+require('dotenv').config({ path: rootEnvPath });
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -272,6 +276,8 @@ logger.debug('Environment check:');
 logger.debug('- NODE_ENV:', process.env.NODE_ENV);
 logger.debug('- MONGODB_URI exists:', !!process.env.MONGODB_URI);
 logger.debug('- MONGODB_URI length:', MONGODB_URI ? MONGODB_URI.length : 0);
+logger.debug('- .env file paths checked:', envPath, rootEnvPath);
+logger.debug('- MONGODB_URI value (first 50 chars):', MONGODB_URI ? MONGODB_URI.substring(0, 50) + '...' : 'undefined');
 
 // Add console logs for development debugging
 console.log('=== SERVER STARTUP DEBUG ===');
