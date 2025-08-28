@@ -79,10 +79,19 @@ router.post('/register', [
     // Generate token
     const token = generateToken(user._id);
 
+    // Set JWT as httpOnly cookie for security (primary method)
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict', // 'lax' for Railway subdomains
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // ALSO send token in response for backward compatibility (fallback method)
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
+      token: token, // Keep for backward compatibility
       user: {
         id: user._id,
         username: user.username,
@@ -200,10 +209,19 @@ router.post('/login', [
       { expiresIn: process.env.JWT_EXPIRE || '7d' }
     );
 
+    // Set JWT as httpOnly cookie for security (primary method)
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict', // 'lax' for Railway subdomains
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // ALSO send token in response for backward compatibility (fallback method)
     res.json({
       success: true,
       message: 'Login successful',
-      token,
+      token: token, // Keep for backward compatibility
       user: {
         id: user._id,
         username: user.username,
@@ -377,11 +395,15 @@ router.post('/change-password', protect, [
 // @route   POST /api/auth/logout
 // @desc    Logout user and remove session
 // @access  Private
-router.post('/logout', checkSession, async (req, res) => {
+router.post('/logout', protect, async (req, res) => {
   try {
-    if (req.session && req.session.sessionId) {
-      await Session.deleteOne({ sessionId: req.session.sessionId });
-    }
+    // Clear JWT cookie
+    res.clearCookie('jwt', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict'
+    });
+    
     res.json({ 
       success: true,
       message: 'Logged out successfully' 

@@ -6,7 +6,7 @@ const AuthContext = createContext();
 
 const initialState = {
   user: null,
-  token: localStorage.getItem('token'),
+  token: null, // Will be null initially, will be set from cookies
   loading: true,
   error: null
 };
@@ -67,29 +67,54 @@ const authReducer = (state, action) => {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Set auth token in axios headers
+  // Helper function to get token from cookies only
+  const getAuthToken = () => {
+    const cookies = document.cookie.split(';');
+    const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
+    
+    if (jwtCookie) {
+      const token = jwtCookie.split('=')[1];
+      logger.debug('Token found in cookies');
+      return token;
+    }
+    
+    logger.debug('No token found in cookies');
+    return null;
+  };
+
+  // Helper function to clear authentication data
+  const clearAuthData = () => {
+    // Clear cookies by setting expired cookie
+    document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    logger.debug('Authentication cookies cleared');
+  };
+
+  // Set auth token in axios headers (for backward compatibility)
   useEffect(() => {
     if (state.token) {
       authAPI.setAuthToken(state.token);
-      localStorage.setItem('token', state.token);
     } else {
       authAPI.removeAuthToken();
-      localStorage.removeItem('token');
     }
   }, [state.token]);
 
   // Check if user is authenticated on app load
   useEffect(() => {
     const checkAuth = async () => {
-      if (state.token) {
+      const token = getAuthToken();
+      
+      if (token) {
         try {
           dispatch({ type: 'AUTH_START' });
           const response = await authAPI.getCurrentUser();
           dispatch({
             type: 'AUTH_SUCCESS',
-            payload: { user: response.data.user, token: state.token }
+            payload: { user: response.data.user, token: token }
           });
         } catch (error) {
+          logger.error('Session validation failed:', error);
+          // Clear invalid authentication data
+          clearAuthData();
           dispatch({
             type: 'AUTH_FAILURE',
             payload: 'Session expired. Please login again.'
@@ -101,7 +126,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
-  }, [state.token]);
+  }, []);
 
   const login = async (email, password, googleData = null) => {
     try {
@@ -116,13 +141,20 @@ export const AuthProvider = ({ children }) => {
         response = await authAPI.login(email, password);
       }
       
+      // Get token from response (for UI state management)
+      const token = response.data.token;
+      
+      // Token is automatically set as httpOnly cookie by server
+      // We use the token from response for UI state only
+      
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: {
           user: response.data.user,
-          token: response.data.token
+          token: token
         }
       });
+      
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
@@ -152,7 +184,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call server logout to clear cookies
+      await authAPI.logout();
+    } catch (error) {
+      logger.warn('Server logout failed, clearing local data anyway:', error);
+    }
+    
+    // Clear all local authentication data
+    clearAuthData();
     dispatch({ type: 'LOGOUT' });
   };
 

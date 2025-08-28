@@ -39,14 +39,24 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Enable credentials for cookie-based authentication
+  withCredentials: true,
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token (fallback method)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Check if we have cookies for authentication
+    const cookies = document.cookie.split(';');
+    const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
+    
+    if (jwtCookie) {
+      // Don't add Authorization header if we have cookies (server will use cookies)
+      logger.debug('Using cookie-based authentication');
+    } else {
+      // No cookies found - this should not happen in normal operation
+      // but we keep the Authorization header logic for edge cases
+      logger.debug('No cookies found, authentication will fail');
     }
     
     // Log request details for debugging (only in development)
@@ -55,7 +65,7 @@ api.interceptors.request.use(
         url: config.url,
         method: config.method,
         baseURL: config.baseURL,
-        hasToken: !!token,
+        hasCookies: !!jwtCookie,
         environment: process.env.NODE_ENV,
         currentHost: window.location.hostname
       });
@@ -88,7 +98,8 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
+      // Clear cookies on authentication failure
+      document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -98,7 +109,8 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (username, password) => api.post('/auth/login', { username, password }),
-  register: (userData) => api.post('/auth/register', userData),
+  register: (userData) => api.post('/auth/register', { username: userData.username, password: userData.password, firstName: userData.firstName, lastName: userData.lastName, email: userData.email, grade: userData.grade, school: userData.school, targetScore: userData.targetScore, studyGoals: userData.studyGoals }),
+  logout: () => api.post('/auth/logout'),
 
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (profileData) => api.put('/auth/profile', profileData),

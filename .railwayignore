@@ -1,0 +1,35 @@
+# Development files
+node_modules/
+.env
+.env.local
+.env.development
+.env.test
+
+# Build artifacts (will be rebuilt)
+client/build/
+client/dist/
+
+# Development tools
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Temporary files
+*.tmp
+*.temp
+uploads/temp/
+
+# Test files
+**/*.test.js
+**/*.spec.js
+coverage/
