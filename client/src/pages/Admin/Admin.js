@@ -10,6 +10,7 @@ import SimpleRichTextEditor from '../../components/UI/SimpleRichTextEditor';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import logger from '../../utils/logger';
+import { validateAndLogId, safeEncodeId } from '../../utils/validationUtils';
 import StudyPlanManagement from './StudyPlanManagement';
 import DailyVocabManagement from './DailyVocabManagement';
 import VocabQuizManagement from './VocabQuizManagement';
@@ -1777,36 +1778,26 @@ const RealTestManagement = () => {
   // Test function to verify server data preservation and question types
   const testServerDataPreservation = async () => {
     try {
-      logger.debug('=== TESTING SERVER DATA PRESERVATION ===');
-      
       // Get the current test ID
       if (!currentTest.id) {
         alert('No test selected. Please create or edit a test first.');
         return;
       }
 
-      // First, let's check what's in the current client state
-      logger.debug('=== CLIENT STATE CHECK ===');
-      if (currentTest.sections && currentTest.sections.length > 0) {
-        currentTest.sections.forEach((section, sectionIndex) => {
-          if (section.questions && section.questions.length > 0) {
-            logger.debug(`Client Section ${sectionIndex + 1} (${section.title}) questions:`);
-            section.questions.forEach((question, questionIndex) => {
-              logger.debug(`  Client Question ${questionIndex + 1}:`, {
-                id: question.id,
-                type: question.type,
-                answerType: question.answerType,
-                correctAnswer: question.correctAnswer,
-                hasOptions: question.options && question.options.length > 0,
-                optionsCount: question.options ? question.options.length : 0
-              });
-            });
-          }
-        });
+      // Validate that the ID is a valid ObjectId
+      if (!validateAndLogId(currentTest.id, 'testServerDataPreservation')) {
+        alert('Invalid test ID format. Please select a valid test.');
+        return;
       }
 
       // Call the debug endpoint
-      const response = await fetch(`/api/tests/${currentTest.id}/debug`, {
+      const testId = safeEncodeId(currentTest.id);
+      if (!testId) {
+        alert('Invalid test ID. Please select a valid test.');
+        return;
+      }
+      
+      const response = await fetch(`/api/tests/${testId}/debug`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -1818,39 +1809,17 @@ const RealTestManagement = () => {
       }
 
       const data = await response.json();
-      logger.debug('Server debug data:', data);
 
       if (data.success && data.debug) {
-        logger.debug('Test ID:', data.debug.testId);
-        logger.debug('Title:', data.debug.title);
-        logger.debug('Sections count:', data.debug.sectionsCount);
-        
         let totalQuestions = 0;
         let questionsWithTypes = 0;
         let questionsWithCorrectAnswers = 0;
         
         data.debug.sections.forEach((section, index) => {
-          logger.debug(`Section ${index + 1} (${section.name}):`, {
-            type: section.type,
-            timeLimit: section.timeLimit,
-            questionCount: section.questionCount,
-            questionsCount: section.questionsCount,
-            questions: section.questions
-          });
-
           // Check each question for types and correct answers
           if (section.questions && section.questions.length > 0) {
             section.questions.forEach((question, qIndex) => {
               totalQuestions++;
-              
-              logger.debug(`Question ${qIndex + 1}:`, {
-                id: question.id,
-                type: question.type,
-                answerType: question.answerType,
-                correctAnswer: question.correctAnswer,
-                hasOptions: question.options && question.options.length > 0,
-                optionsCount: question.options ? question.options.length : 0
-              });
 
               // Check if question has proper type
               if (question.type && (question.type === 'multiple-choice' || question.type === 'grid-in')) {
@@ -1865,13 +1834,6 @@ const RealTestManagement = () => {
           }
         });
 
-        logger.debug('=== DATA PRESERVATION SUMMARY ===');
-        logger.debug('Total questions:', totalQuestions);
-        logger.debug('Questions with proper types:', questionsWithTypes);
-        logger.debug('Questions with correct answers:', questionsWithCorrectAnswers);
-        logger.debug('Type preservation rate:', totalQuestions > 0 ? `${(questionsWithTypes / totalQuestions * 100).toFixed(1)}%` : 'N/A');
-        logger.debug('Correct answer preservation rate:', totalQuestions > 0 ? `${(questionsWithCorrectAnswers / totalQuestions * 100).toFixed(1)}%` : 'N/A');
-        
         if (totalQuestions > 0) {
           const typeRate = (questionsWithTypes / totalQuestions * 100).toFixed(1);
           const answerRate = (questionsWithCorrectAnswers / totalQuestions * 100).toFixed(1);

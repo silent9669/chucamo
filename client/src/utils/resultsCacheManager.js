@@ -1,3 +1,5 @@
+import { validateAndLogId, safeEncodeId } from './validationUtils';
+
 class ResultsCacheManager {
   static testCache = new Map();
   static resultCache = new Map();
@@ -63,11 +65,21 @@ class ResultsCacheManager {
       const batchSize = 5;
       for (let i = 0; i < uncachedIds.length; i += batchSize) {
         const batch = uncachedIds.slice(i, i + batchSize);
-        const batchPromises = batch.map(id => 
-          fetch(`/api/tests/${id}`, {
+        const batchPromises = batch.map(id => {
+          // Validate that the ID is a valid ObjectId
+          if (!validateAndLogId(id, 'batchLoadTests')) {
+            return Promise.reject(new Error(`Invalid test ID: ${id}`));
+          }
+          
+          const encodedId = safeEncodeId(id);
+          if (!encodedId) {
+            return Promise.reject(new Error(`Failed to encode test ID: ${id}`));
+          }
+          
+          return fetch(`/api/tests/${encodedId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          }).then(res => res.json())
-        );
+          }).then(res => res.json());
+        });
         
         const batchResults = await Promise.all(batchPromises);
         batch.forEach((id, index) => {
