@@ -40,7 +40,7 @@ const Login = () => {
         <div>
           <div className="mx-auto h-20 w-20 flex items-center justify-center">
             <img 
-              src="/chucamo.png" 
+              src="/apple.png" 
               alt="Logo" 
               className="h-16 w-16 object-contain rounded-xl"
             />
