@@ -83,7 +83,7 @@ router.post('/register', [
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict', // 'lax' for Railway subdomains
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -213,7 +213,7 @@ router.post('/login', [
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict', // 'lax' for Railway subdomains
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
@@ -401,7 +401,7 @@ router.post('/logout', protect, async (req, res) => {
     res.clearCookie('jwt', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict'
     });
     
     res.json({ 
