@@ -39,14 +39,28 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Enable credentials for cookie-based authentication
+  withCredentials: true,
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token (fallback method)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Try to get token from cookies first (more secure)
+    const cookies = document.cookie.split(';');
+    const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
+    
+    if (jwtCookie) {
+      const token = jwtCookie.split('=')[1];
+      // Don't add Authorization header if we have cookies (server will use cookies)
+      logger.debug('Using cookie-based authentication');
+    } else {
+      // Fallback to localStorage token for backward compatibility
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        logger.debug('Using token-based authentication (fallback)');
+      }
     }
     
     // Log request details for debugging (only in development)
@@ -55,7 +69,8 @@ api.interceptors.request.use(
         url: config.url,
         method: config.method,
         baseURL: config.baseURL,
-        hasToken: !!token,
+        hasCookies: !!jwtCookie,
+        hasToken: !!localStorage.getItem('token'),
         environment: process.env.NODE_ENV,
         currentHost: window.location.hostname
       });
@@ -88,7 +103,9 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
+      // Clear both localStorage and cookies on authentication failure
       localStorage.removeItem('token');
+      document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -98,7 +115,8 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (username, password) => api.post('/auth/login', { username, password }),
-  register: (userData) => api.post('/auth/register', userData),
+  register: (userData) => api.post('/auth/register', { username: userData.username, password: userData.password, firstName: userData.firstName, lastName: userData.lastName, email: userData.email, grade: userData.grade, school: userData.school, targetScore: userData.targetScore, studyGoals: userData.studyGoals }),
+  logout: () => api.post('/auth/logout'),
 
   getCurrentUser: () => api.get('/auth/me'),
   updateProfile: (profileData) => api.put('/auth/profile', profileData),
