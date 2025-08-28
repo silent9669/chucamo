@@ -47,7 +47,8 @@ if (isDevelopment) {
           "'self'",
           "'unsafe-inline'",
           "'unsafe-eval'",
-          "https://www.desmos.com"
+          "https://www.desmos.com",
+          "https://accounts.google.com"
         ],
         styleSrc: [
           "'self'",
@@ -74,7 +75,9 @@ if (isDevelopment) {
         connectSrc: [
           "'self'",
           "https://www.desmos.com",
-          "https://*.railway.app"
+          "https://*.railway.app",
+          "https://accounts.google.com",
+          "https://oauth2.googleapis.com"
         ],
         frameSrc: [
           "'self'",
@@ -83,7 +86,8 @@ if (isDevelopment) {
           "https://www.youtube.com",
           "https://youtube.com",
           "https://drive.google.com",
-          "https://docs.google.com"
+          "https://docs.google.com",
+          "https://accounts.google.com"
         ]
       }
     }
