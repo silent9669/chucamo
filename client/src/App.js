@@ -7,6 +7,7 @@ import ErrorBoundary from './components/UI/ErrorBoundary';
 
 // Pages
 import Login from './pages/Auth/Login';
+import OAuthCallback from './pages/Auth/OAuthCallback';
 import Register from './pages/Auth/Register';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Tests from './pages/Tests/Tests';
@@ -90,6 +91,14 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <Login />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/oauth-callback" 
+        element={
+          <PublicRoute>
+            <OAuthCallback />
           </PublicRoute>
         } 
       />

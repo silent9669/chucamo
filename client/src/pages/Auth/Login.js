@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 
+// Google OAuth client-side library
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '222187587627-bt14cg9demfolkdd08gn22pdtdk1349q.apps.googleusercontent.com';
+
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -37,14 +40,108 @@ const Login = () => {
     }
   }, [searchParams, handleOAuthSuccess]);
 
-  const handleGoogleLogin = () => {
+  // Initialize Google OAuth
+  useEffect(() => {
+    console.log('🔍 Initializing Google OAuth...');
+    console.log('🔑 Client ID:', GOOGLE_CLIENT_ID);
+    console.log('🌐 Current origin:', window.location.origin);
+    console.log('🌐 Current href:', window.location.href);
+    console.log('🌐 Current protocol:', window.location.protocol);
+    console.log('🌐 Current hostname:', window.location.hostname);
+    console.log('🌐 Current port:', window.location.port);
+    
+    // Load Google OAuth script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    
+    script.onload = () => {
+      console.log('✅ Google OAuth script loaded');
+      if (window.google && window.google.accounts) {
+        console.log('🔧 Initializing Google accounts...');
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSuccess,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            context: 'signin',
+            ux_mode: 'popup',
+          });
+          console.log('✅ Google OAuth initialized successfully');
+        } catch (error) {
+          console.error('❌ Error initializing Google OAuth:', error);
+        }
+      } else {
+        console.error('❌ Google accounts not available');
+      }
+    };
+    
+    script.onerror = (error) => {
+      console.error('❌ Failed to load Google OAuth script:', error);
+    };
+    
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
+
+  const handleGoogleSuccess = async (response) => {
     setLoading(true);
-    window.location.href = `${process.env.REACT_APP_API_URL || '/api'}/auth/google`;
+    try {
+      // Send the ID token to your backend
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const result = await fetch(`${apiUrl}/auth/google/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id_token: response.credential,
+        }),
+      });
+
+      const data = await result.json();
+      
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        toast.success('Successfully logged in with Google!');
+        navigate('/dashboard');
+      } else {
+        toast.error(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFacebookLogin = () => {
-    setLoading(true);
-    window.location.href = `${process.env.REACT_APP_API_URL || '/api'}/auth/facebook`;
+  const handleGoogleLogin = () => {
+    console.log('🔘 Google login button clicked');
+    console.log('🌐 Window location:', window.location.origin);
+    console.log('🔑 Client ID being used:', GOOGLE_CLIENT_ID);
+    
+    if (window.google && window.google.accounts) {
+      console.log('✅ Google accounts available, calling prompt()');
+      try {
+        window.google.accounts.id.prompt();
+        console.log('✅ Google prompt() called successfully');
+      } catch (error) {
+        console.error('❌ Error calling Google prompt():', error);
+        toast.error('Google OAuth error. Please try again.');
+      }
+    } else {
+      console.error('❌ Google accounts not available');
+      toast.error('Google OAuth not loaded. Please refresh the page.');
+    }
   };
 
   return (
@@ -69,7 +166,7 @@ const Login = () => {
           </p>
         </div>
 
-        {/* OAuth Buttons Section */}
+        {/* OAuth Buttons Section - Google Only for now */}
         <div className="space-y-4">
           {/* Google OAuth Button */}
           <button
@@ -87,27 +184,13 @@ const Login = () => {
             </div>
             <span className="font-semibold text-gray-800">Continue with Google</span>
           </button>
-
-          {/* Facebook OAuth Button */}
-          <button
-            onClick={handleFacebookLogin}
-            disabled={loading}
-            className="w-full group relative flex items-center justify-center px-6 py-4 border-2 border-gray-200 rounded-xl shadow-sm bg-white text-gray-700 hover:border-gray-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02]"
-          >
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-              <svg className="w-6 h-6" viewBox="0 0 24 24">
-                <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-            </div>
-            <span className="font-semibold text-gray-800">Continue with Facebook</span>
-          </button>
         </div>
 
         {/* Info Section */}
         <div className="text-center space-y-4">
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
             <p className="text-sm text-blue-800">
-              <span className="font-semibold">New to chucamo?</span> Just sign in with Google or Facebook to create your account automatically!
+              <span className="font-semibold">New to chucamo?</span> Just sign in with Google to create your account automatically!
             </p>
           </div>
           
@@ -131,7 +214,7 @@ const Login = () => {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Redirecting to authentication...
+              Redirecting to Google authentication...
             </div>
           </div>
         )}

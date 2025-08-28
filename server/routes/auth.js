@@ -9,6 +9,7 @@ const mongoose = require('mongoose'); // Added for database connection status
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 const rateLimit = require('express-rate-limit');
+const passport = require('passport');
 // Removed updateLoginStreak and checkAndResetStreakIfNoCoins since streak is now only updated on test completion
 
 const router = express.Router();
@@ -421,6 +422,232 @@ router.post('/logout', checkSession, async (req, res) => {
     logger.error('Logout error:', error);
     res.status(500).json({ message: 'Server error during logout' });
   }
+});
+
+// @route   GET /api/auth/google
+// @desc    Google OAuth login - Redirects to Google
+// @access  Public
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+// @route   GET /api/auth/google/callback
+// @desc    Google OAuth callback - Handles user creation/login
+// @access  Public
+router.get('/google/callback', 
+  passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      const user = req.user;
+
+      // Check if user is active
+      if (!user.isActive) {
+        return res.status(401).json({ message: 'Account is deactivated' });
+      }
+
+      // Check if account is locked
+      if (user.status === "locked") {
+        return res.status(403).json({ message: "Account locked. Contact admin." });
+      }
+
+      // Count active sessions (only for student accounts)
+      if (user.accountType === 'student') {
+        const activeSessions = await Session.find({ userId: user._id });
+        if (activeSessions.length >= 2) {
+          // Lock account
+          user.status = "locked";
+          await user.save();
+          return res.status(403).json({ message: "Account locked due to multiple devices" });
+        }
+      }
+
+      // Create new session with OAuth data
+      const sessionId = uuidv4();
+      const deviceInfo = req.headers["user-agent"] || "Unknown";
+      const ip = req.ip || req.connection.remoteAddress;
+
+      await Session.create({
+        userId: user._id,
+        sessionId,
+        deviceInfo,
+        ip,
+        oauthProvider: 'google',
+        oauthId: user.oauthId,
+        loginMethod: 'oauth'
+      });
+
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
+
+      // Generate JWT token with session ID
+      const token = jwt.sign(
+        { id: user._id, sessionId },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRE || '7d' }
+      );
+
+      // Redirect to frontend with token
+      const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      logger.error('Google OAuth callback error:', error);
+      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=oauth_failed`);
+    }
+  }
+);
+
+// @route   POST /api/auth/google/token
+// @desc    Handle client-side Google OAuth token
+// @access  Public
+router.post('/google/token', async (req, res) => {
+  try {
+    const { id_token } = req.body;
+    
+    if (!id_token) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ID token is required' 
+      });
+    }
+
+    // Verify the ID token with Google
+    const { OAuth2Client } = require('google-auth-library');
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    const ticket = await client.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, given_name, family_name } = payload;
+
+    // Check if user already exists
+    let user = await User.findOne({
+      $or: [
+        { oauthId: googleId, oauthProvider: 'google' },
+        { email }
+      ]
+    });
+
+    if (user) {
+      // Update existing user's OAuth info if needed
+      if (!user.oauthProvider || user.oauthProvider !== 'google') {
+        user.oauthProvider = 'google';
+        user.oauthId = googleId;
+        user.emailVerified = true;
+        await user.save();
+      }
+
+      // Update OAuth login stats
+      user.lastOAuthLogin = new Date();
+      user.oauthLoginCount = (user.oauthLoginCount || 0) + 1;
+      await user.save();
+    } else {
+      // Create new user
+      user = await User.create({
+        firstName: given_name || 'Unknown',
+        lastName: family_name || 'User',
+        username: `google_${googleId}`,
+        email,
+        oauthProvider: 'google',
+        oauthId: googleId,
+        emailVerified: true,
+        accountType: 'free',
+        role: 'user',
+        lastOAuthLogin: new Date(),
+        oauthLoginCount: 1
+      });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Account is deactivated' 
+      });
+    }
+
+    // Check if account is locked
+    if (user.status === "locked") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Account locked. Contact admin." 
+      });
+    }
+
+    // Count active sessions (only for student accounts)
+    if (user.accountType === 'student') {
+      const activeSessions = await Session.find({ userId: user._id });
+      if (activeSessions.length >= 2) {
+        user.status = "locked";
+        await user.save();
+        return res.status(403).json({ 
+          success: false, 
+          message: "Account locked due to multiple devices" 
+        });
+      }
+    }
+
+    // Create new session
+    const sessionId = uuidv4();
+    const deviceInfo = req.headers["user-agent"] || "Unknown";
+    const ip = req.ip || req.connection.remoteAddress;
+
+    await Session.create({
+      userId: user._id,
+      sessionId,
+      deviceInfo,
+      ip,
+      oauthProvider: 'google',
+      oauthId: user.oauthId,
+      loginMethod: 'oauth'
+    });
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, sessionId },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRE || '7d' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        accountType: user.accountType
+      }
+    });
+
+  } catch (error) {
+    logger.error('Google token verification error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during authentication' 
+    });
+  }
+});
+
+// @route   GET /api/auth/oauth-status
+// @desc    Check OAuth authentication status
+// @access  Public
+router.get('/oauth-status', (req, res) => {
+  res.json({
+    success: true,
+    message: 'OAuth routes are configured',
+    google: 'Available (Client-side)',
+    facebook: 'Not implemented yet'
+  });
 });
 
 module.exports = router; 
