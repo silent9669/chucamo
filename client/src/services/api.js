@@ -46,7 +46,7 @@ const api = axios.create({
 // Request interceptor to add auth token (fallback method)
 api.interceptors.request.use(
   (config) => {
-    // Try to get token from cookies first (more secure)
+    // Check if we have cookies for authentication
     const cookies = document.cookie.split(';');
     const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
     
@@ -55,12 +55,9 @@ api.interceptors.request.use(
       // Don't add Authorization header if we have cookies (server will use cookies)
       logger.debug('Using cookie-based authentication');
     } else {
-      // Fallback to localStorage token for backward compatibility
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        logger.debug('Using token-based authentication (fallback)');
-      }
+      // No cookies found - this should not happen in normal operation
+      // but we keep the Authorization header logic for edge cases
+      logger.debug('No cookies found, authentication will fail');
     }
     
     // Log request details for debugging (only in development)
@@ -70,7 +67,6 @@ api.interceptors.request.use(
         method: config.method,
         baseURL: config.baseURL,
         hasCookies: !!jwtCookie,
-        hasToken: !!localStorage.getItem('token'),
         environment: process.env.NODE_ENV,
         currentHost: window.location.hostname
       });
@@ -103,8 +99,7 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
-      // Clear both localStorage and cookies on authentication failure
-      localStorage.removeItem('token');
+      // Clear cookies on authentication failure
       document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       window.location.href = '/login';
     }

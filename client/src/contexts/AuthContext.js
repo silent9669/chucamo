@@ -6,7 +6,7 @@ const AuthContext = createContext();
 
 const initialState = {
   user: null,
-  token: null, // Will be null initially, will be set from cookies or localStorage
+  token: null, // Will be null initially, will be set from cookies
   loading: true,
   error: null
 };
@@ -67,9 +67,8 @@ const authReducer = (state, action) => {
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Helper function to get token from cookies or localStorage
+  // Helper function to get token from cookies only
   const getAuthToken = () => {
-    // Try to get token from cookies first (more secure)
     const cookies = document.cookie.split(';');
     const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('jwt='));
     
@@ -79,36 +78,23 @@ export const AuthProvider = ({ children }) => {
       return token;
     }
     
-    // Fallback to localStorage for backward compatibility
-    const localToken = localStorage.getItem('token');
-    if (localToken) {
-      logger.debug('Token found in localStorage (fallback)');
-      return localToken;
-    }
-    
+    logger.debug('No token found in cookies');
     return null;
   };
 
-  // Helper function to clear all authentication data
+  // Helper function to clear authentication data
   const clearAuthData = () => {
-    // Clear localStorage
-    localStorage.removeItem('token');
-    
     // Clear cookies by setting expired cookie
     document.cookie = 'jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    logger.debug('All authentication data cleared');
+    logger.debug('Authentication cookies cleared');
   };
 
-  // Set auth token in axios headers
+  // Set auth token in axios headers (for backward compatibility)
   useEffect(() => {
     if (state.token) {
       authAPI.setAuthToken(state.token);
-      // Keep localStorage in sync for backward compatibility
-      localStorage.setItem('token', state.token);
     } else {
       authAPI.removeAuthToken();
-      localStorage.removeItem('token');
     }
   }, [state.token]);
 
@@ -155,11 +141,11 @@ export const AuthProvider = ({ children }) => {
         response = await authAPI.login(email, password);
       }
       
-      // Get token from response (backward compatibility)
+      // Get token from response (for UI state management)
       const token = response.data.token;
       
-      // Token should also be set as httpOnly cookie by server
-      // We'll use the token from response for now, but cookies are the primary method
+      // Token is automatically set as httpOnly cookie by server
+      // We use the token from response for UI state only
       
       dispatch({
         type: 'AUTH_SUCCESS',

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Authentication Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 8px 16px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🍪 Cookie Authentication Test</h1>
+    <p>Testing the new cookie-only authentication system</p>
+
+    <div class="test-section info">
+        <h3>Test Steps</h3>
+        <p>1. Click "Test Login" to authenticate</p>
+        <p>2. Check if cookies are set</p>
+        <p>3. Test protected endpoint access</p>
+        <p>4. Test logout functionality</p>
+    </div>
+
+    <div class="test-section">
+        <h3>Authentication Test</h3>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testProtectedEndpoint()">Test Protected Endpoint</button>
+        <button onclick="testLogout()">Test Logout</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Cookie Status</h3>
+        <div id="cookieStatus"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let currentToken = null;
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            results.appendChild(div);
+        }
+
+        function updateCookieStatus() {
+            const cookieStatus = document.getElementById('cookieStatus');
+            const cookies = document.cookie;
+            if (cookies) {
+                cookieStatus.innerHTML = `<pre>${cookies}</pre>`;
+            } else {
+                cookieStatus.innerHTML = '<p>No cookies found</p>';
+            }
+        }
+
+        async function testLogin() {
+            try {
+                log('🔄 Testing login...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include', // Important for cookies
+                    body: JSON.stringify({ 
+                        username: 'testuser123', 
+                        password: 'password123' 
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log('✅ Login successful!', 'success');
+                    log(`User: ${data.user.username}`, 'success');
+                    log(`Token received: ${data.token ? 'Yes' : 'No'}`, 'success');
+                    
+                    currentToken = data.token;
+                    
+                    // Check if cookies were set
+                    setTimeout(() => {
+                        updateCookieStatus();
+                        log('🍪 Cookie status updated', 'info');
+                    }, 100);
+                    
+                } else {
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Error during login: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProtectedEndpoint() {
+            try {
+                log('🔄 Testing protected endpoint...', 'info');
+                
+                // Test with cookies only (no Authorization header)
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include' // Send cookies
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log('✅ Cookie-based auth successful!', 'success');
+                    log(`User data: ${JSON.stringify(data.user.username)}`, 'success');
+                } else {
+                    log(`❌ Cookie-based auth failed: ${response.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Error testing protected endpoint: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogout() {
+            try {
+                log('🔄 Testing logout...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    log('✅ Logout successful!', 'success');
+                    currentToken = null;
+                    
+                    // Check if cookies were cleared
+                    setTimeout(() => {
+                        updateCookieStatus();
+                        log('🍪 Cookie status updated after logout', 'info');
+                    }, 100);
+                    
+                } else {
+                    log(`❌ Logout failed: ${response.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`💥 Error during logout: ${error.message}`, 'error');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Initialize
+        updateCookieStatus();
+        log('🚀 Test page loaded. Ready to test cookie authentication.', 'info');
+    </script>
+</body>
+</html>
