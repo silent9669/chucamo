@@ -139,16 +139,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting removed - no limits for users
-// const authLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 50, // limit each IP to 50 login attempts per 15 minutes
-//   message: 'Too many login attempts, please try again later.',
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
+// Rate limiting for login endpoint only - prevent DDoS attacks
+// Applied directly in auth routes for better control
 
-// Rate limiting - General API routes
+// Rate limiting removed for other endpoints - no limits applied
 // const generalLimiter = rateLimit({
 //   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
 //   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limit each IP to 1000 requests per windowMs
@@ -157,8 +151,7 @@ app.use(cors(corsOptions));
 //   legacyHeaders: false,
 // });
 
-// Rate limiting removed - no limits applied
-// app.use('/api/auth', authLimiter);
+// Rate limiting applied only to login endpoint
 // app.use('/api/users', generalLimiter);
 // app.use('/api/tests', generalLimiter);
 // app.use('/api/questions', generalLimiter);

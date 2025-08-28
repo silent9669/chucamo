@@ -8,9 +8,40 @@ const checkSession = require('../middleware/checkSession');
 const mongoose = require('mongoose'); // Added for database connection status
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
 // Removed updateLoginStreak and checkAndResetStreakIfNoCoins since streak is now only updated on test completion
 
 const router = express.Router();
+
+// Rate limiter specifically for login endpoint to prevent DDoS
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 login attempts per 15 minutes
+  message: {
+    success: false,
+    message: 'Too many login attempts from this IP. Please try again in 15 minutes.',
+    error: 'RATE_LIMIT_EXCEEDED'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful logins
+  keyGenerator: (req) => {
+    // Use IP address for rate limiting
+    return req.ip || req.connection.remoteAddress;
+  },
+  handler: (req, res) => {
+    logger.warn('Rate limit exceeded for login:', {
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      timestamp: new Date().toISOString()
+    });
+    res.status(429).json({
+      success: false,
+      message: 'Too many login attempts from this IP. Please try again in 15 minutes.',
+      error: 'RATE_LIMIT_EXCEEDED'
+    });
+  }
+});
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -105,7 +136,7 @@ router.post('/register', [
 // @route   POST /api/auth/login
 // @desc    Login user with username or email
 // @access  Public
-router.post('/login', [
+router.post('/login', loginRateLimiter, [
   body('username').notEmpty().withMessage('Username or email is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
