@@ -993,18 +993,7 @@ const RealTestManagement = () => {
 
       // Debug: Log the current test state before saving
       logger.debug('=== SAVING TEST ===');
-      logger.debug('Current test sections:', currentTest.sections);
-      logger.debug('Sections with questions:', currentTest.sections?.map(s => ({
-        title: s.title,
-        questionCount: s.questions?.length || 0,
-        questions: s.questions?.map(q => ({
-            id: q.id,
-          question: q.question?.substring(0, 50) + '...',
-          type: q.type,
-          answerType: q.answerType,
-          hasKaTeX: q.question?.includes('$') || false
-        }))
-      })));
+      logger.debug('Sections count:', currentTest.sections?.length);
 
       // Preserve ALL sections and their questions, even if empty
       const transformedSections = (currentTest.sections || []).map(section => ({
@@ -1015,20 +1004,19 @@ const RealTestManagement = () => {
         instructions: section.description || 'Complete all questions in this section.',
         questions: (section.questions || []).map(question => ({
           ...question,
-          // Explicitly preserve the topic field
+          // CRITICAL FIX: Explicitly preserve the topic field (question type)
           topic: question.topic || 'general',
           // Ensure correctAnswer is always a string as required by the schema
           correctAnswer: question.answerType === 'written' 
             ? (question.writtenAnswer || question.correctAnswer || '').toString()
             : (question.correctAnswer || 0).toString(),
-          // Ensure type and answerType are properly set
+          // CRITICAL FIX: Ensure type and answerType are properly set
           type: question.type || (question.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
           answerType: question.answerType || (question.type === 'grid-in' ? 'written' : 'multiple-choice')
         }))
       }));
 
-      logger.debug('Transformed sections:', transformedSections);
-      logger.debug('Total questions across all sections:', transformedSections.reduce((total, section) => total + section.questions.length, 0));
+      logger.debug('Total questions:', transformedSections.reduce((total, section) => total + section.questions.length, 0));
 
       const description = currentTest.description || 'A comprehensive test for students to practice and improve their skills.';
       if (description.length < 10) {
@@ -1050,21 +1038,10 @@ const RealTestManagement = () => {
         totalQuestions: totalQuestions
       };
 
-      logger.debug('Final test data to save:', testData);
-      logger.debug('Question types in final data:', testData.sections?.map(s => ({
-        section: s.name,
-        questions: s.questions?.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType,
-          correctAnswer: q.correctAnswer,
-          hasOptions: q.options && q.options.length > 0
-        }))
-      })));
+      logger.debug('Test data prepared for saving');
 
-      // Log the exact data being sent to the server
+      // Log data being sent to server
       logger.debug('=== DATA BEING SENT TO SERVER ===');
-      logger.debug('Raw test data:', JSON.stringify(testData, null, 2));
 
       let response;
       if (editingTest) {
@@ -1099,14 +1076,7 @@ const RealTestManagement = () => {
       // Verify that question types are preserved in the saved test
       if (response.data.test && response.data.test.sections) {
         logger.debug('=== VERIFICATION: SAVED TEST DATA ===');
-        logger.debug('Question types in saved test:', response.data.test.sections?.map(s => ({
-          section: s.name,
-          questions: s.questions?.map(q => ({
-            id: q.id,
-            type: q.type,
-            answerType: q.answerType
-          }))
-        })));
+        logger.debug('Test saved successfully with', response.data.test.sections.length, 'sections');
       }
 
       alert(editingTest ? 'Test updated successfully!' : 'Test created successfully!');
@@ -1129,7 +1099,51 @@ const RealTestManagement = () => {
     }
   };
 
-  // Enhanced question saving with KaTeX preservation
+    // Function to create complete question data with all fields preserved (Real Test Management)
+  const createCompleteQuestionDataReal = (currentQuestion, editingQuestion) => {
+    const questionData = {
+      id: editingQuestion ? editingQuestion.id : Date.now(),
+      question: currentQuestion.question,
+      content: currentQuestion.question,
+      topic: currentQuestion.topic || 'general',
+      difficulty: 'medium',
+      explanation: currentQuestion.explanation || '',
+      passage: currentQuestion.passage || '',
+      // CRITICAL FIX: Preserve the original question type, don't override it
+      type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
+      options: currentQuestion.answerType === 'multiple-choice' 
+        ? currentQuestion.options.map((opt, index) => {
+            const content = typeof opt === 'string' ? opt : (opt.content || '');
+            const images = typeof opt === 'string' ? [] : (opt.images || []);
+            
+            return {
+              content: content,
+              images: images,
+              isCorrect: index === currentQuestion.correctAnswer
+            };
+          })
+        : [],
+      correctAnswer: currentQuestion.answerType === 'written' 
+        ? currentQuestion.writtenAnswer || ''
+        : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+           (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+             ? currentQuestion.options[currentQuestion.correctAnswer] 
+             : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
+      images: (currentQuestion.images || []).map(img => ({
+        url: img.url,
+        name: img.name
+      })),
+      answerType: currentQuestion.answerType,
+      writtenAnswer: currentQuestion.writtenAnswer || '',
+      acceptableAnswers: currentQuestion.acceptableAnswers || []
+    };
+
+    logger.debug('Question data created - topic:', questionData.topic, 'type:', questionData.type);
+    
+    return questionData;
+  };
+
+  // Fixed saveQuestion function for Real tests that properly preserves question types
   const saveQuestion = async () => {
     try {
       if (!currentQuestion.question.trim()) {
@@ -1137,87 +1151,19 @@ const RealTestManagement = () => {
         return;
       }
 
-      // Deep clone the current question to preserve all data
-      const questionToSave = JSON.parse(JSON.stringify({
-        id: editingQuestion ? editingQuestion.id : Date.now(),
-        question: currentQuestion.question,
-        content: currentQuestion.question,
-        topic: currentQuestion.topic || 'general', // This is the question type (e.g., "Information & Ideas", "Algebra")
-        difficulty: 'medium',
-        explanation: currentQuestion.explanation || '',
-        passage: currentQuestion.passage || '',
-        type: currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice', // This is the answer type
-        // Options with image support - saveQuestion function
-        options: currentQuestion.answerType === 'multiple-choice' 
-          ? currentQuestion.options.map((opt, index) => {
-              const content = typeof opt === 'string' ? opt : (opt.content || '');
-              const images = typeof opt === 'string' ? [] : (opt.images || []);
-              
-              // Use the content as provided by the user - no automatic fallback content
-              let finalContent = content;
-              
-              return {
-                content: finalContent,
-                images: images,
-                isCorrect: index === currentQuestion.correctAnswer
-              };
-            })
-          : [],
-        correctAnswer: currentQuestion.answerType === 'written' 
-          ? currentQuestion.writtenAnswer || ''
-          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
-             (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
-               ? currentQuestion.options[currentQuestion.correctAnswer] 
-               : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
-        images: (currentQuestion.images || []).map(img => ({
-          url: img.url,
-          name: img.name
-        })),
-        answerType: currentQuestion.answerType, // This is the answer type (multiple-choice or written)
-        writtenAnswer: currentQuestion.writtenAnswer || '',
-        acceptableAnswers: currentQuestion.acceptableAnswers || []
-      }));
-
-      // Ensure question type (topic) is properly preserved when editing
-      if (editingQuestion) {
-        // When editing, preserve the original question topic if it exists
-        questionToSave.topic = editingQuestion.topic || currentQuestion.topic || 'general';
-        // Keep the answer type as set by the user
-        questionToSave.answerType = currentQuestion.answerType;
-        // Set the type based on answer type
-        questionToSave.type = currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice';
-      }
-
-      // Debug logging to verify the separation
-      logger.debug('=== SAVING QUESTION (FIXED) ===');
-      logger.debug('Original question type (topic):', editingQuestion?.topic || currentQuestion.topic || 'general');
-      logger.debug('Original answer type:', editingQuestion?.answerType || currentQuestion.answerType);
-      logger.debug('Saved question type (topic):', questionToSave.topic);
-      logger.debug('Saved answer type:', questionToSave.answerType);
-      logger.debug('Saved type field:', questionToSave.type);
-
-      // Debug: Log the question data being saved
-      logger.debug('=== SAVING QUESTION ===');
-      logger.debug('Question text:', questionToSave.question);
-      logger.debug('Has KaTeX in question:', questionToSave.question?.includes('$'));
-      logger.debug('Explanation:', questionToSave.explanation);
-      logger.debug('Has KaTeX in explanation:', questionToSave.explanation?.includes('$'));
-      logger.debug('Passage:', questionToSave.passage);
-      logger.debug('Has KaTeX in passage:', questionToSave.passage?.includes('$'));
-      logger.debug('Options:', questionToSave.options);
-      logger.debug('Options with KaTeX:', questionToSave.options?.map(opt => opt.content?.includes('$')));
-
+      const questionToSave = createCompleteQuestionDataReal(currentQuestion, editingQuestion);
+      
       // Create a new questions array with the updated question
       const updatedQuestions = editingQuestion
         ? currentSection.questions.map(q => q.id === editingQuestion.id ? questionToSave : q)
         : [...currentSection.questions, questionToSave];
-
+      
       // Create updated section
       const updatedSection = {
         ...currentSection,
         questions: updatedQuestions
       };
-
+      
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
@@ -1227,27 +1173,23 @@ const RealTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
-        logger.debug('Test sections count:', newTest.sections.length);
-        logger.debug('Current section questions count:', updatedSection.questions.length);
+        logger.debug('Real test state updated - sections:', newTest.sections.length, 'questions:', updatedSection.questions.length);
         
         return newTest;
       });
-
+      
       // Update the section state
       setCurrentSection(updatedSection);
 
       // Verify the data was saved correctly
       setTimeout(() => {
-        logger.debug('=== VERIFICATION ===');
-        logger.debug('Current section questions after save:', currentSection.questions?.length);
-        logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
+        logger.debug('Question saved successfully');
       }, 100);
 
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
       setEditingQuestion(null);
       setCurrentView('section-builder');
-        } catch (error) {
+    } catch (error) {
       logger.error('Error saving question:', error);
       alert('Failed to save question. Please try again.');
     }
@@ -1368,6 +1310,7 @@ const RealTestManagement = () => {
       id: question.id,
       question: question.question || question.content || '',
       topic: question.topic || 'general', // Add topic loading
+      type: question.type || (question.answerType === 'written' ? 'grid-in' : 'multiple-choice'), // CRITICAL FIX: Add type field
       options: question.options && question.options.length > 0 
         ? question.options.map(opt => {
             if (typeof opt === 'string') {
@@ -1395,19 +1338,7 @@ const RealTestManagement = () => {
       acceptableAnswers: question.acceptableAnswers || []
     };
 
-    logger.debug('Processed question data:', questionData);
-    logger.debug('KaTeX content preserved - loadQuestionForEditing:', {
-      question: questionData.question?.includes('$'),
-      explanation: questionData.explanation?.includes('$'),
-      passage: questionData.passage?.includes('$'),
-      options: questionData.options?.map(opt => {
-        if (typeof opt === 'string') {
-          return opt.includes('$');
-        } else {
-          return opt.content?.includes('$') || false;
-        }
-      })
-    });
+    logger.debug('Question loaded - topic:', questionData.topic, 'type:', questionData.type);
 
     setCurrentQuestion(questionData);
     setEditingQuestion(question);
@@ -1415,7 +1346,7 @@ const RealTestManagement = () => {
 
   // Test function to verify data preservation
   const testDataPreservation = () => {
-    logger.debug('=== TESTING DATA PRESERVATION ===');
+    logger.debug('Creating test question with KaTeX content');
     
     // Create a test question with KaTeX content
     const testQuestion = {
@@ -1440,9 +1371,7 @@ const RealTestManagement = () => {
       acceptableAnswers: []
     };
 
-    logger.debug('Test question created:', testQuestion);
-    logger.debug('KaTeX content in question:', testQuestion.question.includes('$'));
-    logger.debug('KaTeX content in explanation:', testQuestion.explanation.includes('$'));
+    logger.debug('Test question created with KaTeX content');
 
     // Add the test question to the current section
     if (currentSection) {
@@ -1452,8 +1381,7 @@ const RealTestManagement = () => {
         questions: updatedQuestions
       };
 
-      logger.debug('Adding test question to section:', updatedSection.title);
-      logger.debug('Section now has', updatedQuestions.length, 'questions');
+      logger.debug('Test question added to section:', updatedSection.title);
 
       // Update both test and section states
       setCurrentTest(prev => ({
@@ -1480,11 +1408,7 @@ const RealTestManagement = () => {
       answerType: question.answerType || (question.type === 'grid-in' ? 'written' : 'multiple-choice')
     };
     
-    logger.debug('=== QUESTION TYPE PRESERVATION ===');
-    logger.debug('Original question type (topic):', question.topic || 'general');
-    logger.debug('Original answer type:', question.answerType);
-    logger.debug('Preserved question type (topic):', preservedQuestion.topic);
-    logger.debug('Preserved answer type:', preservedQuestion.answerType);
+    logger.debug('Question type preserved - topic:', preservedQuestion.topic);
     
     return preservedQuestion;
   };
@@ -1522,21 +1446,14 @@ const RealTestManagement = () => {
     // Ensure question types are properly preserved
     const preservedQuestion = ensureQuestionTypePreservation(questionData);
     
-    logger.debug('=== COMPLETE QUESTION DATA CREATED ===');
-    logger.debug('Question ID:', preservedQuestion.id);
-    logger.debug('Question type (topic):', preservedQuestion.topic);
-    logger.debug('Answer type:', preservedQuestion.answerType);
-    logger.debug('Question text:', preservedQuestion.question?.substring(0, 50) + '...');
-    logger.debug('Options count:', preservedQuestion.options?.length || 0);
-    logger.debug('Has written answer:', !!preservedQuestion.writtenAnswer);
-    logger.debug('Acceptable answers:', preservedQuestion.acceptableAnswers);
+    logger.debug('Question data created - topic:', preservedQuestion.topic, 'type:', preservedQuestion.type);
     
     return preservedQuestion;
   };
 
 
 
-  // Enhanced saveQuestion function that ensures all question data is preserved
+        // Enhanced saveQuestion function that ensures all question data is preserved
   const saveQuestionEnhanced = async (currentQuestion, editingQuestion, currentSection, setCurrentTest, setCurrentSection, setEditingQuestion, setCurrentView) => {
     try {
       if (!currentQuestion.question.trim()) {
@@ -1567,14 +1484,7 @@ const RealTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
-        logger.debug('Test sections count:', newTest.sections.length);
-        logger.debug('Current section questions count:', updatedSection.questions.length);
-        logger.debug('Question types in updated section:', updatedSection.questions.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType
-        })));
+        logger.debug('Test state updated - sections:', newTest.sections.length, 'questions:', updatedSection.questions.length);
         
         return newTest;
       });
@@ -1584,14 +1494,7 @@ const RealTestManagement = () => {
 
       // Verify the data was saved correctly
       setTimeout(() => {
-        logger.debug('=== VERIFICATION ===');
-        logger.debug('Current section questions after save:', currentSection.questions?.length);
-        logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
-        logger.debug('Question types after save:', updatedQuestions.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType
-        })));
+        logger.debug('Question saved successfully (enhanced)');
       }, 100);
 
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
@@ -1606,6 +1509,11 @@ const RealTestManagement = () => {
   // Fixed saveQuestion function that properly preserves question types
   const saveQuestionFixed = async () => {
     try {
+      // Debug: Show key state values
+      logger.debug('=== SAVING QUESTION (FIXED) ===');
+      logger.debug('User input topic:', currentQuestion.topic);
+      logger.debug('Original topic:', editingQuestion?.topic);
+      
       if (!currentQuestion.question.trim()) {
         alert('Question text is required');
       return;
@@ -1616,7 +1524,7 @@ const RealTestManagement = () => {
         id: editingQuestion ? editingQuestion.id : Date.now(),
         question: currentQuestion.question,
         content: currentQuestion.question,
-        topic: editingQuestion ? (editingQuestion.topic || currentQuestion.topic || 'general') : (currentQuestion.topic || 'general'),
+        topic: currentQuestion.topic || 'general', // CRITICAL FIX: Always use current form state for topic
         difficulty: 'medium',
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
@@ -1664,16 +1572,9 @@ const RealTestManagement = () => {
         questionToSave.type = 'multiple-choice';
       }
 
-      // Debug: Log the question data being saved
-      logger.debug('=== SAVING QUESTION (FIXED) ===');
-      logger.debug('Original question type (topic):', currentQuestion.topic || 'general');
-      logger.debug('Original answer type:', currentQuestion.answerType);
-      logger.debug('Saved question type (topic):', questionToSave.topic);
-      logger.debug('Saved answer type:', questionToSave.answerType);
-      logger.debug('Question text:', questionToSave.question);
-      logger.debug('Correct answer:', questionToSave.correctAnswer);
-      logger.debug('Written answer:', questionToSave.writtenAnswer);
-      logger.debug('Acceptable answers:', questionToSave.acceptableAnswers);
+      // Debug: Log key question data
+      logger.debug('Question type (topic):', questionToSave.topic);
+      logger.debug('Answer type:', questionToSave.answerType);
 
       // Create a new questions array with the updated question
       const updatedQuestions = editingQuestion
@@ -1695,14 +1596,7 @@ const RealTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
-        logger.debug('Test sections count:', newTest.sections.length);
-        logger.debug('Current section questions count:', updatedSection.questions.length);
-        logger.debug('Question types in updated section:', updatedSection.questions.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType
-        })));
+        logger.debug('Test updated - sections:', newTest.sections.length, 'questions:', updatedSection.questions.length);
         
         return newTest;
       });
@@ -1712,14 +1606,7 @@ const RealTestManagement = () => {
 
       // Verify the data was saved correctly
       setTimeout(() => {
-        logger.debug('=== VERIFICATION ===');
-        logger.debug('Current section questions after save:', currentSection.questions?.length);
-        logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
-        logger.debug('Question types after save:', updatedQuestions.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType
-        })));
+        logger.debug('Question saved successfully');
       }, 100);
 
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
@@ -1733,28 +1620,12 @@ const RealTestManagement = () => {
 
   // Monitor currentTest state changes to track data preservation
   useEffect(() => {
-    logger.debug('=== CURRENT TEST STATE CHANGED ===');
-    logger.debug('Current test:', currentTest);
-    logger.debug('Sections count:', currentTest.sections?.length || 0);
-    if (currentTest.sections) {
-      currentTest.sections.forEach((section, index) => {
-        logger.debug(`Section ${index + 1} (${section.title}):`, {
-          questionCount: section.questions?.length || 0,
-          questions: section.questions?.map(q => ({
-            id: q.id,
-            type: q.type,
-            answerType: q.answerType,
-            question: q.question?.substring(0, 30) + '...',
-            hasKaTeX: q.question?.includes('$') || false
-          }))
-        });
-      });
-    }
+    logger.debug('Test state changed - sections:', currentTest.sections?.length || 0);
 
     // Save to localStorage to prevent data loss when switching pages
     if (currentTest && currentTest.sections && currentTest.sections.length > 0) {
       localStorage.setItem('currentTestState', JSON.stringify(currentTest));
-      logger.debug('=== SAVED TEST STATE TO LOCALSTORAGE ===');
+      logger.debug('Test state saved to localStorage');
     }
   }, [currentTest]);
 
@@ -1765,9 +1636,7 @@ const RealTestManagement = () => {
       try {
         const parsedState = JSON.parse(savedTestState);
         setCurrentTest(parsedState);
-        logger.debug('=== LOADED TEST STATE FROM LOCALSTORAGE ===');
-        logger.debug('Loaded test sections:', parsedState.sections?.length || 0);
-        logger.debug('Loaded questions:', parsedState.sections?.reduce((total, section) => total + (section.questions?.length || 0), 0) || 0);
+        logger.debug('Test state loaded from localStorage');
       } catch (error) {
         logger.error('Error loading test state from localStorage:', error);
       }
@@ -1781,9 +1650,7 @@ const RealTestManagement = () => {
         ...prev,
         type: prev.answerType === 'written' ? 'grid-in' : 'multiple-choice'
       }));
-      logger.debug('=== AUTO-SETTING QUESTION TYPE ===');
-      logger.debug('Answer type:', currentQuestion.answerType);
-      logger.debug('Setting type to:', currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice');
+      logger.debug('Auto-setting question type for answer type:', currentQuestion.answerType);
     }
   }, [currentQuestion.answerType, currentQuestion.type]);
 
@@ -2051,26 +1918,8 @@ const RealTestManagement = () => {
             <button
               onClick={() => {
                 logger.debug('=== SERVER DATA VERIFICATION ===');
-                logger.debug('Current test:', currentTest);
-                logger.debug('Current section:', currentSection);
-                logger.debug('Current question:', currentQuestion);
-                logger.debug('Editing question:', editingQuestion);
-                if (currentTest && currentTest.sections) {
-                  currentTest.sections.forEach((section, sectionIndex) => {
-                    logger.debug(`Section ${sectionIndex + 1} (${section.title}):`, section);
-                    if (section.questions) {
-                      section.questions.forEach((question, questionIndex) => {
-                        logger.debug(`  Question ${questionIndex + 1}:`, {
-                          id: question.id,
-                          topic: question.topic,
-                          type: question.type,
-                          answerType: question.answerType,
-                          correctAnswer: question.correctAnswer
-                        });
-                      });
-                    }
-                  });
-                }
+                logger.debug('Test sections:', currentTest.sections?.length);
+                logger.debug('Current section:', currentSection?.title);
               }}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
               title="Verify Server Data"
@@ -3185,15 +3034,7 @@ const MockTestManagement = () => {
 
       // Debug: Log the transformed sections
       logger.debug('=== SAVING MOCK TEST ===');
-      logger.debug('Transformed sections:', transformedSections);
-      logger.debug('Question types in transformed data:', transformedSections?.map(s => ({
-        section: s.name,
-        questions: s.questions?.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType
-        }))
-      })));
+      logger.debug('Sections count:', transformedSections.length);
 
       if (transformedSections.length === 0) {
         alert('Please add at least one question to a section before saving the test.');
@@ -3217,21 +3058,10 @@ const MockTestManagement = () => {
         totalQuestions: currentTest.sections ? currentTest.sections.reduce((total, section) => total + (section.questions ? section.questions.length : 0), 0) : 0
       };
 
-      logger.debug('Final mock test data to save:', testData);
-      logger.debug('Question types in final mock test data:', testData.sections?.map(s => ({
-        section: s.name,
-        questions: s.questions?.map(q => ({
-          id: q.id,
-          type: q.type,
-          answerType: q.answerType,
-          correctAnswer: q.correctAnswer,
-          hasOptions: q.options && q.options.length > 0
-        }))
-      })));
+      logger.debug('Mock test data prepared for saving');
 
       // Log the exact data being sent to the server
       logger.debug('=== DATA BEING SENT TO SERVER (MOCK) ===');
-      logger.debug('Raw mock test data:', JSON.stringify(testData, null, 2));
 
       let response;
       if (editingTest) {
@@ -3264,14 +3094,7 @@ const MockTestManagement = () => {
       // Verify that question types are preserved in the saved test
       if (response.data.test && response.data.test.sections) {
         logger.debug('=== VERIFICATION: SAVED MOCK TEST DATA ===');
-        logger.debug('Question types in saved mock test:', response.data.test.sections?.map(s => ({
-          section: s.name,
-          questions: s.questions?.map(q => ({
-            id: q.id,
-            type: q.type,
-            answerType: q.answerType
-          }))
-        })));
+        logger.debug('Mock test saved successfully with', response.data.test.sections.length, 'sections');
       }
 
       alert(editingTest ? 'Test updated successfully!' : 'Test created successfully!');
@@ -3341,22 +3164,12 @@ const MockTestManagement = () => {
 
       // Debug logging to verify the separation
       logger.debug('=== SAVING MOCK QUESTION (FIXED) ===');
-      logger.debug('Original question type (topic):', editingQuestion?.topic || currentQuestion.topic || 'general');
-      logger.debug('Original answer type:', editingQuestion?.answerType || currentQuestion.answerType);
-      logger.debug('Saved question type (topic):', questionToSave.topic);
-      logger.debug('Saved answer type:', questionToSave.answerType);
-      logger.debug('Saved type field:', questionToSave.type);
+      logger.debug('Question type (topic):', questionToSave.topic);
+      logger.debug('Answer type:', questionToSave.answerType);
 
       // Debug: Log the question data being saved
       logger.debug('=== SAVING QUESTION ===');
-      logger.debug('Question text:', questionToSave.question);
-      logger.debug('Has KaTeX in question:', questionToSave.question?.includes('$'));
-      logger.debug('Explanation:', questionToSave.explanation);
-      logger.debug('Has KaTeX in explanation:', questionToSave.explanation?.includes('$'));
-      logger.debug('Passage:', questionToSave.passage);
-      logger.debug('Has KaTeX in passage:', questionToSave.passage?.includes('$'));
-      logger.debug('Options:', questionToSave.options);
-      logger.debug('Options with KaTeX:', questionToSave.options?.map(opt => opt.content?.includes('$')));
+      logger.debug('Question saved with KaTeX content');
 
       // Create a new questions array with the updated question
       const updatedQuestions = editingQuestion
@@ -3378,9 +3191,7 @@ const MockTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
-        logger.debug('Test sections count:', newTest.sections.length);
-        logger.debug('Current section questions count:', updatedSection.questions.length);
+        logger.debug('Test state updated - sections:', newTest.sections.length, 'questions:', updatedSection.questions.length);
         
         return newTest;
       });
@@ -3390,9 +3201,7 @@ const MockTestManagement = () => {
 
       // Verify the data was saved correctly
       setTimeout(() => {
-        logger.debug('=== VERIFICATION ===');
-        logger.debug('Current section questions after save:', currentSection.questions?.length);
-        logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
+        logger.debug('Mock question saved successfully');
       }, 100);
 
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
@@ -3532,19 +3341,7 @@ const MockTestManagement = () => {
       acceptableAnswers: question.acceptableAnswers || []
     };
 
-    logger.debug('Processed question data:', questionData);
-    logger.debug('KaTeX content preserved - createCompleteQuestionDataMock:', {
-      question: questionData.question?.includes('$'),
-      explanation: questionData.explanation?.includes('$'),
-      passage: questionData.passage?.includes('$'),
-      options: questionData.options?.map(opt => {
-        if (typeof opt === 'string') {
-          return opt.includes('$');
-        } else {
-          return opt.content?.includes('$') || false;
-        }
-      })
-    });
+    logger.debug('Mock question loaded - topic:', questionData.topic);
 
     setCurrentQuestion(questionData);
     setEditingQuestion(question);
@@ -3592,14 +3389,7 @@ const MockTestManagement = () => {
       acceptableAnswers: currentQuestion.acceptableAnswers || []
     };
 
-    logger.debug('=== COMPLETE QUESTION DATA CREATED (MOCK) ===');
-    logger.debug('Question ID:', questionData.id);
-    logger.debug('Question type (topic):', questionData.topic);
-    logger.debug('Answer type:', questionData.answerType);
-    logger.debug('Question text:', questionData.question?.substring(0, 50) + '...');
-    logger.debug('Options count:', questionData.options?.length || 0);
-    logger.debug('Has written answer:', !!questionData.writtenAnswer);
-    logger.debug('Acceptable answers:', questionData.acceptableAnswers);
+    logger.debug('Mock question data created - topic:', questionData.topic, 'type:', questionData.type);
     
     return questionData;
   };
@@ -3624,30 +3414,14 @@ const MockTestManagement = () => {
         const newTest = { ...prev, sections: prev.sections.map(section => 
           section.id === currentSection.id ? updatedSection : section
         )};
-        logger.debug('=== UPDATED MOCK TEST STATE ===');
-        logger.debug('Test sections count:', newTest.sections.length);
-        logger.debug('Current section questions count:', updatedSection.questions.length);
-        logger.debug('Question types in updated section:', updatedSection.questions.map(q => ({ 
-          id: q.id, 
-          type: q.type, 
-          answerType: q.answerType,
-          correctAnswer: q.correctAnswer 
-        })));
+        logger.debug('Mock test state updated - sections:', newTest.sections.length, 'questions:', updatedSection.questions.length);
         return newTest;
       });
       
       setCurrentSection(updatedSection);
       
       setTimeout(() => {
-        logger.debug('=== MOCK VERIFICATION ===');
-        logger.debug('Current section questions after save:', currentSection.questions?.length);
-        logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
-        logger.debug('Question types after save:', updatedQuestions.map(q => ({ 
-          id: q.id, 
-          type: q.type, 
-          answerType: q.answerType,
-          correctAnswer: q.correctAnswer 
-        })));
+        logger.debug('Mock question saved successfully (fixed)');
       }, 100);
       
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
