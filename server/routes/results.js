@@ -1029,93 +1029,9 @@ router.put('/:id/review', protect, async (req, res) => {
 // @access  Private
 router.delete('/:id', protect, async (req, res) => {
   try {
-    const result = await Result.findById(req.params.id);
-
-    if (!result) {
-      return res.status(404).json({ message: 'Result not found' });
-    }
-
-    if (result.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    // Store test ID and result status before deletion for restriction check
-    const testId = result.test;
-    const wasCompleted = result.status === 'completed';
-    const userAccountType = req.user.accountType;
-
-    // If this was a completed test, update historical attempts tracking
-    if (wasCompleted) {
-      const User = require('../models/User');
-      const user = await User.findById(req.user.id);
-      
-      if (user) {
-        // Initialize historical attempts array if it doesn't exist
-        if (!user.historicalTestAttempts) {
-          user.historicalTestAttempts = [];
-        }
-        
-        // Find existing historical record for this test
-        let historicalRecord = user.historicalTestAttempts.find(h => h.testId.toString() === testId.toString());
-        
-        if (historicalRecord) {
-          // Update existing record
-          historicalRecord.attemptsUsed += 1;
-          historicalRecord.lastAttemptDate = new Date();
-        } else {
-          // Create new record
-          historicalRecord = {
-            testId: testId,
-            attemptsUsed: 1,
-            lastAttemptDate: new Date()
-          };
-          user.historicalTestAttempts.push(historicalRecord);
-        }
-        
-        // Save the user
-        await user.save();
-        
-        console.log('📊 Historical attempts updated for test:', testId);
-        console.log('📋 Attempts used:', historicalRecord.attemptsUsed);
-      }
-    }
-
-    // Delete the result
-    await Result.findByIdAndDelete(req.params.id);
-
-    // Check if user can start this test again after deletion
-    let canStartAgain = true;
-    let restrictionMessage = null;
-
-    if (wasCompleted && userAccountType === 'free') {
-      // Get updated user to check current historical attempts
-      const updatedUser = await User.findById(req.user.id);
-      const historicalRecord = updatedUser.historicalTestAttempts?.find(h => h.testId.toString() === testId.toString());
-      const historicalAttempts = historicalRecord?.attemptsUsed || 0;
-      
-      if (historicalAttempts >= 1) {
-        canStartAgain = false;
-        restrictionMessage = 'Free users cannot retake tests after deletion. Your attempt has been used.';
-      }
-    }
-
-    // Get final historical attempts count for response
-    let finalHistoricalAttempts = 0;
-    if (wasCompleted) {
-      const finalUser = await User.findById(req.user.id);
-      const finalHistoricalRecord = finalUser.historicalTestAttempts?.find(h => h.testId.toString() === testId.toString());
-      finalHistoricalAttempts = finalHistoricalRecord?.attemptsUsed || 0;
-    }
-
-    res.json({
-      success: true,
-      message: 'Result deleted successfully',
-      canStartAgain,
-      restrictionMessage,
-      wasCompleted,
-      userAccountType,
-      historicalAttempts: finalHistoricalAttempts,
-      testId: testId.toString()
+    return res.status(405).json({
+      success: false,
+      message: 'Deleting test results is no longer allowed.'
     });
   } catch (error) {
     console.error('Delete result error:', error);

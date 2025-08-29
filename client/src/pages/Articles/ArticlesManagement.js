@@ -217,8 +217,16 @@ const ArticlesManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Library Management</h1>
-        <p className="text-gray-600">Create and manage your library content</p>
+          <div className="flex items-center gap-4 mb-2">
+            <Link
+              to="/admin"
+              className="bg-gray-600 text-white px-3 py-1 rounded-lg hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
+            >
+              ← Back to Admin
+            </Link>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Library Management</h1>
+          <p className="text-gray-600">Create and manage your library content</p>
         </div>
         <button
           onClick={handleNewArticle}

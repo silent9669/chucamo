@@ -116,15 +116,14 @@ const Tests = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'published':
-        return 'bg-green-100 text-green-800';
-      case 'draft':
-        return 'bg-gray-100 text-gray-600';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const getStatusPill = (attemptStatus) => {
+    if (attemptStatus?.completedAttempts > 0) {
+      return { text: 'Completed', cls: 'bg-green-100 text-green-800' };
     }
+    if (attemptStatus?.hasIncompleteAttempt) {
+      return { text: 'Incomplete', cls: 'bg-yellow-100 text-yellow-800' };
+    }
+    return { text: 'Not started', cls: 'bg-gray-100 text-gray-600' };
   };
 
   const formatDuration = (minutes) => {
@@ -265,15 +264,10 @@ const Tests = () => {
     }, [test.id]);
     
     const getButtonState = () => {
-      // Use database data if available, otherwise fallback to localStorage
       if (attemptStatus) {
-        const { hasIncompleteAttempt, canAttempt } = attemptStatus;
-        
-        // Always ensure we have consistent values for maxAttempts and accountTypeLabel
+        const { canAttempt } = attemptStatus;
         let maxAttempts = attemptStatus.maxAttempts;
         let accountTypeLabel = attemptStatus.accountTypeLabel;
-        
-        // Fallback to localStorage logic if database values are missing
         if (!maxAttempts || !accountTypeLabel) {
           if (user?.accountType === 'admin' || user?.accountType === 'mentor' || user?.accountType === 'student' || user?.accountType === 'pro') {
             maxAttempts = '∞';
@@ -283,38 +277,20 @@ const Tests = () => {
             accountTypeLabel = 'Free';
           }
         }
-        
-        return {
-          text: hasIncompleteAttempt ? 'Continue Test' : 'Start Test',
-          maxAttempts,
-          accountTypeLabel,
-          canAttempt
-        };
+        return { text: 'Start Test', maxAttempts, accountTypeLabel, canAttempt };
       }
-      
-      // Fallback to localStorage logic
-      const hasProgress = localStorage.getItem(`test_progress_${test.id}`);
       let maxAttempts = 1;
       let accountType = 'Free';
-      
       if (user?.accountType === 'admin' || user?.accountType === 'mentor' || user?.accountType === 'student' || user?.accountType === 'pro') {
         maxAttempts = '∞';
         accountType = user.accountType === 'admin' ? 'Admin' : user.accountType === 'mentor' ? 'Mentor' : user.accountType === 'student' ? 'Student' : 'Pro';
-      } else {
-        maxAttempts = 1;
-        accountType = 'Free';
       }
-      
-      return {
-        text: hasProgress ? 'Continue Test' : 'Start Test',
-        maxAttempts,
-        accountTypeLabel: accountType,
-        canAttempt: maxAttempts === '∞' || 0 < maxAttempts
-      };
+      return { text: 'Start Test', maxAttempts, accountTypeLabel: accountType, canAttempt: maxAttempts === '∞' || 0 < maxAttempts };
     };
     
     const buttonState = getButtonState();
     
+    const statusPill = getStatusPill(attemptStatus);
     return (
       <div className="bg-white border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
@@ -326,8 +302,8 @@ const Tests = () => {
             <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(test.difficulty)}`}>
               {test.difficulty || 'Unknown'}
             </span>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(test.status)}`}>
-              {test.status === 'published' ? 'Published' : 'Draft'}
+            <span className={`px-2 py-1 rounded text-xs font-medium ${statusPill.cls}`}>
+              {statusPill.text}
             </span>
           </div>
         </div>
@@ -362,7 +338,7 @@ const Tests = () => {
             </span>
           </div>
           
-          {test.status === 'published' && (
+          {true && (
             <div className="flex flex-col gap-2">
               <div className="text-xs text-gray-500 mb-1">
                 <span>{buttonState.accountTypeLabel}: {buttonState.maxAttempts === '∞' ? 'Unlimited' : buttonState.maxAttempts} attempts</span>

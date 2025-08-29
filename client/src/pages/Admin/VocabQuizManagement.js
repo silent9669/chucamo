@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit, FiTrash2, FiSave, FiX } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import RichTextEditor from '../../components/UI/RichTextEditor';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
@@ -491,6 +492,14 @@ const VocabQuizManagement = () => {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
+          <div className="flex items-center gap-4 mb-2">
+            <Link
+              to="/admin"
+              className="bg-gray-600 text-white px-3 py-1 rounded-lg hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
+            >
+              ← Back to Admin
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-gray-900">Vocabulary Quiz Management</h1>
           <p className="text-gray-600">Create and manage vocabulary quizzes for students</p>
         </div>

@@ -144,7 +144,8 @@ export const resultsAPI = {
   submitTest: (id, data) => api.put(`/results/${id}`, data),
   getAnalytics: () => api.get('/results/analytics/overview'),
   addReview: (id, reviewNotes) => api.put(`/results/${id}/review`, { reviewNotes }),
-  delete: (id) => api.delete(`/results/${id}`),
+  // Deleting results disabled by policy
+  delete: () => Promise.reject(new Error('Deleting test results is no longer allowed.')),
 };
 
 // Articles API

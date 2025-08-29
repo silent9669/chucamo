@@ -201,6 +201,8 @@ const TestDetails = () => {
   }, [getQuestionResult, test, isAnswerCorrect]);
 
   const getQuestionBoxColor = useCallback((questionId) => {
+    // When answers are hidden, neutralize highlighting
+    if (!showAnswers) return 'border-l-4 border-gray-300';
     if (!testResults) return '';
     
     const questionResult = getQuestionResult(questionId);
@@ -208,7 +210,7 @@ const TestDetails = () => {
     
     const isCorrect = isAnswerCorrect(questionId, questionResult.selectedAnswer);
     return isCorrect ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500';
-  }, [testResults, getQuestionResult, isAnswerCorrect]);
+  }, [showAnswers, testResults, getQuestionResult, isAnswerCorrect]);
 
   const handleQuestionChange = (questionNum) => {
     setCurrentQuestion(questionNum);
@@ -541,7 +543,7 @@ const TestDetails = () => {
                         <span className="text-sm font-medium text-gray-500">
                           Section {currentSection + 1}, Question {currentQuestion}
                         </span>
-                        {testResults && (
+                        {showAnswers && testResults && (
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                             getQuestionResult(`${currentSection}-${currentQuestion}`) ? 
                               (isAnswerCorrect(`${currentSection}-${currentQuestion}`, getQuestionResult(`${currentSection}-${currentQuestion}`).selectedAnswer)
@@ -662,12 +664,14 @@ const TestDetails = () => {
                               >
                                 <div className="flex items-center">
                                   <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
+                                    !showAnswers ? 'border-gray-300 bg-gray-100' :
                                     status === 'correct' ? 'border-green-500 bg-green-100' :
                                     status === 'incorrect' ? 'border-red-500 bg-red-100' :
                                     status === 'correct-answer' ? 'border-green-400 bg-green-50' :
                                     'border-gray-300 bg-gray-100'
                                   }`}>
                                     <span className={`text-sm font-medium ${
+                                      !showAnswers ? 'text-gray-600' :
                                       status === 'correct' ? 'text-green-700' :
                                       status === 'incorrect' ? 'text-red-700' :
                                       status === 'correct-answer' ? 'text-green-600' :
@@ -917,11 +921,13 @@ const TestDetails = () => {
                           className={`w-8 h-8 text-xs border-2 rounded flex items-center justify-center transition-colors ${
                             currentQuestion === questionNum
                               ? 'bg-blue-500 text-white border-blue-500'
-                              : hasAnswer
-                                ? isCorrect
-                                  ? 'bg-green-500 text-white border-green-500'
-                                  : 'bg-red-500 text-white border-red-500'
-                                : 'bg-white text-gray-600 border-dashed border-gray-400'
+                              : !showAnswers
+                                ? 'bg-white text-gray-600 border border-gray-300'
+                                : hasAnswer
+                                  ? isCorrect
+                                    ? 'bg-green-500 text-white border-green-500'
+                                    : 'bg-red-500 text-white border-red-500'
+                                  : 'bg-white text-gray-600 border-dashed border-gray-400'
                           }`}
                         >
                           {currentQuestion === questionNum ? 'C' : questionNum}
