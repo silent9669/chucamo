@@ -1129,7 +1129,58 @@ const RealTestManagement = () => {
     }
   };
 
-  // Enhanced question saving with KaTeX preservation
+    // Function to create complete question data with all fields preserved (Real Test Management)
+  const createCompleteQuestionDataReal = (currentQuestion, editingQuestion) => {
+    const questionData = {
+      id: editingQuestion ? editingQuestion.id : Date.now(),
+      question: currentQuestion.question,
+      content: currentQuestion.question,
+      topic: currentQuestion.topic || 'general',
+      difficulty: 'medium',
+      explanation: currentQuestion.explanation || '',
+      passage: currentQuestion.passage || '',
+      // CRITICAL FIX: Preserve the original question type, don't override it
+      type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
+      options: currentQuestion.answerType === 'multiple-choice' 
+        ? currentQuestion.options.map((opt, index) => {
+            const content = typeof opt === 'string' ? opt : (opt.content || '');
+            const images = typeof opt === 'string' ? [] : (opt.images || []);
+            
+            return {
+              content: content,
+              images: images,
+              isCorrect: index === currentQuestion.correctAnswer
+            };
+          })
+        : [],
+      correctAnswer: currentQuestion.answerType === 'written' 
+        ? currentQuestion.writtenAnswer || ''
+        : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+           (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+             ? currentQuestion.options[currentQuestion.correctAnswer] 
+             : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
+      images: (currentQuestion.images || []).map(img => ({
+        url: img.url,
+        name: img.name
+      })),
+      answerType: currentQuestion.answerType,
+      writtenAnswer: currentQuestion.writtenAnswer || '',
+      acceptableAnswers: currentQuestion.acceptableAnswers || []
+    };
+
+    logger.debug('=== COMPLETE QUESTION DATA CREATED (REAL TEST) ===');
+    logger.debug('Question ID:', questionData.id);
+    logger.debug('Question type (topic):', questionData.topic);
+    logger.debug('Answer type:', questionData.answerType);
+    logger.debug('Type field:', questionData.type);
+    logger.debug('Question text:', questionData.question?.substring(0, 50) + '...');
+    logger.debug('Options count:', questionData.options?.length || 0);
+    logger.debug('Has written answer:', !!questionData.writtenAnswer);
+    
+    return questionData;
+  };
+
+  // Fixed saveQuestion function for Real tests that properly preserves question types
   const saveQuestion = async () => {
     try {
       if (!currentQuestion.question.trim()) {
@@ -1137,87 +1188,19 @@ const RealTestManagement = () => {
         return;
       }
 
-      // Deep clone the current question to preserve all data
-      const questionToSave = JSON.parse(JSON.stringify({
-        id: editingQuestion ? editingQuestion.id : Date.now(),
-        question: currentQuestion.question,
-        content: currentQuestion.question,
-        topic: currentQuestion.topic || 'general', // This is the question type (e.g., "Information & Ideas", "Algebra")
-        difficulty: 'medium',
-        explanation: currentQuestion.explanation || '',
-        passage: currentQuestion.passage || '',
-        type: currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice', // This is the answer type
-        // Options with image support - saveQuestion function
-        options: currentQuestion.answerType === 'multiple-choice' 
-          ? currentQuestion.options.map((opt, index) => {
-              const content = typeof opt === 'string' ? opt : (opt.content || '');
-              const images = typeof opt === 'string' ? [] : (opt.images || []);
-              
-              // Use the content as provided by the user - no automatic fallback content
-              let finalContent = content;
-              
-              return {
-                content: finalContent,
-                images: images,
-                isCorrect: index === currentQuestion.correctAnswer
-              };
-            })
-          : [],
-        correctAnswer: currentQuestion.answerType === 'written' 
-          ? currentQuestion.writtenAnswer || ''
-          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
-             (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
-               ? currentQuestion.options[currentQuestion.correctAnswer] 
-               : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
-        images: (currentQuestion.images || []).map(img => ({
-          url: img.url,
-          name: img.name
-        })),
-        answerType: currentQuestion.answerType, // This is the answer type (multiple-choice or written)
-        writtenAnswer: currentQuestion.writtenAnswer || '',
-        acceptableAnswers: currentQuestion.acceptableAnswers || []
-      }));
-
-      // Ensure question type (topic) is properly preserved when editing
-      if (editingQuestion) {
-        // When editing, preserve the original question topic if it exists
-        questionToSave.topic = editingQuestion.topic || currentQuestion.topic || 'general';
-        // Keep the answer type as set by the user
-        questionToSave.answerType = currentQuestion.answerType;
-        // Set the type based on answer type
-        questionToSave.type = currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice';
-      }
-
-      // Debug logging to verify the separation
-      logger.debug('=== SAVING QUESTION (FIXED) ===');
-      logger.debug('Original question type (topic):', editingQuestion?.topic || currentQuestion.topic || 'general');
-      logger.debug('Original answer type:', editingQuestion?.answerType || currentQuestion.answerType);
-      logger.debug('Saved question type (topic):', questionToSave.topic);
-      logger.debug('Saved answer type:', questionToSave.answerType);
-      logger.debug('Saved type field:', questionToSave.type);
-
-      // Debug: Log the question data being saved
-      logger.debug('=== SAVING QUESTION ===');
-      logger.debug('Question text:', questionToSave.question);
-      logger.debug('Has KaTeX in question:', questionToSave.question?.includes('$'));
-      logger.debug('Explanation:', questionToSave.explanation);
-      logger.debug('Has KaTeX in explanation:', questionToSave.explanation?.includes('$'));
-      logger.debug('Passage:', questionToSave.passage);
-      logger.debug('Has KaTeX in passage:', questionToSave.passage?.includes('$'));
-      logger.debug('Options:', questionToSave.options);
-      logger.debug('Options with KaTeX:', questionToSave.options?.map(opt => opt.content?.includes('$')));
-
+      const questionToSave = createCompleteQuestionDataReal(currentQuestion, editingQuestion);
+      
       // Create a new questions array with the updated question
       const updatedQuestions = editingQuestion
         ? currentSection.questions.map(q => q.id === editingQuestion.id ? questionToSave : q)
         : [...currentSection.questions, questionToSave];
-
+      
       // Create updated section
       const updatedSection = {
         ...currentSection,
         questions: updatedQuestions
       };
-
+      
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
@@ -1227,13 +1210,19 @@ const RealTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
+        logger.debug('=== UPDATED REAL TEST STATE ===');
         logger.debug('Test sections count:', newTest.sections.length);
         logger.debug('Current section questions count:', updatedSection.questions.length);
+        logger.debug('Question types in updated section:', updatedSection.questions.map(q => ({ 
+          id: q.id, 
+          type: q.type, 
+          answerType: q.answerType,
+          topic: q.topic
+        })));
         
         return newTest;
       });
-
+      
       // Update the section state
       setCurrentSection(updatedSection);
 
@@ -1242,12 +1231,18 @@ const RealTestManagement = () => {
         logger.debug('=== VERIFICATION ===');
         logger.debug('Current section questions after save:', currentSection.questions?.length);
         logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
+        logger.debug('Question types after save:', updatedQuestions.map(q => ({
+          id: q.id,
+          type: q.type,
+          answerType: q.answerType,
+          topic: q.topic
+        })));
       }, 100);
 
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
       setEditingQuestion(null);
       setCurrentView('section-builder');
-        } catch (error) {
+    } catch (error) {
       logger.error('Error saving question:', error);
       alert('Failed to save question. Please try again.');
     }
@@ -1368,6 +1363,7 @@ const RealTestManagement = () => {
       id: question.id,
       question: question.question || question.content || '',
       topic: question.topic || 'general', // Add topic loading
+      type: question.type || (question.answerType === 'written' ? 'grid-in' : 'multiple-choice'), // CRITICAL FIX: Add type field
       options: question.options && question.options.length > 0 
         ? question.options.map(opt => {
             if (typeof opt === 'string') {
@@ -1396,6 +1392,11 @@ const RealTestManagement = () => {
     };
 
     logger.debug('Processed question data:', questionData);
+    logger.debug('Question type preservation - loadQuestionForEditing:', {
+      topic: questionData.topic,
+      type: questionData.type,
+      answerType: questionData.answerType
+    });
     logger.debug('KaTeX content preserved - loadQuestionForEditing:', {
       question: questionData.question?.includes('$'),
       explanation: questionData.explanation?.includes('$'),
