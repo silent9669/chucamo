@@ -182,10 +182,7 @@ app.use(require('express-session')({
   }
 }));
 
-// Initialize Passport
-const passport = require('./config/passport');
-app.use(passport.initialize());
-app.use(passport.session());
+// Passport removed - no longer using server-side OAuth
 
 // Static files
 app.use('/uploads', express.static('uploads'));

@@ -9,7 +9,7 @@ const mongoose = require('mongoose'); // Added for database connection status
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 const rateLimit = require('express-rate-limit');
-const passport = require('passport');
+// Removed passport import - no longer using server-side OAuth
 // Removed updateLoginStreak and checkAndResetStreakIfNoCoins since streak is now only updated on test completion
 
 const router = express.Router();
@@ -424,77 +424,7 @@ router.post('/logout', checkSession, async (req, res) => {
   }
 });
 
-// @route   GET /api/auth/google
-// @desc    Google OAuth login - Redirects to Google
-// @access  Public
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
-// @route   GET /api/auth/google/callback
-// @desc    Google OAuth callback - Handles user creation/login
-// @access  Public
-router.get('/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
-  async (req, res) => {
-    try {
-      const user = req.user;
-
-      // Check if user is active
-      if (!user.isActive) {
-        return res.status(401).json({ message: 'Account is deactivated' });
-      }
-
-      // Check if account is locked
-      if (user.status === "locked") {
-        return res.status(403).json({ message: "Account locked. Contact admin." });
-      }
-
-      // Count active sessions (only for student accounts)
-      if (user.accountType === 'student') {
-        const activeSessions = await Session.find({ userId: user._id });
-        if (activeSessions.length >= 2) {
-          // Lock account
-          user.status = "locked";
-          await user.save();
-          return res.status(403).json({ message: "Account locked due to multiple devices" });
-        }
-      }
-
-      // Create new session with OAuth data
-      const sessionId = uuidv4();
-      const deviceInfo = req.headers["user-agent"] || "Unknown";
-      const ip = req.ip || req.connection.remoteAddress;
-
-      await Session.create({
-        userId: user._id,
-        sessionId,
-        deviceInfo,
-        ip,
-        oauthProvider: 'google',
-        oauthId: user.oauthId,
-        loginMethod: 'oauth'
-      });
-
-      // Update last login
-      user.lastLogin = new Date();
-      await user.save();
-
-      // Generate JWT token with session ID
-      const token = jwt.sign(
-        { id: user._id, sessionId },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRE || '7d' }
-      );
-
-      // Redirect to frontend with token
-      const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/oauth-callback?token=${token}&provider=google`;
-      res.redirect(redirectUrl);
-    } catch (error) {
-      logger.error('Google OAuth callback error:', error);
-      res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/login?error=oauth_failed`);
-    }
-  }
-);
-
+// Remove server-side Google OAuth routes - keeping only client-side
 // @route   POST /api/auth/google/token
 // @desc    Handle client-side Google OAuth token
 // @access  Public
@@ -645,7 +575,7 @@ router.get('/oauth-status', (req, res) => {
   res.json({
     success: true,
     message: 'OAuth routes are configured',
-    google: 'Available (Client-side)',
+    google: 'Available (Client-side only)',
     facebook: 'Not implemented yet'
   });
 });
