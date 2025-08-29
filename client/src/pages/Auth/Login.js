@@ -153,8 +153,8 @@ const Login = () => {
         }
         popup.close();
         
-        // Call Google prompt with FedCM support
-        const promptResult = window.google.accounts.id.prompt((notification) => {
+                 // Call Google prompt with FedCM support
+         window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
             const reason = notification.getNotDisplayedReason();
             console.error('❌ Google prompt not displayed:', reason);
