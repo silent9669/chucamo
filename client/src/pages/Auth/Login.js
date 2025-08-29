@@ -82,6 +82,12 @@ const Login = () => {
     console.log('🌐 Current hostname:', window.location.hostname);
     console.log('🌐 Current port:', window.location.port);
     
+    // Add global callback function for fallback button
+    window.handleGoogleCredentialResponse = (response) => {
+      console.log('🔄 Fallback Google sign-in response received');
+      handleGoogleSuccess(response);
+    };
+    
     // Load Google OAuth script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -102,7 +108,10 @@ const Login = () => {
             ux_mode: 'popup',
             prompt_parent_id: 'google-signin-container',
             state_cookie_domain: window.location.hostname,
-            use_fedcm_for_prompt: true
+            use_fedcm_for_prompt: true,
+            // FedCM migration settings
+            fedcm_auto_select: false,
+            fedcm_auto_select_one_tap: false
           });
           console.log('✅ Google OAuth initialized successfully');
         } catch (error) {
@@ -144,11 +153,29 @@ const Login = () => {
         }
         popup.close();
         
-        // Call Google prompt
-        window.google.accounts.id.prompt((notification) => {
+        // Call Google prompt with FedCM support
+        const promptResult = window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
-            console.error('❌ Google prompt not displayed:', notification.getNotDisplayedReason());
-            toast.error('Google sign-in prompt not displayed. Please try again.');
+            const reason = notification.getNotDisplayedReason();
+            console.error('❌ Google prompt not displayed:', reason);
+            
+            if (reason === 'opt_out_or_no_session') {
+              // User opted out or no session - try alternative approach
+              console.log('🔄 Attempting alternative sign-in method...');
+              window.google.accounts.id.renderButton(
+                document.getElementById('google-signin-container'),
+                {
+                  theme: 'outline',
+                  size: 'large',
+                  text: 'signin_with',
+                  shape: 'rectangular',
+                  width: 400
+                }
+              );
+              toast.info('Google One Tap is disabled. Please use the sign-in button below.');
+            } else {
+              toast.error('Google sign-in prompt not displayed. Please try again.');
+            }
           } else if (notification.isSkippedMoment()) {
             console.log('ℹ️ Google prompt skipped:', notification.getSkippedReason());
           } else if (notification.isDismissedMoment()) {
@@ -210,6 +237,23 @@ const Login = () => {
           
           {/* Google Sign-In Container */}
           <div id="google-signin-container" className="flex justify-center"></div>
+          
+          {/* Fallback Google Sign-In Button (always visible) */}
+          <div id="google-signin-fallback" className="flex justify-center">
+            <div id="g_id_onload"
+                 data-client_id={GOOGLE_CLIENT_ID}
+                 data-callback="handleGoogleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div className="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
+            </div>
+          </div>
         </div>
 
         {/* Info Section */}
