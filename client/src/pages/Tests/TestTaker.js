@@ -435,29 +435,39 @@ const TestTaker = () => {
     return () => clearInterval(timer);
   }, [isTimerStopped, test]);
 
-  // Handle timer reaching 0 - automatically go to review page
+  // Handle timer reaching 0 - automatically go to review page and start next section timer if available
   useEffect(() => {
     if (timeLeft === 0 && test && !showReviewPage) {
-      logger.debug('Timer reached 0, automatically going to review page');
-      setShowReviewPage(true);
-      setShowQuestionNav(false);
-      
-      // If this is the final section, the review page will show only the finish button
-      // If there are more sections, the review page will show only the next button
-      // and the timer for the next section will start automatically
+      const lastIndex = (test.sections?.length || 0) - 1;
+      if (currentSection >= lastIndex) {
+        // Final section: automatically finish test and route to results
+        logger.debug('Timer reached 0 on final section -> finishing test automatically');
+        (async () => {
+          try {
+            await handleReviewNext();
+          } catch (e) {
+            logger.error('Auto-finish on timeout failed:', e);
+          }
+        })();
+      } else {
+        // Not final section: show review and start next section timer
+        logger.debug('Timer reached 0, automatically going to review page');
+        setShowReviewPage(true);
+        setShowQuestionNav(false);
+        const nextSectionTime = (test.sections[currentSection + 1]?.timeLimit || 0) * 60;
+        setTimeLeft(nextSectionTime);
+        setIsTimerStopped(false);
+        logger.debug('Started next section timer while on review page:', nextSectionTime);
+      }
     }
-  }, [timeLeft, test, showReviewPage]);
+  }, [timeLeft, test, showReviewPage, currentSection, handleReviewNext]);
 
-  // Auto-start timer for next section when moving to review page
+  // Review page acts like a normal page; do not pause or change timer on entry
   useEffect(() => {
-    if (showReviewPage && test && currentSection < test.sections.length - 1) {
-      // If there are more sections, start the timer for the next section
-      const nextSectionTime = test.sections[currentSection + 1].timeLimit * 60;
-      setTimeLeft(nextSectionTime);
-      setIsTimerStopped(false);
-      logger.debug('Auto-started timer for next section:', currentSection + 1, 'with', nextSectionTime, 'seconds');
+    if (showReviewPage) {
+      // No-op: keep timer running as usual
     }
-  }, [showReviewPage, test, currentSection]);
+  }, [showReviewPage]);
 
   // Get current section data
   const getCurrentSectionData = () => {
@@ -1587,15 +1597,8 @@ const TestTaker = () => {
     const totalQuestionsInSection = getTotalQuestionsInSection();
     setShowReviewPage(false);
     setCurrentQuestion(totalQuestionsInSection);
-    
-    // Reset timer for current section when going back
-    const currentSectionData = getCurrentSectionData();
-    if (currentSectionData && currentSectionData.timeLimit) {
-      const sectionTime = currentSectionData.timeLimit * 60;
-      setTimeLeft(sectionTime);
-      setIsTimerStopped(false); // Ensure timer is running
-      logger.debug('Going back to section', currentSection, 'with', sectionTime, 'seconds');
-    }
+    // Keep timer unchanged; review page does not affect countdown
+    setIsTimerStopped(false);
     
     const questionKey = `${currentSection}-${totalQuestionsInSection}`;
     const previousAnswer = answeredQuestions.get(questionKey);
@@ -1609,16 +1612,7 @@ const TestTaker = () => {
     setSelectedAnswer(actualAnswer || null);
     setIsMarkedForReview(markedForReviewQuestions.has(questionKey));
     
-    // Clear any auto-started timer from next section
-    if (currentSection < test.sections.length - 1) {
-      const currentSectionData = getCurrentSectionData();
-      if (currentSectionData && currentSectionData.timeLimit) {
-        const sectionTime = currentSectionData.timeLimit * 60;
-        setTimeLeft(sectionTime);
-        setIsTimerStopped(false);
-        logger.debug('Reset timer for current section when going back:', sectionTime, 'seconds');
-      }
-    }
+    // Ensure no stray next-section timer overrides current section time
   };
 
   const handleReviewNext = async () => {
