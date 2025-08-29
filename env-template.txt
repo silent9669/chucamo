@@ -11,14 +11,14 @@ JWT_EXPIRE=7d
 
 # React App Configuration
 REACT_APP_DESMOS_API_KEY=your_desmos_api_key_here
-REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_API_URL=https://your-production-domain.com/api
 
 # Logging Configuration
-LOG_LEVEL=DEBUG
-REACT_APP_LOG_LEVEL=DEBUG
+LOG_LEVEL=ERROR
+REACT_APP_LOG_LEVEL=WARN
 
 # CORS Configuration
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://yourdomain.com
+ALLOWED_ORIGINS=https://your-production-domain.com,https://*.railway.app,https://railway.app
 
 # File Upload Configuration
 MAX_FILE_SIZE=5242880
@@ -41,6 +41,13 @@ SMTP_PASS=your_app_password
 # Payment Configuration (if using payment features)
 STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
 STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+
+# Client Configuration
+CLIENT_URL=https://your-production-domain.com
 
 # Analytics Configuration (if using analytics)
 GOOGLE_ANALYTICS_ID=GA_MEASUREMENT_ID

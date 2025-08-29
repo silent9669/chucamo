@@ -53,11 +53,13 @@ if (isDevelopment) {
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
-          "https://fonts.googleapis.com"
+          "https://fonts.googleapis.com",
+          "https://accounts.google.com"
         ],
         fontSrc: [
           "'self'",
           "https://fonts.gstatic.com",
+          "https://www.gstatic.com",
           "data:"
         ],
         imgSrc: [
@@ -97,10 +99,12 @@ if (isDevelopment) {
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-  : [
+      : [
       'http://localhost:3000',
       'http://localhost:3001',
-      'https://yourdomain.com'
+      'https://chucamo-backup.up.railway.app',
+      'https://*.railway.app',
+      'https://railway.app'
     ];
 
 const corsOptions = {
