@@ -296,7 +296,7 @@ const TestTaker = () => {
     }
   }, [testId, test]);
 
-  const saveProgress = () => {
+  const saveProgress = useCallback(() => {
     if (!test) return;
     
     console.log('Saving progress with highlights:', {
@@ -357,7 +357,7 @@ const TestTaker = () => {
         console.log('Minimal progress saved (without highlights)');
       }
     }
-  };
+  }, [test, currentSection, currentQuestion, timeLeft, answeredQuestions, markedForReviewQuestions, highlights, questionHighlights, testId]);
 
   // Load test data on component mount
   useEffect(() => {
@@ -446,31 +446,7 @@ const TestTaker = () => {
   }, [showReviewPage]);
 
   // Handle timer reaching 0 - automatically go to review page and start next section timer if available
-  useEffect(() => {
-    if (timeLeft === 0 && test && !showReviewPage) {
-      const lastIndex = (test.sections?.length || 0) - 1;
-      if (currentSection >= lastIndex) {
-        // Final section: automatically finish test and route to results
-        logger.debug('Timer reached 0 on final section -> finishing test automatically');
-        (async () => {
-          try {
-            await handleReviewNext();
-          } catch (e) {
-            logger.error('Auto-finish on timeout failed:', e);
-          }
-        })();
-      } else {
-        // Not final section: show review and start next section timer
-      logger.debug('Timer reached 0, automatically going to review page');
-      setShowReviewPage(true);
-      setShowQuestionNav(false);
-        const nextSectionTime = (test.sections[currentSection + 1]?.timeLimit || 0) * 60;
-      setTimeLeft(nextSectionTime);
-      setIsTimerStopped(false);
-        logger.debug('Started next section timer while on review page:', nextSectionTime);
-    }
-    }
-  }, [timeLeft, test, showReviewPage, currentSection, handleReviewNext]);
+  // This useEffect will be moved after handleReviewNext is defined to avoid "use before define" error
 
   // Get current section data
   const getCurrentSectionData = () => {
@@ -1821,11 +1797,38 @@ const TestTaker = () => {
       // Navigate to results page
       navigate('/results');
     }
-  }, [currentSection, test, answeredQuestions, questions, timeLeft, navigate, refreshUser]);
+  }, [currentSection, test, answeredQuestions, questions, timeLeft, navigate, refreshUser, markedForReviewQuestions, saveProgress, testId]);
 
   const toggleTimer = () => {
     setIsTimerStopped(!isTimerStopped);
   };
+
+  // Handle timer reaching 0 - automatically go to review page and start next section timer if available
+  useEffect(() => {
+    if (timeLeft === 0 && test && !showReviewPage) {
+      const lastIndex = (test.sections?.length || 0) - 1;
+      if (currentSection >= lastIndex) {
+        // Final section: automatically finish test and route to results
+        logger.debug('Timer reached 0 on final section -> finishing test automatically');
+        (async () => {
+          try {
+            await handleReviewNext();
+          } catch (e) {
+            logger.error('Auto-finish on timeout failed:', e);
+          }
+        })();
+      } else {
+        // Not final section: show review and start next section timer
+        logger.debug('Timer reached 0, automatically going to review page');
+        setShowReviewPage(true);
+        setShowQuestionNav(false);
+        const nextSectionTime = (test.sections[currentSection + 1]?.timeLimit || 0) * 60;
+        setTimeLeft(nextSectionTime);
+        setIsTimerStopped(false);
+        logger.debug('Started next section timer while on review page:', nextSectionTime);
+      }
+    }
+  }, [timeLeft, test, showReviewPage, currentSection, handleReviewNext]);
 
   // Get question state based on actual data
   const getQuestionState = (questionNum) => {
