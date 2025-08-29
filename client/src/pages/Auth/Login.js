@@ -44,7 +44,10 @@ const Login = () => {
     setLoading(true);
     try {
       // Send the ID token to your backend
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://chucamo-backup.up.railway.app/api';
+      console.log('🌐 Sending to API:', apiUrl);
+      console.log('🔑 ID Token length:', response.credential ? response.credential.length : 0);
+      
       const result = await fetch(`${apiUrl}/auth/google/token`, {
         method: 'POST',
         headers: {
@@ -55,7 +58,9 @@ const Login = () => {
         }),
       });
 
+      console.log('📡 API response status:', result.status);
       const data = await result.json();
+      console.log('📡 API response data:', data);
       
       if (data.success) {
         localStorage.setItem('token', data.token);
@@ -63,6 +68,7 @@ const Login = () => {
         navigate('/dashboard');
       } else {
         toast.error(data.message || 'Login failed');
+        setLoading(false);
       }
     } catch (error) {
       console.error('Google OAuth error:', error);
@@ -111,7 +117,9 @@ const Login = () => {
             use_fedcm_for_prompt: true,
             // FedCM migration settings
             fedcm_auto_select: false,
-            fedcm_auto_select_one_tap: false
+            fedcm_auto_select_one_tap: false,
+            // Ensure proper origin handling
+            origin: window.location.origin
           });
           console.log('✅ Google OAuth initialized successfully');
         } catch (error) {
@@ -243,7 +251,8 @@ const Login = () => {
             <div id="g_id_onload"
                  data-client_id={GOOGLE_CLIENT_ID}
                  data-callback="handleGoogleCredentialResponse"
-                 data-auto_prompt="false">
+                 data-auto_prompt="false"
+                 data-state_cookie_domain={window.location.hostname}>
             </div>
             <div className="g_id_signin"
                  data-type="standard"
