@@ -41,6 +41,7 @@ const Login = () => {
   }, [searchParams, handleOAuthSuccess]);
 
   const handleGoogleSuccess = useCallback(async (response) => {
+    console.log('🔄 Google sign-in response received:', response);
     setLoading(true);
     try {
       // Send the ID token to your backend
@@ -73,7 +74,6 @@ const Login = () => {
     } catch (error) {
       console.error('Google OAuth error:', error);
       toast.error('Login failed. Please try again.');
-    } finally {
       setLoading(false);
     }
   }, [navigate]);
@@ -84,12 +84,6 @@ const Login = () => {
     console.log('🔑 Client ID:', GOOGLE_CLIENT_ID);
     console.log('🌐 Current origin:', window.location.origin);
     
-    // Add global callback function for Google Sign-In
-    window.handleGoogleCredentialResponse = (response) => {
-      console.log('🔄 Google sign-in response received');
-      handleGoogleSuccess(response);
-    };
-    
     // Load Google OAuth script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -98,6 +92,39 @@ const Login = () => {
     
     script.onload = () => {
       console.log('✅ Google OAuth script loaded');
+      
+      // Initialize Google Identity Services
+      if (window.google && window.google.accounts) {
+        console.log('🔧 Initializing Google accounts...');
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSuccess,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            context: 'signin'
+          });
+          console.log('✅ Google OAuth initialized successfully');
+          
+          // Render the sign-in button
+          window.google.accounts.id.renderButton(
+            document.getElementById('google-signin-button'),
+            {
+              theme: 'outline',
+              size: 'large',
+              text: 'signin_with',
+              shape: 'rectangular',
+              width: 400,
+              logo_alignment: 'left'
+            }
+          );
+          console.log('✅ Google Sign-In button rendered');
+        } catch (error) {
+          console.error('❌ Error initializing Google OAuth:', error);
+        }
+      } else {
+        console.error('❌ Google accounts not available');
+      }
     };
     
     script.onerror = (error) => {
@@ -138,22 +165,8 @@ const Login = () => {
 
         {/* Google Sign-In Section */}
         <div className="space-y-4">
-          {/* Google Sign-In Button */}
-          <div id="google-signin-fallback" className="flex justify-center">
-            <div id="g_id_onload"
-                 data-client_id={GOOGLE_CLIENT_ID}
-                 data-callback="handleGoogleCredentialResponse"
-                 data-auto_prompt="false">
-            </div>
-            <div className="g_id_signin"
-                 data-type="standard"
-                 data-size="large"
-                 data-theme="outline"
-                 data-text="signin_with"
-                 data-shape="rectangular"
-                 data-logo_alignment="left">
-            </div>
-          </div>
+          {/* Google Sign-In Button Container */}
+          <div id="google-signin-button" className="flex justify-center"></div>
         </div>
 
         {/* Info Section */}
