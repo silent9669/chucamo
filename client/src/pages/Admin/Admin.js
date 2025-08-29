@@ -1102,40 +1102,40 @@ const RealTestManagement = () => {
     // Function to create complete question data with all fields preserved (Real Test Management)
   const createCompleteQuestionDataReal = (currentQuestion, editingQuestion) => {
     const questionData = {
-      id: editingQuestion ? editingQuestion.id : Date.now(),
-      question: currentQuestion.question,
-      content: currentQuestion.question,
+        id: editingQuestion ? editingQuestion.id : Date.now(),
+        question: currentQuestion.question,
+        content: currentQuestion.question,
       topic: currentQuestion.topic || 'general',
-      difficulty: 'medium',
-      explanation: currentQuestion.explanation || '',
-      passage: currentQuestion.passage || '',
+        difficulty: 'medium',
+        explanation: currentQuestion.explanation || '',
+        passage: currentQuestion.passage || '',
       // CRITICAL FIX: Preserve the original question type, don't override it
       type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
-      options: currentQuestion.answerType === 'multiple-choice' 
-        ? currentQuestion.options.map((opt, index) => {
-            const content = typeof opt === 'string' ? opt : (opt.content || '');
-            const images = typeof opt === 'string' ? [] : (opt.images || []);
-            
-            return {
+        options: currentQuestion.answerType === 'multiple-choice' 
+          ? currentQuestion.options.map((opt, index) => {
+              const content = typeof opt === 'string' ? opt : (opt.content || '');
+              const images = typeof opt === 'string' ? [] : (opt.images || []);
+              
+              return {
               content: content,
-              images: images,
-              isCorrect: index === currentQuestion.correctAnswer
-            };
-          })
-        : [],
-      correctAnswer: currentQuestion.answerType === 'written' 
-        ? currentQuestion.writtenAnswer || ''
-        : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
-           (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
-             ? currentQuestion.options[currentQuestion.correctAnswer] 
-             : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
-      images: (currentQuestion.images || []).map(img => ({
-        url: img.url,
-        name: img.name
-      })),
+                images: images,
+                isCorrect: index === currentQuestion.correctAnswer
+              };
+            })
+          : [],
+        correctAnswer: currentQuestion.answerType === 'written' 
+          ? currentQuestion.writtenAnswer || ''
+          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+             (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+               ? currentQuestion.options[currentQuestion.correctAnswer] 
+               : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
+        images: (currentQuestion.images || []).map(img => ({
+          url: img.url,
+          name: img.name
+        })),
       answerType: currentQuestion.answerType,
-      writtenAnswer: currentQuestion.writtenAnswer || '',
-      acceptableAnswers: currentQuestion.acceptableAnswers || []
+        writtenAnswer: currentQuestion.writtenAnswer || '',
+        acceptableAnswers: currentQuestion.acceptableAnswers || []
     };
 
     logger.debug('Question data created - topic:', questionData.topic, 'type:', questionData.type);
@@ -1152,18 +1152,18 @@ const RealTestManagement = () => {
       }
 
       const questionToSave = createCompleteQuestionDataReal(currentQuestion, editingQuestion);
-      
+
       // Create a new questions array with the updated question
       const updatedQuestions = editingQuestion
         ? currentSection.questions.map(q => q.id === editingQuestion.id ? questionToSave : q)
         : [...currentSection.questions, questionToSave];
-      
+
       // Create updated section
       const updatedSection = {
         ...currentSection,
         questions: updatedQuestions
       };
-      
+
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
@@ -1177,7 +1177,7 @@ const RealTestManagement = () => {
         
         return newTest;
       });
-      
+
       // Update the section state
       setCurrentSection(updatedSection);
 
@@ -1189,7 +1189,7 @@ const RealTestManagement = () => {
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
       setEditingQuestion(null);
       setCurrentView('section-builder');
-    } catch (error) {
+        } catch (error) {
       logger.error('Error saving question:', error);
       alert('Failed to save question. Please try again.');
     }
@@ -1453,7 +1453,7 @@ const RealTestManagement = () => {
 
 
 
-        // Enhanced saveQuestion function that ensures all question data is preserved
+  // Enhanced saveQuestion function that ensures all question data is preserved
   const saveQuestionEnhanced = async (currentQuestion, editingQuestion, currentSection, setCurrentTest, setCurrentSection, setEditingQuestion, setCurrentView) => {
     try {
       if (!currentQuestion.question.trim()) {

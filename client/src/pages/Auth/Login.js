@@ -102,7 +102,9 @@ const Login = () => {
             callback: handleGoogleSuccess,
             auto_select: false,
             cancel_on_tap_outside: true,
-            context: 'signin'
+            context: 'signin',
+            ux_mode: 'popup',
+            prompt_parent_id: 'google-signin-button'
           });
           console.log('✅ Google OAuth initialized successfully');
           
@@ -115,7 +117,8 @@ const Login = () => {
               text: 'signin_with',
               shape: 'rectangular',
               width: 400,
-              logo_alignment: 'left'
+              logo_alignment: 'left',
+              type: 'standard'
             }
           );
           console.log('✅ Google Sign-In button rendered');
