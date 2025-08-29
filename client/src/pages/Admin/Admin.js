@@ -1000,6 +1000,7 @@ const RealTestManagement = () => {
         questions: s.questions?.map(q => ({
             id: q.id,
           question: q.question?.substring(0, 50) + '...',
+          topic: q.topic, // CRITICAL: Add topic field to debug
           type: q.type,
           answerType: q.answerType,
           hasKaTeX: q.question?.includes('$') || false
@@ -1015,19 +1016,28 @@ const RealTestManagement = () => {
         instructions: section.description || 'Complete all questions in this section.',
         questions: (section.questions || []).map(question => ({
           ...question,
-          // Explicitly preserve the topic field
+          // CRITICAL FIX: Explicitly preserve the topic field (question type)
           topic: question.topic || 'general',
           // Ensure correctAnswer is always a string as required by the schema
           correctAnswer: question.answerType === 'written' 
             ? (question.writtenAnswer || question.correctAnswer || '').toString()
             : (question.correctAnswer || 0).toString(),
-          // Ensure type and answerType are properly set
+          // CRITICAL FIX: Ensure type and answerType are properly set
           type: question.type || (question.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
           answerType: question.answerType || (question.type === 'grid-in' ? 'written' : 'multiple-choice')
         }))
       }));
 
       logger.debug('Transformed sections:', transformedSections);
+      logger.debug('Question types in transformed data:', transformedSections?.map(s => ({
+        section: s.name,
+        questions: s.questions?.map(q => ({
+          id: q.id,
+          topic: q.topic, // CRITICAL: Add topic field to debug
+          type: q.type,
+          answerType: q.answerType
+        }))
+      })));
       logger.debug('Total questions across all sections:', transformedSections.reduce((total, section) => total + section.questions.length, 0));
 
       const description = currentTest.description || 'A comprehensive test for students to practice and improve their skills.';
@@ -1537,7 +1547,7 @@ const RealTestManagement = () => {
 
 
 
-  // Enhanced saveQuestion function that ensures all question data is preserved
+        // Enhanced saveQuestion function that ensures all question data is preserved
   const saveQuestionEnhanced = async (currentQuestion, editingQuestion, currentSection, setCurrentTest, setCurrentSection, setEditingQuestion, setCurrentView) => {
     try {
       if (!currentQuestion.question.trim()) {
@@ -1568,11 +1578,12 @@ const RealTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
+        logger.debug('=== UPDATED TEST STATE (saveQuestionEnhanced) ===');
         logger.debug('Test sections count:', newTest.sections.length);
         logger.debug('Current section questions count:', updatedSection.questions.length);
         logger.debug('Question types in updated section:', updatedSection.questions.map(q => ({
           id: q.id,
+          topic: q.topic, // CRITICAL: Add topic field to debug
           type: q.type,
           answerType: q.answerType
         })));
@@ -1585,11 +1596,12 @@ const RealTestManagement = () => {
 
       // Verify the data was saved correctly
       setTimeout(() => {
-        logger.debug('=== VERIFICATION ===');
+        logger.debug('=== VERIFICATION (saveQuestionEnhanced) ===');
         logger.debug('Current section questions after save:', currentSection.questions?.length);
         logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
         logger.debug('Question types after save:', updatedQuestions.map(q => ({
           id: q.id,
+          topic: q.topic, // CRITICAL: Add topic field to debug
           type: q.type,
           answerType: q.answerType
         })));
@@ -1696,11 +1708,12 @@ const RealTestManagement = () => {
           )
         };
         
-        logger.debug('=== UPDATED TEST STATE ===');
+        logger.debug('=== UPDATED TEST STATE (saveQuestionFixed) ===');
         logger.debug('Test sections count:', newTest.sections.length);
         logger.debug('Current section questions count:', updatedSection.questions.length);
         logger.debug('Question types in updated section:', updatedSection.questions.map(q => ({
           id: q.id,
+          topic: q.topic, // CRITICAL: Add topic field to debug
           type: q.type,
           answerType: q.answerType
         })));
@@ -1713,11 +1726,12 @@ const RealTestManagement = () => {
 
       // Verify the data was saved correctly
       setTimeout(() => {
-        logger.debug('=== VERIFICATION ===');
+        logger.debug('=== VERIFICATION (saveQuestionFixed) ===');
         logger.debug('Current section questions after save:', currentSection.questions?.length);
         logger.debug('Last question saved:', updatedQuestions[updatedQuestions.length - 1]);
         logger.debug('Question types after save:', updatedQuestions.map(q => ({
           id: q.id,
+          topic: q.topic, // CRITICAL: Add topic field to debug
           type: q.type,
           answerType: q.answerType
         })));
