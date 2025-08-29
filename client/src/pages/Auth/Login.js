@@ -94,6 +94,21 @@ const Login = () => {
       handleGoogleSuccess(response);
     };
     
+    // Alternative: Try to render a simple Google Sign-In button immediately
+    if (window.google && window.google.accounts) {
+      console.log('🔄 Rendering alternative Google Sign-In button...');
+      window.google.accounts.id.renderButton(
+        document.getElementById('google-signin-container'),
+        {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          width: 400
+        }
+      );
+    }
+    
     // Load Google OAuth script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -105,6 +120,11 @@ const Login = () => {
       if (window.google && window.google.accounts) {
         console.log('🔧 Initializing Google accounts...');
         try {
+          const currentOrigin = window.location.origin;
+          console.log('🔍 Setting origin for Google OAuth:', currentOrigin);
+          console.log('🔍 Origin type:', typeof currentOrigin);
+          console.log('🔍 Origin length:', currentOrigin.length);
+          
           window.google.accounts.id.initialize({
             client_id: GOOGLE_CLIENT_ID,
             callback: handleGoogleSuccess,
@@ -112,14 +132,7 @@ const Login = () => {
             cancel_on_tap_outside: true,
             context: 'signin',
             ux_mode: 'popup',
-            prompt_parent_id: 'google-signin-container',
-            state_cookie_domain: window.location.hostname,
-            use_fedcm_for_prompt: true,
-            // FedCM migration settings
-            fedcm_auto_select: false,
-            fedcm_auto_select_one_tap: false,
-            // Ensure proper origin handling
-            origin: window.location.origin
+            prompt_parent_id: 'google-signin-container'
           });
           console.log('✅ Google OAuth initialized successfully');
         } catch (error) {
@@ -251,8 +264,7 @@ const Login = () => {
             <div id="g_id_onload"
                  data-client_id={GOOGLE_CLIENT_ID}
                  data-callback="handleGoogleCredentialResponse"
-                 data-auto_prompt="false"
-                 data-state_cookie_domain={window.location.hostname}>
+                 data-auto_prompt="false">
             </div>
             <div className="g_id_signin"
                  data-type="standard"
