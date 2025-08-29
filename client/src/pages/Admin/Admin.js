@@ -1065,6 +1065,7 @@ const RealTestManagement = () => {
         section: s.name,
         questions: s.questions?.map(q => ({
           id: q.id,
+          topic: q.topic, // CRITICAL: Add topic field to debug
           type: q.type,
           answerType: q.answerType,
           correctAnswer: q.correctAnswer,
@@ -1113,6 +1114,7 @@ const RealTestManagement = () => {
           section: s.name,
           questions: s.questions?.map(q => ({
             id: q.id,
+            topic: q.topic, // CRITICAL: Add topic field to debug
             type: q.type,
             answerType: q.answerType
           }))
@@ -1619,6 +1621,13 @@ const RealTestManagement = () => {
   // Fixed saveQuestion function that properly preserves question types
   const saveQuestionFixed = async () => {
     try {
+      // CRITICAL DEBUG: Show raw state values to understand the data flow
+      logger.debug('=== SAVING QUESTION (FIXED) - RAW STATE ANALYSIS ===');
+      logger.debug('currentQuestion.topic (user input):', currentQuestion.topic);
+      logger.debug('editingQuestion.topic (original):', editingQuestion?.topic);
+      logger.debug('currentQuestion.type:', currentQuestion.type);
+      logger.debug('currentQuestion.answerType:', currentQuestion.answerType);
+      
       if (!currentQuestion.question.trim()) {
         alert('Question text is required');
       return;
@@ -1629,7 +1638,7 @@ const RealTestManagement = () => {
         id: editingQuestion ? editingQuestion.id : Date.now(),
         question: currentQuestion.question,
         content: currentQuestion.question,
-        topic: editingQuestion ? (editingQuestion.topic || currentQuestion.topic || 'general') : (currentQuestion.topic || 'general'),
+        topic: currentQuestion.topic || 'general', // CRITICAL FIX: Always use current form state for topic
         difficulty: 'medium',
         explanation: currentQuestion.explanation || '',
         passage: currentQuestion.passage || '',
