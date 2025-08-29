@@ -43,6 +43,7 @@ const Login = () => {
   const handleGoogleSuccess = useCallback(async (response) => {
     console.log('🔄 Google sign-in response received:', response);
     setLoading(true);
+    
     try {
       // Send the ID token to your backend
       const apiUrl = process.env.REACT_APP_API_URL || 'https://chucamo-backup.up.railway.app/api';
@@ -60,19 +61,40 @@ const Login = () => {
       });
 
       console.log('📡 API response status:', result.status);
+      
+      if (!result.ok) {
+        throw new Error(`HTTP error! status: ${result.status}`);
+      }
+      
       const data = await result.json();
       console.log('📡 API response data:', data);
       
-      if (data.success) {
+      if (data.success && data.token) {
+        // Store user data and token
         localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        console.log('✅ Login successful, user data:', data.user);
         toast.success('Successfully logged in with Google!');
-        navigate('/dashboard');
+        
+        // Close any Google popup if it exists
+        if (window.google && window.google.accounts) {
+          try {
+            window.google.accounts.id.disableAutoSelect();
+          } catch (e) {
+            console.log('Popup cleanup:', e);
+          }
+        }
+        
+        // Navigate to dashboard
+        navigate('/dashboard', { replace: true });
       } else {
+        console.error('❌ Login failed:', data.message);
         toast.error(data.message || 'Login failed');
         setLoading(false);
       }
     } catch (error) {
-      console.error('Google OAuth error:', error);
+      console.error('❌ Google OAuth error:', error);
       toast.error('Login failed. Please try again.');
       setLoading(false);
     }
