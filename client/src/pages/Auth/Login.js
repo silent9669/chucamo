@@ -145,7 +145,7 @@ const Login = () => {
         popup.close();
         
         // Call Google prompt
-        const promptResult = window.google.accounts.id.prompt((notification) => {
+        window.google.accounts.id.prompt((notification) => {
           if (notification.isNotDisplayed()) {
             console.error('❌ Google prompt not displayed:', notification.getNotDisplayedReason());
             toast.error('Google sign-in prompt not displayed. Please try again.');
