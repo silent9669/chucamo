@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Filter, BookOpen, Edit, Trash2, Youtube, FileText, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 import lessonAPI from '../../services/lessonAPI';
@@ -145,10 +146,18 @@ const RecordingManagement = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-                 <div className="mb-8">
-           <h1 className="text-3xl font-bold text-gray-900 mb-2">Lesson Management</h1>
-           <p className="text-gray-600">Create and manage educational lessons with YouTube video and PDF support</p>
-         </div>
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-2">
+            <Link
+              to="/admin"
+              className="bg-gray-600 text-white px-3 py-1 rounded-lg hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
+            >
+              ← Back to Admin
+            </Link>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Lesson Management</h1>
+          <p className="text-gray-600">Create and manage educational lessons with YouTube video and PDF support</p>
+        </div>
 
         {/* Search and Filter Section */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">

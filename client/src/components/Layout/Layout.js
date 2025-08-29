@@ -28,6 +28,25 @@ const Layout = ({ children, hideNavigation = false }) => {
   const isHoveringRef = useRef(false);
   const isManualToggleRef = useRef(false);
 
+  // Check if we're in admin management pages where navigation should be disabled
+  const isInAdminManagement = () => {
+    const adminManagementPaths = [
+      '/admin/real-tests',
+      '/admin/mock-tests', 
+      '/admin/analytics',
+      '/admin/recordings',
+      '/admin/daily-vocab',
+      '/admin/vocab-quiz',
+      '/admin/users',
+      '/library-management'
+    ];
+    
+    return adminManagementPaths.some(path => location.pathname.startsWith(path));
+  };
+
+  // Determine if navigation should be hidden
+  const shouldHideNavigation = hideNavigation || isInAdminManagement();
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -60,7 +79,7 @@ const Layout = ({ children, hideNavigation = false }) => {
 
   // Auto-hide navigation functionality
   useEffect(() => {
-    if (hideNavigation) return;
+    if (shouldHideNavigation) return;
 
     const handleMouseMove = (e) => {
       const mouseX = e.clientX;
@@ -116,11 +135,11 @@ const Layout = ({ children, hideNavigation = false }) => {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [hideNavigation]);
+  }, [shouldHideNavigation]);
 
   // Auto-hide navigation when navigating to a new page
   useEffect(() => {
-    if (!hideNavigation && !isManualToggleRef.current) {
+    if (!shouldHideNavigation && !isManualToggleRef.current) {
       // Hide navigation after navigation
       const timer = setTimeout(() => {
         if (!isManualToggleRef.current) {
@@ -131,7 +150,7 @@ const Layout = ({ children, hideNavigation = false }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [location.pathname, hideNavigation]);
+  }, [location.pathname, shouldHideNavigation]);
 
   // Reset auto-hide when navigation is manually opened
   const handleManualToggle = () => {
@@ -157,12 +176,12 @@ const Layout = ({ children, hideNavigation = false }) => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hover trigger zone indicator */}
-      {!hideNavigation && (
+      {!shouldHideNavigation && (
         <div className="fixed left-0 top-0 w-1 h-full bg-gradient-to-b from-primary-400 to-primary-600 opacity-0 hover:opacity-100 transition-opacity duration-300 z-30 pointer-events-none" />
       )}
       
       {/* Mobile sidebar overlay */}
-      {sidebarOpen && !hideNavigation && (
+      {sidebarOpen && !shouldHideNavigation && (
         <div 
           className="fixed inset-0 z-30 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
@@ -170,7 +189,7 @@ const Layout = ({ children, hideNavigation = false }) => {
       )}
 
       {/* Sidebar */}
-      {!hideNavigation && (
+      {!shouldHideNavigation && (
         <div 
           ref={sidebarRef}
           className={`
@@ -282,14 +301,14 @@ const Layout = ({ children, hideNavigation = false }) => {
 
       {/* Main content */}
       <div 
-        className={`${hideNavigation ? 'w-full' : ''} transition-all duration-300 ease-in-out ${!hideNavigation && !isAutoHidden ? 'lg:ml-64' : 'lg:ml-0'}`}
+        className={`${shouldHideNavigation ? 'w-full' : ''} transition-all duration-300 ease-in-out ${!shouldHideNavigation && !isAutoHidden ? 'lg:ml-64' : 'lg:ml-0'}`}
         style={{
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           willChange: 'margin-left'
         }}
       >
         {/* Top bar */}
-        {!hideNavigation && (
+        {!shouldHideNavigation && (
           <div className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
             <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
               <div className="flex items-center space-x-4">
@@ -356,7 +375,7 @@ const Layout = ({ children, hideNavigation = false }) => {
         )}
 
         {/* Page content */}
-        <main className={`${hideNavigation ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
+        <main className={`${shouldHideNavigation ? 'p-0' : 'p-4 sm:p-6 lg:p-8'}`}>
           {children}
         </main>
       </div>

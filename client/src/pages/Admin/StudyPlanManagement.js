@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiEdit, FiTrash2, FiCalendar, FiBookOpen, FiTarget } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import logger from '../../utils/logger';
 
@@ -134,8 +135,16 @@ const StudyPlanManagement = () => {
   return (
     <div className="py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Recording Management</h1>
-        <p className="text-gray-600">Create and manage recordings for students</p>
+        <div className="flex items-center gap-4 mb-2">
+          <Link
+            to="/admin"
+            className="bg-gray-600 text-white px-3 py-1 rounded-lg hover:bg-gray-700 transition-colors text-sm flex items-center gap-2"
+          >
+            ← Back to Admin
+          </Link>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Study Plan Management</h1>
+        <p className="text-gray-600">Create and manage study plans for students</p>
       </div>
 
       {/* Create Recording Button */}
