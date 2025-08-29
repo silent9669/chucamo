@@ -436,6 +436,16 @@ const TestTaker = () => {
   }, [isTimerStopped, test]);
 
   // Handle timer reaching 0 - automatically go to review page and start next section timer if available
+  // Moved below to use the memoized handleReviewNext
+
+  // Review page acts like a normal page; do not pause or change timer on entry
+  useEffect(() => {
+    if (showReviewPage) {
+      // No-op: keep timer running as usual
+    }
+  }, [showReviewPage]);
+
+  // Handle timer reaching 0 - automatically go to review page and start next section timer if available
   useEffect(() => {
     if (timeLeft === 0 && test && !showReviewPage) {
       const lastIndex = (test.sections?.length || 0) - 1;
@@ -451,23 +461,16 @@ const TestTaker = () => {
         })();
       } else {
         // Not final section: show review and start next section timer
-        logger.debug('Timer reached 0, automatically going to review page');
-        setShowReviewPage(true);
-        setShowQuestionNav(false);
+      logger.debug('Timer reached 0, automatically going to review page');
+      setShowReviewPage(true);
+      setShowQuestionNav(false);
         const nextSectionTime = (test.sections[currentSection + 1]?.timeLimit || 0) * 60;
-        setTimeLeft(nextSectionTime);
-        setIsTimerStopped(false);
+      setTimeLeft(nextSectionTime);
+      setIsTimerStopped(false);
         logger.debug('Started next section timer while on review page:', nextSectionTime);
-      }
+    }
     }
   }, [timeLeft, test, showReviewPage, currentSection, handleReviewNext]);
-
-  // Review page acts like a normal page; do not pause or change timer on entry
-  useEffect(() => {
-    if (showReviewPage) {
-      // No-op: keep timer running as usual
-    }
-  }, [showReviewPage]);
 
   // Get current section data
   const getCurrentSectionData = () => {
@@ -1615,7 +1618,7 @@ const TestTaker = () => {
     // Ensure no stray next-section timer overrides current section time
   };
 
-  const handleReviewNext = async () => {
+  const handleReviewNext = useCallback(async () => {
     // Move to next section
     if (currentSection < test.sections.length - 1) {
       setCurrentSection(currentSection + 1);
@@ -1818,7 +1821,7 @@ const TestTaker = () => {
       // Navigate to results page
       navigate('/results');
     }
-  };
+  }, [currentSection, test, answeredQuestions, questions, timeLeft, navigate, refreshUser]);
 
   const toggleTimer = () => {
     setIsTimerStopped(!isTimerStopped);
