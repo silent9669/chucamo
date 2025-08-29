@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiTrash2, FiX, FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
+import { FiEye, FiBarChart2, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiX, FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
 import { testsAPI, resultsAPI } from '../../services/api';
 import logger from '../../utils/logger';
 import ResultsCacheManager from '../../utils/resultsCacheManager';
@@ -980,43 +980,7 @@ const Results = () => {
     navigate(`/test-details/${test.id}`);
   };
 
-  const handleDeleteTest = async (test) => {
-    if (window.confirm(`Are you sure you want to delete the test result for "${test.title}"? This action cannot be undone.`)) {
-      try {
-        // If it's a database result, try to delete from database first
-        if (test.databaseResult && test.resultId) {
-          try {
-            await resultsAPI.delete(test.resultId);
-            if (process.env.NODE_ENV === 'development') {
-              logger.info(`Successfully deleted database result ${test.resultId} for test ${test.id}`);
-            }
-          } catch (dbError) {
-            logger.error('Failed to delete from database:', dbError);
-            // Continue with localStorage deletion even if database deletion fails
-          }
-        }
-        
-      // Remove from localStorage
-        if (test.localStorageKey) {
-          localStorage.removeItem(test.localStorageKey);
-        } else {
-      localStorage.removeItem(`test_completion_${test.id}`);
-        }
-      localStorage.removeItem(`test_progress_${test.id}`);
-      
-      // Remove from state
-      setTestHistory(prev => prev.filter(t => t.id !== test.id));
-        setFilteredTestHistory(prev => prev.filter(t => t.id !== test.id));
-        
-        if (process.env.NODE_ENV === 'development') {
-          logger.info(`Test result deleted successfully for: ${test.title}`);
-        }
-      } catch (error) {
-        logger.error('Error deleting test result:', error);
-        alert('Failed to delete test result. Please try again.');
-      }
-    }
-  };
+  // Delete action removed by policy
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -1283,13 +1247,7 @@ const Results = () => {
                                 <FiEye className="h-3 w-3 mr-1" />
                                 View Details
                               </button>
-                              <button
-                                onClick={() => handleDeleteTest(test)}
-                                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
-                              >
-                                <FiTrash2 className="h-3 w-3 mr-1" />
-                                Delete
-                              </button>
+                              {/* Delete removed */}
                             </div>
                           </td>
                         </tr>
