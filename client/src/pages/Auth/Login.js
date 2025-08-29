@@ -100,6 +100,9 @@ const Login = () => {
             cancel_on_tap_outside: true,
             context: 'signin',
             ux_mode: 'popup',
+            prompt_parent_id: 'google-signin-container',
+            state_cookie_domain: window.location.hostname,
+            use_fedcm_for_prompt: true
           });
           console.log('✅ Google OAuth initialized successfully');
         } catch (error) {
@@ -132,7 +135,27 @@ const Login = () => {
     if (window.google && window.google.accounts) {
       console.log('✅ Google accounts available, calling prompt()');
       try {
-        window.google.accounts.id.prompt();
+        // Check if popup is blocked
+        const popup = window.open('', '_blank', 'width=500,height=600');
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+          console.error('❌ Popup blocked by browser');
+          toast.error('Please allow popups for this site to sign in with Google');
+          return;
+        }
+        popup.close();
+        
+        // Call Google prompt
+        const promptResult = window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed()) {
+            console.error('❌ Google prompt not displayed:', notification.getNotDisplayedReason());
+            toast.error('Google sign-in prompt not displayed. Please try again.');
+          } else if (notification.isSkippedMoment()) {
+            console.log('ℹ️ Google prompt skipped:', notification.getSkippedReason());
+          } else if (notification.isDismissedMoment()) {
+            console.log('ℹ️ Google prompt dismissed');
+          }
+        });
+        
         console.log('✅ Google prompt() called successfully');
       } catch (error) {
         console.error('❌ Error calling Google prompt():', error);
@@ -184,6 +207,9 @@ const Login = () => {
             </div>
             <span className="font-semibold text-gray-800">Continue with Google</span>
           </button>
+          
+          {/* Google Sign-In Container */}
+          <div id="google-signin-container" className="flex justify-center"></div>
         </div>
 
         {/* Info Section */}
