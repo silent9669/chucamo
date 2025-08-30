@@ -662,8 +662,13 @@ const Results = () => {
 
   const transformDatabaseResults = async (dbResults) => {
     try {
-      // Extract all unique test IDs
-      const testIds = [...new Set(dbResults.map(r => r.test?.toString()).filter(Boolean))];
+      // Extract all unique test IDs - handle both ObjectId and string cases
+      const testIds = [...new Set(dbResults.map(r => {
+        if (typeof r.test === 'object' && r.test._id) {
+          return r.test._id.toString();
+        }
+        return r.test?.toString();
+      }).filter(Boolean))];
       
       // Batch load all tests at once (much faster than individual calls)
       const testsData = await ResultsCacheManager.batchLoadTests(testIds);
@@ -671,7 +676,13 @@ const Results = () => {
       // Transform results using cached test data
       const transformedResults = dbResults.map(result => {
         try {
-          const testId = result.test?.toString();
+          let testId;
+          if (typeof result.test === 'object' && result.test._id) {
+            testId = result.test._id.toString();
+          } else {
+            testId = result.test?.toString();
+          }
+          
           if (!testId || !testsData[testId]) {
             return null;
           }

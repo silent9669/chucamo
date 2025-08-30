@@ -173,8 +173,27 @@ const Profile = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Profile Card */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Profile Information</h2>
+              {/* Profile Picture Display */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex-shrink-0">
+                  {user?.oauthPicture ? (
+                    <img
+                      src={user.oauthPicture}
+                      alt={`${user.firstName} ${user.lastName}`}
+                      className="w-20 h-20 rounded-full object-cover border-4 border-blue-100"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-2xl font-bold border-4 border-blue-100">
+                      {getInitials(user?.firstName, user?.lastName)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold text-gray-800">Profile Information</h2>
+                  {user?.oauthProvider && (
+                    <p className="text-sm text-gray-500 mt-1">Google Account</p>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
@@ -188,70 +207,98 @@ const Profile = () => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                    <input
-                      type="text"
-                      value={profileData.firstName}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    />
+                    {user?.oauthProvider ? (
+                      <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600">
+                        {profileData.firstName}
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={profileData.firstName}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
+                        disabled={!isEditing}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      value={profileData.lastName}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    />
+                    {user?.oauthProvider ? (
+                      <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600">
+                        {profileData.lastName}
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={profileData.lastName}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
+                        disabled={!isEditing}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                      />
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                    <input
-                      type="text"
-                      value={profileData.username}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    />
-                  </div>
+                  {/* Username - Hidden for OAuth users */}
+                  {!user?.oauthProvider && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                      <input
+                        type="text"
+                        value={profileData.username}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
+                        disabled={!isEditing}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                      />
+                    </div>
+                  )}
+                  {/* Email - Read-only for OAuth users */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    />
+                    {user?.oauthProvider ? (
+                      <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600">
+                        {profileData.email}
+                      </div>
+                    ) : (
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                        disabled={!isEditing}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                      />
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">School Name</label>
-                    <input
-                      type="text"
-                      value={profileData.school}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, school: e.target.value }))}
-                      disabled={!isEditing}
-                      placeholder="Enter your school name"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
-                    <select
-                      value={profileData.grade || ''}
-                      onChange={(e) => setProfileData(prev => ({ ...prev, grade: e.target.value ? parseInt(e.target.value) : '' }))}
-                      disabled={!isEditing}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
-                    >
-                      <option value="">Select Grade</option>
-                      <option value="9">Grade 9</option>
-                      <option value="10">Grade 10</option>
-                      <option value="11">Grade 11</option>
-                      <option value="12">Grade 12</option>
-                    </select>
-                  </div>
+                  {/* School Name - Hidden for OAuth users */}
+                  {!user?.oauthProvider && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">School Name</label>
+                      <input
+                        type="text"
+                        value={profileData.school}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, school: e.target.value }))}
+                        disabled={!isEditing}
+                        placeholder="Enter your school name"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                      />
+                    </div>
+                  )}
+                  {/* Grade Level - Hidden for OAuth users */}
+                  {!user?.oauthProvider && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Grade Level</label>
+                      <select
+                        value={profileData.grade || ''}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, grade: e.target.value ? parseInt(e.target.value) : '' }))}
+                        disabled={!isEditing}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors disabled:bg-gray-50"
+                      >
+                        <option value="">Select Grade</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Target SAT Score</label>
                     <input
@@ -298,18 +345,19 @@ const Profile = () => {
               </form>
             </div>
 
-            {/* Password Change Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>
-                <button
-                  onClick={() => setIsChangingPassword(!isChangingPassword)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
-                >
-                  <FiEdit className="w-4 h-4" />
-                  {isChangingPassword ? 'Cancel' : 'Change Password'}
-                </button>
-              </div>
+            {/* Password Change Card - Hidden for OAuth users */}
+            {!user?.oauthProvider && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800">Change Password</h2>
+                  <button
+                    onClick={() => setIsChangingPassword(!isChangingPassword)}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                  >
+                    <FiEdit className="w-4 h-4" />
+                    {isChangingPassword ? 'Cancel' : 'Change Password'}
+                  </button>
+                </div>
 
               {isChangingPassword && (
                 <form onSubmit={handlePasswordChange}>
@@ -381,6 +429,7 @@ const Profile = () => {
                 </form>
               )}
             </div>
+            )}
 
 
           </div>
@@ -425,7 +474,13 @@ const Profile = () => {
                       </div>
                       <div className="flex-shrink-0">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                          {user.profilePicture ? (
+                          {user.oauthPicture ? (
+                            <img
+                              src={user.oauthPicture}
+                              alt={`${user.firstName} ${user.lastName}`}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : user.profilePicture ? (
                             <img
                               src={user.profilePicture}
                               alt={`${user.firstName} ${user.lastName}`}

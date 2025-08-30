@@ -32,9 +32,43 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
-    minlength: [6, 'Password must be at least 6 characters'],
+    required: function() {
+      // Password is required only if oauthProvider is not set (i.e., for traditional users)
+      return !this.oauthProvider;
+    },
+    validate: {
+      validator: function(password) {
+        // If no password (OAuth user), validation passes
+        if (!password) return true;
+        // If password exists, it must be at least 6 characters
+        return password.length >= 6;
+      },
+      message: 'Password must be at least 6 characters long'
+    },
     select: false
+  },
+  
+  // OAuth fields
+  oauthProvider: {
+    type: String,
+    enum: ['google', 'facebook', 'github'],
+    default: null
+  },
+  oauthId: {
+    type: String,
+    default: null
+  },
+  oauthLoginCount: {
+    type: Number,
+    default: 0
+  },
+  lastOAuthLogin: {
+    type: Date,
+    default: null
+  },
+  oauthPicture: {
+    type: String,
+    default: null
   },
 
   role: {
@@ -140,15 +174,22 @@ const userSchema = new mongoose.Schema({
 
 // Encrypt password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
+  // Skip password hashing if password is not modified or doesn't exist (for OAuth users)
+  if (!this.isModified('password') || !this.password) {
     next();
+    return;
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 // Compare password method
 userSchema.methods.comparePassword = async function(enteredPassword) {
+  // OAuth users don't have passwords to compare
+  if (this.oauthProvider) {
+    return false;
+  }
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

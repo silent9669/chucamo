@@ -197,6 +197,59 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (idToken, accessToken) => {
+    try {
+      dispatch({ type: 'AUTH_START' });
+      
+      // Ensure the API URL includes /api suffix
+      let apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+      if (!apiUrl.endsWith('/api')) {
+        apiUrl = apiUrl.endsWith('/') ? apiUrl + 'api' : apiUrl + '/api';
+      }
+      console.log('🔍 API URL being used:', apiUrl);
+      console.log('🔍 Full endpoint URL:', `${apiUrl}/auth/google/token`);
+      
+      // Prepare request body based on token type
+      const requestBody = accessToken 
+        ? { access_token: accessToken }
+        : { id_token: idToken };
+      
+      console.log('🔍 Token type:', accessToken ? 'access_token' : 'id_token');
+      
+      const response = await fetch(`${apiUrl}/auth/google/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Google login failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.token) {
+        dispatch({
+          type: 'AUTH_SUCCESS',
+          payload: {
+            user: data.user,
+            token: data.token
+          }
+        });
+        return { success: true };
+      } else {
+        throw new Error(data.message || 'Google login failed');
+      }
+    } catch (error) {
+      const message = error.message || 'Google login failed';
+      dispatch({ type: 'AUTH_FAILURE', payload: message });
+      return { success: false, message };
+    }
+  };
+
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
@@ -212,6 +265,7 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     changePassword,
     refreshUser,
+    loginWithGoogle,
     clearError
   };
 

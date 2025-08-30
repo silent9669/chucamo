@@ -430,26 +430,63 @@ router.post('/logout', checkSession, async (req, res) => {
 // @access  Public
 router.post('/google/token', async (req, res) => {
   try {
-    const { id_token } = req.body;
+    console.log('🔍 Google OAuth request received:', {
+      body: req.body,
+      headers: req.headers,
+      clientId: process.env.GOOGLE_CLIENT_ID
+    });
     
-    if (!id_token) {
+    const { id_token, access_token } = req.body;
+    
+    if (!id_token && !access_token) {
       return res.status(400).json({ 
         success: false, 
-        message: 'ID token is required' 
+        message: 'Either ID token or access token is required' 
       });
     }
 
-    // Verify the ID token with Google
-    const { OAuth2Client } = require('google-auth-library');
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    let googleId, email, given_name, family_name, picture;
     
-    const ticket = await client.verifyIdToken({
-      idToken: id_token,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-    
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, given_name, family_name } = payload;
+    if (id_token) {
+      // Verify the ID token with Google
+      const { OAuth2Client } = require('google-auth-library');
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      
+      const ticket = await client.verifyIdToken({
+        idToken: id_token,
+        audience: process.env.GOOGLE_CLIENT_ID
+      });
+      
+      const payload = ticket.getPayload();
+      googleId = payload.sub;
+      email = payload.email;
+      given_name = payload.given_name;
+      family_name = payload.family_name;
+      picture = payload.picture;
+    } else if (access_token) {
+      // Use access token to get user info
+      try {
+        const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${access_token}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch user info');
+        }
+        
+        const userInfo = await response.json();
+        googleId = userInfo.id;
+        email = userInfo.email;
+        given_name = userInfo.given_name;
+        family_name = userInfo.family_name;
+        picture = userInfo.picture;
+        
+        console.log('🔍 User info from access token:', userInfo);
+      } catch (error) {
+        console.error('❌ Error fetching user info from access token:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid access token'
+        });
+      }
+    }
 
     // Check if user already exists
     let user = await User.findOne({
@@ -464,6 +501,7 @@ router.post('/google/token', async (req, res) => {
       if (!user.oauthProvider || user.oauthProvider !== 'google') {
         user.oauthProvider = 'google';
         user.oauthId = googleId;
+        user.oauthPicture = picture;
         user.emailVerified = true;
         await user.save();
       }
@@ -473,14 +511,26 @@ router.post('/google/token', async (req, res) => {
       user.oauthLoginCount = (user.oauthLoginCount || 0) + 1;
       await user.save();
     } else {
-      // Create new user
+      // Create new user with email-based credentials for database compatibility
+      const emailPrefix = email.split('@')[0];
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 8);
+      
+      // Generate username from email prefix
+      const username = emailPrefix;
+      
+      // Generate password for database compatibility (not for actual login)
+      const password = `oauth_${emailPrefix}_${timestamp}_${randomString}`;
+      
       user = await User.create({
         firstName: given_name || 'Unknown',
         lastName: family_name || 'User',
-        username: `google_${googleId}`,
+        username,
         email,
+        password, // Required for database compatibility
         oauthProvider: 'google',
         oauthId: googleId,
+        oauthPicture: picture,
         emailVerified: true,
         accountType: 'free',
         role: 'user',
@@ -561,9 +611,17 @@ router.post('/google/token', async (req, res) => {
 
   } catch (error) {
     logger.error('Google token verification error:', error);
+    console.error('🔍 Google OAuth Error Details:', {
+      error: error.message,
+      stack: error.stack,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      hasIdToken: !!req.body.id_token,
+      idTokenLength: req.body.id_token ? req.body.id_token.length : 0
+    });
     res.status(500).json({ 
       success: false, 
-      message: 'Server error during authentication' 
+      message: 'Server error during authentication',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
