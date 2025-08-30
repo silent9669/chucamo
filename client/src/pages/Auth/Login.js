@@ -55,7 +55,11 @@ const Login = () => {
           auto_select: false,
           cancel_on_tap_outside: true,
           context: 'signin',
-          ux_mode: 'popup'
+          ux_mode: 'popup',
+          // Enable FedCM for better production compatibility
+          fedcm: true,
+          // Additional FedCM options for better origin handling
+          prompt_parent_id: 'google-signin-button'
         });
         
         console.log('✅ Google OAuth initialized successfully');
@@ -192,7 +196,7 @@ const Login = () => {
               <span className="text-sm text-gray-500 mb-6 block font-medium">Sign in with:</span>
             </div>
             
-            <div id="google-signin-button" className="flex justify-center px-4">
+            <div id="google-signin-button" className="flex justify-center px-4" data-fedcm="true">
               {/* Google button will be rendered here */}
             </div>
             
