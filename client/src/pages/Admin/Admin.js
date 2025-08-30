@@ -898,36 +898,9 @@ const RealTestManagement = () => {
     }));
   };
 
-  const toggleTestVisibility = async (testId, newVisibility) => {
-    try {
-      const test = tests.find(t => t.id === testId);
-      if (test) {
-        const updatePayload = {
-          isPublic: newVisibility === 'all',
-          visibleTo: newVisibility
-        };
-        
-        await testsAPI.update(testId, updatePayload);
-        
-        setTests(prev => prev.map(test => 
-          test.id === testId 
-            ? { ...test, visible: newVisibility === 'all', visibleTo: newVisibility }
-            : test
-        ));
-        
-        const visibilityText = {
-          'all': 'visible to all users',
-          'free': 'visible to free accounts only',
-          'student': 'visible to student accounts only'
-        };
-        
-        alert(`Test made ${visibilityText[newVisibility]} successfully!`);
-      }
-    } catch (error) {
-      logger.error('Error toggling test visibility:', error);
-      alert('Failed to update test visibility. Please try again.');
-    }
-  };
+  // Visibility is now automatically managed based on test type
+  // Real tests: visible to all users
+  // Mock tests: visible to student accounts and above
 
   const deleteTest = async (testId) => {
     if (window.confirm('Are you sure you want to delete this test?')) {
@@ -1035,7 +1008,10 @@ const RealTestManagement = () => {
         difficulty: currentTest.difficulty || 'medium',
         sections: transformedSections,
         totalTime: totalTime,
-        totalQuestions: totalQuestions
+        totalQuestions: totalQuestions,
+        // Automatically set visibility for real tests
+        visibleTo: 'all',
+        isPublic: true
       };
 
       logger.debug('Test data prepared for saving');
@@ -1102,40 +1078,40 @@ const RealTestManagement = () => {
     // Function to create complete question data with all fields preserved (Real Test Management)
   const createCompleteQuestionDataReal = (currentQuestion, editingQuestion) => {
     const questionData = {
-        id: editingQuestion ? editingQuestion.id : Date.now(),
-        question: currentQuestion.question,
-        content: currentQuestion.question,
+      id: editingQuestion ? editingQuestion.id : Date.now(),
+      question: currentQuestion.question,
+      content: currentQuestion.question,
       topic: currentQuestion.topic || 'general',
-        difficulty: 'medium',
-        explanation: currentQuestion.explanation || '',
-        passage: currentQuestion.passage || '',
+      difficulty: 'medium',
+      explanation: currentQuestion.explanation || '',
+      passage: currentQuestion.passage || '',
       // CRITICAL FIX: Preserve the original question type, don't override it
       type: currentQuestion.type || (currentQuestion.answerType === 'written' ? 'grid-in' : 'multiple-choice'),
-        options: currentQuestion.answerType === 'multiple-choice' 
-          ? currentQuestion.options.map((opt, index) => {
-              const content = typeof opt === 'string' ? opt : (opt.content || '');
-              const images = typeof opt === 'string' ? [] : (opt.images || []);
-              
-              return {
+      options: currentQuestion.answerType === 'multiple-choice' 
+        ? currentQuestion.options.map((opt, index) => {
+            const content = typeof opt === 'string' ? opt : (opt.content || '');
+            const images = typeof opt === 'string' ? [] : (opt.images || []);
+            
+            return {
               content: content,
-                images: images,
-                isCorrect: index === currentQuestion.correctAnswer
-              };
-            })
-          : [],
-        correctAnswer: currentQuestion.answerType === 'written' 
-          ? currentQuestion.writtenAnswer || ''
-          : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
-             (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
-               ? currentQuestion.options[currentQuestion.correctAnswer] 
-               : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
-        images: (currentQuestion.images || []).map(img => ({
-          url: img.url,
-          name: img.name
-        })),
+              images: images,
+              isCorrect: index === currentQuestion.correctAnswer
+            };
+          })
+        : [],
+      correctAnswer: currentQuestion.answerType === 'written' 
+        ? currentQuestion.writtenAnswer || ''
+        : (currentQuestion.options && currentQuestion.options[currentQuestion.correctAnswer] && 
+           (typeof currentQuestion.options[currentQuestion.correctAnswer] === 'string' 
+             ? currentQuestion.options[currentQuestion.correctAnswer] 
+             : currentQuestion.options[currentQuestion.correctAnswer].content)) || '',
+      images: (currentQuestion.images || []).map(img => ({
+        url: img.url,
+        name: img.name
+      })),
       answerType: currentQuestion.answerType,
-        writtenAnswer: currentQuestion.writtenAnswer || '',
-        acceptableAnswers: currentQuestion.acceptableAnswers || []
+      writtenAnswer: currentQuestion.writtenAnswer || '',
+      acceptableAnswers: currentQuestion.acceptableAnswers || []
     };
 
     logger.debug('Question data created - topic:', questionData.topic, 'type:', questionData.type);
@@ -1152,18 +1128,17 @@ const RealTestManagement = () => {
       }
 
       const questionToSave = createCompleteQuestionDataReal(currentQuestion, editingQuestion);
-
       // Create a new questions array with the updated question
       const updatedQuestions = editingQuestion
         ? currentSection.questions.map(q => q.id === editingQuestion.id ? questionToSave : q)
         : [...currentSection.questions, questionToSave];
-
+      
       // Create updated section
       const updatedSection = {
         ...currentSection,
         questions: updatedQuestions
       };
-
+      
       // Update the test state first
       setCurrentTest(prev => {
         const newTest = {
@@ -1177,7 +1152,7 @@ const RealTestManagement = () => {
         
         return newTest;
       });
-
+      
       // Update the section state
       setCurrentSection(updatedSection);
 
@@ -1189,7 +1164,7 @@ const RealTestManagement = () => {
       alert(editingQuestion ? 'Question updated successfully!' : 'Question created successfully!');
       setEditingQuestion(null);
       setCurrentView('section-builder');
-        } catch (error) {
+    } catch (error) {
       logger.error('Error saving question:', error);
       alert('Failed to save question. Please try again.');
     }
@@ -1453,7 +1428,7 @@ const RealTestManagement = () => {
 
 
 
-  // Enhanced saveQuestion function that ensures all question data is preserved
+        // Enhanced saveQuestion function that ensures all question data is preserved
   const saveQuestionEnhanced = async (currentQuestion, editingQuestion, currentSection, setCurrentTest, setCurrentSection, setEditingQuestion, setCurrentView) => {
     try {
       if (!currentQuestion.question.trim()) {
@@ -1819,22 +1794,7 @@ const RealTestManagement = () => {
                     <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
                       Real Test
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      test.visibleTo === 'all' 
-                        ? 'bg-green-100 text-green-800' 
-                        : test.visibleTo === 'student'
-                        ? 'bg-blue-100 text-blue-800'
-                        : test.visibleTo === 'free'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : test.visible
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {test.visibleTo === 'all' ? 'All Users' :
-                       test.visibleTo === 'student' ? 'Student Only' :
-                       test.visibleTo === 'free' ? 'Free Only' :
-                       test.visible ? 'Visible' : 'Hidden'}
-                    </span>
+                    {/* Visibility is automatically managed based on test type */}
                     <button 
                       onClick={() => editTest(test)}
                       className="p-2 text-gray-400 hover:text-blue-600"
@@ -1842,22 +1802,7 @@ const RealTestManagement = () => {
                     >
                       <FiEdit size={16} />
                     </button>
-                    <div className="relative">
-                    <button 
-                        onClick={() => {
-                          const visibility = test.visibleTo === 'all' ? 'free' : 
-                                           test.visibleTo === 'free' ? 'student' : 'all';
-                          toggleTestVisibility(test.id, visibility);
-                        }}
-                        className={`p-2 ${test.visibleTo === 'all' ? 'text-green-600' : 
-                                         test.visibleTo === 'student' ? 'text-blue-600' : 
-                                         test.visibleTo === 'free' ? 'text-yellow-600' : 
-                                         test.visible ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-600`}
-                        title="Change Visibility"
-                    >
-                      <FiEye size={16} />
-                    </button>
-                    </div>
+                    {/* Visibility is automatically managed based on test type */}
                     <button 
                       onClick={() => deleteTest(test.id)}
                       className="p-2 text-gray-400 hover:text-red-600"
@@ -2886,36 +2831,9 @@ const MockTestManagement = () => {
     }
   }, [searchTerm, tests]);
 
-  const toggleTestVisibility = async (testId, newVisibility) => {
-    try {
-      const test = tests.find(t => t.id === testId);
-      if (test) {
-        const updatePayload = {
-          isPublic: newVisibility === 'all',
-          visibleTo: newVisibility
-        };
-        
-        const response = await testsAPI.update(testId, updatePayload);
-        
-        setTests(prev => prev.map(test => 
-          test.id === testId 
-            ? { ...test, visible: newVisibility === 'all', visibleTo: newVisibility }
-            : test
-        ));
-        
-        const visibilityText = {
-          'all': 'visible to all users',
-          'free': 'visible to free accounts only',
-          'student': 'visible to student accounts only'
-        };
-        
-        alert(`Test made ${visibilityText[newVisibility]} successfully!`);
-      }
-    } catch (error) {
-      logger.error('Error toggling test visibility:', error);
-      alert('Failed to update test visibility. Please try again.');
-    }
-  };
+  // Visibility is now automatically managed based on test type
+  // Real tests: visible to all users
+  // Mock tests: visible to student accounts and above
 
   const deleteTest = async (testId) => {
     if (window.confirm('Are you sure you want to delete this test?')) {
@@ -3055,7 +2973,10 @@ const MockTestManagement = () => {
         difficulty: currentTest.difficulty || 'medium',
         sections: transformedSections,
         totalTime: currentTest.timeLimit || 180,
-        totalQuestions: currentTest.sections ? currentTest.sections.reduce((total, section) => total + (section.questions ? section.questions.length : 0), 0) : 0
+        totalQuestions: currentTest.sections ? currentTest.sections.reduce((total, section) => total + (section.questions ? section.questions.length : 0), 0) : 0,
+        // Automatically set visibility for mock tests
+        visibleTo: 'student',
+        isPublic: false
       };
 
       logger.debug('Mock test data prepared for saving');
@@ -3506,22 +3427,7 @@ const MockTestManagement = () => {
                     <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
                       Mock Test
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      test.visibleTo === 'all' 
-                        ? 'bg-green-100 text-green-800' 
-                        : test.visibleTo === 'student'
-                        ? 'bg-blue-100 text-blue-800'
-                        : test.visibleTo === 'free'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : test.visible
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {test.visibleTo === 'all' ? 'All Users' :
-                       test.visibleTo === 'student' ? 'Student Only' :
-                       test.visibleTo === 'free' ? 'Free Only' :
-                       test.visible ? 'Visible' : 'Hidden'}
-                    </span>
+                    {/* Visibility is automatically managed based on test type */}
                     <button 
                       onClick={() => editTest(test)}
                       className="p-2 text-gray-400 hover:text-blue-600"
@@ -3529,22 +3435,7 @@ const MockTestManagement = () => {
                     >
                       <FiEdit size={16} />
                     </button>
-                    <div className="relative">
-                    <button 
-                        onClick={() => {
-                          const visibility = test.visibleTo === 'all' ? 'free' : 
-                                           test.visibleTo === 'free' ? 'student' : 'all';
-                          toggleTestVisibility(test.id, visibility);
-                        }}
-                        className={`p-2 ${test.visibleTo === 'all' ? 'text-green-600' : 
-                                         test.visibleTo === 'student' ? 'text-blue-600' : 
-                                         test.visibleTo === 'free' ? 'text-yellow-600' : 
-                                         test.visible ? 'text-blue-600' : 'text-gray-400'} hover:text-blue-600`}
-                        title="Change Visibility"
-                    >
-                      <FiEye size={16} />
-                    </button>
-                    </div>
+                    {/* Visibility is automatically managed based on test type */}
                     <button 
                       onClick={() => deleteTest(test.id)}
                       className="p-2 text-gray-400 hover:text-red-600"

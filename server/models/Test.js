@@ -162,14 +162,14 @@ const testSchema = new mongoose.Schema({
   visibleTo: {
     type: String,
     enum: ['all', 'free', 'premium', 'student', 'mentor', 'admin'],
-    default: 'premium', // Default to premium instead of 'all'
+    default: 'all', // Default to all users
     // Visibility levels:
-    // 'free' - Accessible to all users (basic practice tests)
-    // 'premium' - Requires premium account or higher
-    // 'student' - Accessible to student accounts and higher
-    // 'mentor' - Accessible to mentor accounts and higher
-    // 'admin' - Accessible to admin accounts only
-    // 'all' - Accessible to all account types (legacy support)
+    // 'all' - Accessible to all users (real/practice tests)
+    // 'student' - Accessible to student accounts and higher (mock tests)
+    // 'free' - Accessible to free accounts only (legacy)
+    // 'premium' - Requires premium account or higher (legacy)
+    // 'mentor' - Accessible to mentor accounts and higher (legacy)
+    // 'admin' - Accessible to admin accounts only (legacy)
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
