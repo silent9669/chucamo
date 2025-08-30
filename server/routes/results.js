@@ -6,6 +6,198 @@ const { calculateStreakBonus, isSameDay, updateTestCompletionStreak } = require(
 
 const router = express.Router();
 
+// @route   POST /api/results/migrate-from-localstorage
+// @desc    Migrate test completion data from localStorage to server database
+// @access  Private
+router.post('/migrate-from-localstorage', protect, async (req, res) => {
+  try {
+    const { testId, answeredQuestions, status, startedAt, completedAt, totalQuestions, timeSpent, source } = req.body;
+
+    // Validate required fields
+    if (!testId || !answeredQuestions || !Array.isArray(answeredQuestions)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: testId and answeredQuestions array' 
+      });
+    }
+
+    // Check if test exists
+    const test = await Test.findById(testId);
+    if (!test) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Test not found' 
+      });
+    }
+
+    // Check if result already exists for this user and test
+    const existingResult = await Result.findOne({ 
+      user: req.user.id, 
+      test: testId 
+    });
+
+    if (existingResult) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Result already exists for this test',
+        resultId: existingResult._id 
+      });
+    }
+
+    // Process answered questions and calculate results
+    const questionResults = [];
+    let correctAnswers = 0;
+    let totalAnswered = 0;
+
+    // Get test sections and questions for validation
+    const allQuestions = [];
+    if (test.sections) {
+      test.sections.forEach((section, sectionIndex) => {
+        if (section.questions) {
+          section.questions.forEach((question, questionIndex) => {
+            allQuestions.push({
+              question: question._id,
+              sectionIndex,
+              questionIndex,
+              correctAnswer: question.correctAnswer,
+              answerType: question.answerType || question.type
+            });
+          });
+        }
+      });
+    }
+
+    // Process each answered question
+    answeredQuestions.forEach(([questionKey, answerData]) => {
+      try {
+        let actualAnswer = answerData;
+        if (answerData && typeof answerData === 'object' && answerData.answer) {
+          actualAnswer = answerData.answer;
+        }
+
+        // Find the corresponding question
+        let questionId = null;
+        let isCorrect = false;
+
+        if (typeof questionKey === 'string' && questionKey.includes('-')) {
+          // Format: "section-question" (e.g., "0-1")
+          const [sectionIndex, questionNum] = questionKey.split('-').map(Number);
+          const question = allQuestions.find(q => 
+            q.sectionIndex === sectionIndex && q.questionIndex === questionNum - 1
+          );
+          
+          if (question) {
+            questionId = question.question;
+            isCorrect = checkAnswerCorrectness(actualAnswer, question.correctAnswer, question.answerType);
+          }
+        } else {
+          // Try to find by question ID
+          const question = allQuestions.find(q => q.question.toString() === questionKey.toString());
+          if (question) {
+            questionId = question.question;
+            isCorrect = checkAnswerCorrectness(actualAnswer, question.correctAnswer, question.answerType);
+          }
+        }
+
+        if (questionId) {
+          questionResults.push({
+            question: questionId,
+            selectedAnswer: actualAnswer,
+            isCorrect,
+            answeredAt: completedAt || Date.now()
+          });
+
+          if (isCorrect) {
+            correctAnswers++;
+          }
+          totalAnswered++;
+        }
+      } catch (error) {
+        console.warn('Error processing answered question:', error);
+      }
+    });
+
+    // Calculate score
+    const score = totalAnswered > 0 ? Math.round((correctAnswers / totalAnswered) * 100) : 0;
+
+    // Create new result
+    const newResult = new Result({
+      user: req.user.id,
+      test: testId,
+      status: status || 'completed',
+      score,
+      correctAnswers,
+      totalQuestions: totalQuestions || totalAnswered,
+      answeredQuestions: totalAnswered,
+      questionResults,
+      startedAt: startedAt || Date.now(),
+      completedAt: completedAt || Date.now(),
+      timeSpent: timeSpent || 0,
+      source: source || 'localStorage_migration',
+      metadata: {
+        migrated: true,
+        originalFormat: 'localStorage',
+        migrationTimestamp: Date.now()
+      }
+    });
+
+    await newResult.save();
+
+    // Update user streak if applicable
+    if (status === 'completed') {
+      try {
+        await updateTestCompletionStreak(req.user.id);
+      } catch (streakError) {
+        console.warn('Failed to update streak during migration:', streakError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Data migrated successfully',
+      resultId: newResult._id,
+      score,
+      correctAnswers,
+      totalQuestions: totalAnswered
+    });
+
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Migration failed: ' + error.message 
+    });
+  }
+});
+
+// Helper function to check answer correctness
+function checkAnswerCorrectness(userAnswer, correctAnswer, answerType) {
+  try {
+    if (answerType === 'multiple-choice' || answerType === 'multiple-choice') {
+      // Handle both string and index-based correct answers
+      if (typeof correctAnswer === 'string') {
+        return userAnswer === correctAnswer;
+      } else if (typeof correctAnswer === 'number') {
+        return userAnswer === correctAnswer.toString();
+      }
+    } else if (answerType === 'written' || answerType === 'grid-in') {
+      // For written answers, check if it matches any acceptable answer
+      if (Array.isArray(correctAnswer)) {
+        return correctAnswer.some(answer => 
+          userAnswer.toLowerCase().trim() === answer.toLowerCase().trim()
+        );
+      } else if (typeof correctAnswer === 'string') {
+        return userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.warn('Error checking answer correctness:', error);
+    return false;
+  }
+}
+
 // @route   GET /api/results
 // @desc    Get user's test results
 // @access  Private

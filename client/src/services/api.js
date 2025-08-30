@@ -144,6 +144,8 @@ export const resultsAPI = {
   submitTest: (id, data) => api.put(`/results/${id}`, data),
   getAnalytics: () => api.get('/results/analytics/overview'),
   addReview: (id, reviewNotes) => api.put(`/results/${id}/review`, { reviewNotes }),
+  // Migration endpoint for localStorage data
+  migrateFromLocalStorage: (migrationData) => api.post('/results/migrate-from-localstorage', migrationData),
   // Deleting results disabled by policy
   delete: () => Promise.reject(new Error('Deleting test results is no longer allowed.')),
 };
