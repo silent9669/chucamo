@@ -5,6 +5,28 @@ const Session = require('../models/Session');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 
+// Helper function to generate clean username for OAuth users
+const generateCleanUsername = (baseName, googleId) => {
+  // Remove any special characters and replace with underscores
+  const cleanBase = baseName.replace(/[^a-zA-Z0-9]/g, '');
+  const cleanId = googleId.replace(/[^a-zA-Z0-9]/g, '');
+  
+  // Generate username: cleanName_cleanId
+  let username = `${cleanBase}_${cleanId}`;
+  
+  // Ensure username is not too long (max 30 characters)
+  if (username.length > 30) {
+    username = username.substring(0, 30);
+  }
+  
+  // Ensure it starts with a letter
+  if (!/^[a-zA-Z]/.test(username)) {
+    username = `user_${username}`;
+  }
+  
+  return username;
+};
+
 // Serialize user for the session
 passport.serializeUser((user, done) => {
   done(null, user.id);
@@ -61,10 +83,25 @@ passport.use(new GoogleStrategy({
     }
 
     // Create new user
+    let username = generateCleanUsername(profile.name.givenName || 'Unknown', profile.id);
+    
+    // Check if username already exists and generate a unique one if needed
+    let counter = 1;
+    while (await User.findOne({ username })) {
+      username = `${generateCleanUsername(profile.name.givenName || 'Unknown', profile.id)}_${counter}`;
+      counter++;
+      
+      // Prevent infinite loop
+      if (counter > 100) {
+        username = `user_${Date.now()}`;
+        break;
+      }
+    }
+    
     const newUser = await User.create({
       firstName: profile.name.givenName || 'Unknown',
       lastName: profile.name.familyName || 'User',
-      username: `google_${profile.id}`,
+      username: username,
       email: profile.emails[0]?.value,
       oauthProvider: 'google',
       oauthId: profile.id,
