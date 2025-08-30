@@ -253,15 +253,10 @@ export const AuthProvider = ({ children }) => {
       if (!apiUrl.endsWith('/api')) {
         apiUrl = apiUrl.endsWith('/') ? apiUrl + 'api' : apiUrl + '/api';
       }
-      console.log('🔍 API URL being used:', apiUrl);
-      console.log('🔍 Full endpoint URL:', `${apiUrl}/auth/google/token`);
-      
       // Prepare request body based on token type
       const requestBody = accessToken 
         ? { access_token: accessToken }
         : { id_token: idToken };
-      
-      console.log('🔍 Token type:', accessToken ? 'access_token' : 'id_token');
       
       const response = await fetch(`${apiUrl}/auth/google/token`, {
         method: 'POST',

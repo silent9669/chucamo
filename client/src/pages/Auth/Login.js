@@ -17,15 +17,13 @@ const Login = () => {
       setIsGoogleLoading(true);
       setError('');
       
-      console.log('🔐 Google OAuth response received:', response);
-      console.log('🔑 Credential length:', response.credential ? response.credential.length : 0);
-      console.log('🔑 Client ID from response:', response.clientId);
+      console.log('Google OAuth response received');
       
       // Send the ID token to your backend
       const result = await loginWithGoogle(response.credential);
       
       if (result.success) {
-        console.log('✅ Google login successful, redirecting to dashboard');
+        console.log('Google login successful, redirecting to dashboard');
         navigate('/dashboard');
       } else {
         console.error('❌ Google login failed:', result.message);
@@ -47,7 +45,7 @@ const Login = () => {
     }
     
     if (window.google && window.google.accounts) {
-      console.log('🔧 Initializing Google accounts...');
+
       try {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
@@ -55,14 +53,9 @@ const Login = () => {
           auto_select: false,
           cancel_on_tap_outside: true,
           context: 'signin',
-          ux_mode: 'popup',
-          // Enable FedCM for better production compatibility
-          fedcm: true,
-          // Additional FedCM options for better origin handling
-          prompt_parent_id: 'google-signin-button'
+          ux_mode: 'popup'
         });
         
-        console.log('✅ Google OAuth initialized successfully');
         window.googleOAuthInitialized = true;
         
         // Render the Google button
@@ -81,7 +74,7 @@ const Login = () => {
             type: 'standard'
           });
           
-          console.log('✅ Google button rendered successfully');
+
         } catch (renderError) {
           console.warn('⚠️ Google button render failed, using custom button:', renderError);
           
@@ -101,7 +94,7 @@ const Login = () => {
           `;
           customButton.className = 'px-8 py-4 bg-white border-2 border-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-3 text-gray-700 font-medium w-full max-w-lg hover:border-blue-300 hover:scale-105 transform';
           customButton.onclick = () => {
-            console.log('🔍 Custom Google button clicked');
+            console.log('Custom Google button clicked');
             try {
               window.google.accounts.id.prompt();
             } catch (error) {
@@ -127,14 +120,11 @@ const Login = () => {
       return;
     }
     
-    console.log('🔍 Initializing Google OAuth...');
-    console.log('🔑 Client ID:', GOOGLE_CLIENT_ID);
-    console.log('🌐 Current origin:', window.location.origin);
-    console.log('🔧 Environment:', process.env.NODE_ENV);
+    console.log('Initializing Google OAuth...');
     
     // Check if script is already loaded
     if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-      console.log('🔍 Google OAuth script already loaded, skipping...');
+
       if (window.google && window.google.accounts) {
         initializeGoogleOAuth();
       }
@@ -148,7 +138,7 @@ const Login = () => {
     script.defer = true;
     
     script.onload = () => {
-      console.log('✅ Google OAuth script loaded');
+      
       clearTimeout(timeout);
       initializeGoogleOAuth();
     };
@@ -196,7 +186,7 @@ const Login = () => {
               <span className="text-sm text-gray-500 mb-6 block font-medium">Sign in with:</span>
             </div>
             
-            <div id="google-signin-button" className="flex justify-center px-4" data-fedcm="true">
+            <div id="google-signin-button" className="flex justify-center px-4">
               {/* Google button will be rendered here */}
             </div>
             
