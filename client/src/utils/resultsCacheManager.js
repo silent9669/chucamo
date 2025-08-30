@@ -1,4 +1,5 @@
 import { validateAndLogId, safeEncodeId } from './validationUtils';
+import { testsAPI } from '../services/api';
 
 class ResultsCacheManager {
   static testCache = new Map();
@@ -76,16 +77,32 @@ class ResultsCacheManager {
             return Promise.reject(new Error(`Failed to encode test ID: ${id}`));
           }
           
-          return fetch(`/api/tests/${encodedId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          }).then(res => res.json());
+          // Use the existing API service which has proper authentication and error handling
+          return testsAPI.getById(encodedId).catch(error => {
+            console.warn(`Failed to load test ${encodedId}:`, error.response?.status, error.response?.statusText);
+            // Return null for failed requests so they can be filtered out
+            return null;
+          });
         });
         
         const batchResults = await Promise.all(batchPromises);
         batch.forEach((id, index) => {
-          const testData = batchResults[index].test;
-          results[id] = testData;
-          this.setCachedTest(id, testData);
+          try {
+            const response = batchResults[index];
+            if (response && response.data?.test) {
+              results[id] = response.data.test;
+              this.setCachedTest(id, response.data.test);
+            } else if (response && response.test) {
+              results[id] = response.test;
+              this.setCachedTest(id, response.test);
+            } else if (response === null) {
+              console.warn(`Test ${id} failed to load (likely access denied)`);
+            } else {
+              console.warn(`No test data found for ID ${id}:`, response);
+            }
+          } catch (error) {
+            console.error(`Error processing test data for ID ${id}:`, error);
+          }
         });
       }
     }

@@ -609,26 +609,30 @@ const Results = () => {
             return; // Successfully loaded from database
           } else {
             if (process.env.NODE_ENV === 'development') {
-              logger.warn('Database results transformed to empty array, falling back to localStorage');
+              logger.warn('Database results transformed to empty array - no valid test data found');
             }
           }
         } else {
           if (process.env.NODE_ENV === 'development') {
-            logger.info('No database results found, falling back to localStorage');
+            logger.info('No database results found');
           }
         }
         
-        // Fallback to localStorage if database fails or is empty
-        await loadFromLocalStorage();
+        // Check if we have any results to display
+        if (testHistory.length === 0) {
+          setError('No test results found. Complete some practice tests to see your results here.');
+        } else {
+          logger.info('Database results loaded successfully');
+        }
         
       } catch (error) {
         logger.error('Error loading from database:', error);
-        // Always try localStorage as fallback
-        try {
-          await loadFromLocalStorage();
-        } catch (localStorageError) {
-          logger.error('Error loading from localStorage fallback:', localStorageError);
-          setError('Failed to load test history from both database and local storage');
+        if (error.response?.status === 403) {
+          setError('Access denied. Please check your permissions or try logging in again.');
+        } else if (error.response?.status === 404) {
+          setError('Test data not found. Please try again later.');
+        } else {
+          setError('Failed to load test history from database. Please try again later.');
         }
       } finally {
         setLoading(false);
@@ -643,7 +647,7 @@ const Results = () => {
     }, 5 * 60 * 1000); // Every 5 minutes
     
     return () => clearInterval(cleanupInterval);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcut for content search (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -720,6 +724,7 @@ const Results = () => {
     }
   };
 
+  /*
   const loadFromLocalStorage = async () => {
     try {
       // Get all test completion data from localStorage
@@ -940,6 +945,7 @@ const Results = () => {
       setError('Failed to load test history from localStorage');
     }
   };
+  */
 
 
 

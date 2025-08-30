@@ -159,10 +159,15 @@ const Dashboard = () => {
         <p className="text-primary-100">
           Ready to continue your SAT preparation journey?
         </p>
-        {user?.targetScore && (
-          <div className="mt-4 flex items-center space-x-2">
+        {user?.targetScore ? (
+          <div className="mt-4 flex items-center space-x-2 bg-white bg-opacity-20 rounded-lg px-3 py-2">
+            <FiTarget className="w-5 h-5 text-yellow-300" />
+            <span className="font-medium">Target Score: {user.targetScore}</span>
+          </div>
+        ) : (
+          <div className="mt-4 flex items-center space-x-2 text-primary-200">
             <FiTarget className="w-5 h-5" />
-            <span>Target Score: {user.targetScore}</span>
+            <span>No target score set yet</span>
           </div>
         )}
       </div>

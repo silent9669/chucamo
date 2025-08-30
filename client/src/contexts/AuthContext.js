@@ -103,6 +103,53 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [state.token]);
 
+  // Session state monitoring for OAuth users
+  useEffect(() => {
+    if (state.user?.oauthProvider && window.google?.accounts?.id) {
+      const handleCredentialResponse = (response) => {
+        console.log('🔍 OAuth session state changed:', response);
+        // Handle session state changes
+        if (response.credential) {
+          // User is still signed in
+          console.log('✅ User OAuth session is still valid');
+        } else {
+          // User signed out
+          console.log('❌ User OAuth session expired');
+          dispatch({ type: 'LOGOUT' });
+        }
+      };
+
+      // Listen for credential changes
+      window.google.accounts.id.initialize({
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        auto_select: false
+      });
+
+      // Monitor session state
+      const checkSessionState = () => {
+        if (window.google?.accounts?.id) {
+          try {
+            window.google.accounts.id.prompt((notification) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                console.log('🔍 OAuth session state:', notification);
+              }
+            });
+          } catch (error) {
+            console.log('🔍 OAuth session check error:', error);
+          }
+        }
+      };
+
+      // Check session state every 5 minutes
+      const sessionInterval = setInterval(checkSessionState, 5 * 60 * 1000);
+      
+      return () => {
+        clearInterval(sessionInterval);
+      };
+    }
+  }, [state.user]);
+
   const login = async (email, password, googleData = null) => {
     try {
       dispatch({ type: 'AUTH_START' });
@@ -250,6 +297,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (userData) => {
+    dispatch({ type: 'UPDATE_USER', payload: userData });
+  };
+
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
@@ -266,6 +317,7 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     refreshUser,
     loginWithGoogle,
+    updateUser,
     clearError
   };
 

@@ -274,30 +274,32 @@ router.get('/me', protect, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    res.json({
-      success: true,
-      user: {
-        id: user._id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        accountType: user.accountType,
-        grade: user.grade,
-        school: user.school,
-        targetScore: user.targetScore,
-        studyGoals: user.studyGoals,
-        profilePicture: user.profilePicture,
-        lastLogin: user.lastLogin,
-        emailVerified: user.emailVerified,
-        loginStreak: user.loginStreak || 0,
-        totalTestsTaken: user.totalTestsTaken || 0,
-        averageAccuracy: user.averageAccuracy || 0,
-        coins: user.coins || 0,
-        lastTestCompletionDate: user.lastTestCompletionDate
-      }
-    });
+            res.json({
+          success: true,
+          user: {
+            id: user._id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+            accountType: user.accountType,
+            grade: user.grade,
+            school: user.school,
+            targetScore: user.targetScore,
+            studyGoals: user.studyGoals,
+            profilePicture: user.profilePicture,
+            lastLogin: user.lastLogin,
+            emailVerified: user.emailVerified,
+            loginStreak: user.loginStreak || 0,
+            totalTestsTaken: user.totalTestsTaken || 0,
+            averageAccuracy: user.averageAccuracy || 0,
+            coins: user.coins || 0,
+            lastTestCompletionDate: user.lastTestCompletionDate,
+            oauthProvider: user.oauthProvider,
+            oauthPicture: user.oauthPicture
+          }
+        });
   } catch (error) {
     logger.error('Get user error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -516,11 +518,30 @@ router.post('/google/token', async (req, res) => {
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 8);
       
-      // Generate username from email prefix
-      const username = emailPrefix;
+      // Generate unique username from email prefix
+      let username = emailPrefix;
+      let usernameCounter = 1;
+      
+      // Check if username already exists and generate a unique one
+      while (await User.findOne({ username })) {
+        username = `${emailPrefix}_${usernameCounter}`;
+        usernameCounter++;
+      }
+      
+      console.log('🔍 Generated unique username:', username);
       
       // Generate password for database compatibility (not for actual login)
       const password = `oauth_${emailPrefix}_${timestamp}_${randomString}`;
+      
+      console.log('🔍 Creating new OAuth user with data:', {
+        firstName: given_name || 'Unknown',
+        lastName: family_name || 'User',
+        username,
+        email,
+        oauthProvider: 'google',
+        oauthId: googleId,
+        oauthPicture: picture
+      });
       
       user = await User.create({
         firstName: given_name || 'Unknown',
@@ -537,6 +558,8 @@ router.post('/google/token', async (req, res) => {
         lastOAuthLogin: new Date(),
         oauthLoginCount: 1
       });
+      
+      console.log('✅ New OAuth user created successfully:', user._id);
     }
 
     // Check if user is active
@@ -605,7 +628,9 @@ router.post('/google/token', async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        accountType: user.accountType
+        accountType: user.accountType,
+        oauthProvider: user.oauthProvider,
+        oauthPicture: user.oauthPicture
       }
     });
 
@@ -616,8 +641,18 @@ router.post('/google/token', async (req, res) => {
       stack: error.stack,
       clientId: process.env.GOOGLE_CLIENT_ID,
       hasIdToken: !!req.body.id_token,
-      idTokenLength: req.body.id_token ? req.body.id_token.length : 0
+      idTokenLength: req.body.id_token ? req.body.id_token.length : 0,
+      requestBody: req.body,
+      requestHeaders: req.headers
     });
+    
+    // Log specific error details for debugging
+    if (error.name === 'ValidationError') {
+      console.error('🔍 Mongoose Validation Error:', error.errors);
+    } else if (error.code === 11000) {
+      console.error('🔍 Duplicate Key Error:', error.keyValue);
+    }
+    
     res.status(500).json({ 
       success: false, 
       message: 'Server error during authentication',
