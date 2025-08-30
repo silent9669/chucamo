@@ -21,14 +21,15 @@ router.get('/', protect, async (req, res) => {
         { 
           isActive: true,
           $and: [
-            // For free users, only show tests explicitly marked as free or basic practice tests
+            // For free users, show real tests (visibleTo: 'all') and free tests
             req.user.accountType === 'free' ? {
               $or: [
+                { visibleTo: 'all' }, // Real tests visible to all users
                 { visibleTo: 'free' },
                 { 
                   visibleTo: { $exists: false },
                   isPublic: true,
-                  testType: 'practice' // Only practice tests for free users
+                  testType: 'practice' // Legacy practice tests
                 }
               ]
             } : 
@@ -93,7 +94,7 @@ router.get('/', protect, async (req, res) => {
 
     const skip = (page - 1) * limit;
     
-          logger.debug('Tests query:', Object.keys(query).length, 'items');
+          // Query built successfully
     
     const tests = await Test.find(query)
       .populate('createdBy', 'firstName lastName')
@@ -103,7 +104,7 @@ router.get('/', protect, async (req, res) => {
 
     const total = await Test.countDocuments(query);
     
-          logger.debug('Found tests:', tests.length, 'of', total);
+          // Tests retrieved successfully
 
     res.json({
       success: true,
@@ -143,38 +144,37 @@ router.get('/:id', protect, validateObjectId('id'), async (req, res) => {
       let hasAccess = false;
       
       if (req.user.accountType === 'free') {
-        hasAccess = test.visibleTo === 'free' || 
+        hasAccess = test.visibleTo === 'all' || // Real tests accessible to all users
+                   test.visibleTo === 'free' || 
                    (test.visibleTo === undefined && test.isPublic && test.testType === 'practice');
       } else if (req.user.accountType === 'premium' || req.user.accountType === 'pro') {
-        hasAccess = test.visibleTo === 'all' || 
+        hasAccess = test.visibleTo === 'all' || // Real tests
                    test.visibleTo === req.user.accountType ||
                    test.visibleTo === 'free' ||
-                   test.visibleTo === 'student' ||
+                   test.visibleTo === 'student' || // Mock tests
                    (test.visibleTo === undefined && test.isPublic);
       } else if (req.user.accountType === 'student') {
-        hasAccess = test.visibleTo === 'all' || 
-                   test.visibleTo === 'student' ||
+        hasAccess = test.visibleTo === 'all' || // Real tests
+                   test.visibleTo === 'student' || // Mock tests
                    test.visibleTo === 'free' ||
-                   (test.visibleTo === undefined && test.isPublic) ||
-                   // Allow student accounts to access mock tests (study-plan)
-                   test.testType === 'study-plan';
+                   (test.visibleTo === undefined && test.isPublic);
       } else if (req.user.accountType === 'mentor' || req.user.accountType === 'admin') {
-        hasAccess = test.visibleTo === 'all' || 
+        hasAccess = test.visibleTo === 'all' || // Real tests
                    test.visibleTo === req.user.accountType ||
                    test.visibleTo === 'free' ||
-                   test.visibleTo === 'student' ||
+                   test.visibleTo === 'student' || // Mock tests
                    (test.visibleTo === undefined && test.isPublic);
       } else {
         hasAccess = test.visibleTo === 'free';
       }
       
       if (!hasAccess) {
-        logger.debug('Access denied for test:', test._id);
+        // Access denied for test
         return res.status(403).json({ message: 'Access denied. This content requires a higher account tier.' });
       }
     }
 
-          logger.debug('Getting test:', req.params.id);
+          // Test retrieved successfully
 
     res.json({
       success: true,
@@ -357,8 +357,43 @@ router.get('/:id/questions', protect, validateObjectId('id'), async (req, res) =
     }
 
     // Check if user can access this test
-    if (!test.isPublic && test.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: 'Access denied' });
+    const isOwnTest = test.createdBy.toString() === req.user.id;
+    
+    if (isOwnTest) {
+      // User can always access their own tests
+    } else {
+      // Check access based on account type
+      let hasAccess = false;
+      
+      if (req.user.accountType === 'free') {
+        hasAccess = test.visibleTo === 'all' || // Real tests accessible to all users
+                   test.visibleTo === 'free' || 
+                   (test.visibleTo === undefined && test.isPublic && test.testType === 'practice');
+      } else if (req.user.accountType === 'premium' || req.user.accountType === 'pro') {
+        hasAccess = test.visibleTo === 'all' || // Real tests
+                   test.visibleTo === req.user.accountType ||
+                   test.visibleTo === 'free' ||
+                   test.visibleTo === 'student' || // Mock tests
+                   (test.visibleTo === undefined && test.isPublic);
+      } else if (req.user.accountType === 'student') {
+        hasAccess = test.visibleTo === 'all' || // Real tests
+                   test.visibleTo === 'student' || // Mock tests
+                   test.visibleTo === 'free' ||
+                   (test.visibleTo === undefined && test.isPublic);
+      } else if (req.user.accountType === 'mentor' || req.user.accountType === 'admin') {
+        hasAccess = test.visibleTo === 'all' || // Real tests
+                   test.visibleTo === req.user.accountType ||
+                   test.visibleTo === 'free' ||
+                   test.visibleTo === 'student' || // Mock tests
+                   (test.visibleTo === undefined && test.isPublic);
+      } else {
+        hasAccess = test.visibleTo === 'free';
+      }
+      
+      if (!hasAccess) {
+        // Access denied for test questions
+        return res.status(403).json({ message: 'Access denied. This content requires a higher account tier.' });
+      }
     }
 
     const Question = require('../models/Question');
