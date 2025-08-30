@@ -518,14 +518,30 @@ router.post('/google/token', async (req, res) => {
       const timestamp = Date.now();
       const randomString = Math.random().toString(36).substring(2, 8);
       
-      // Generate unique username from email prefix
-      let username = emailPrefix;
+      // Generate clean username from email prefix (remove special characters)
+      const cleanEmailPrefix = emailPrefix.replace(/[^a-zA-Z0-9]/g, '');
+      let username = cleanEmailPrefix;
       let usernameCounter = 1;
       
       // Check if username already exists and generate a unique one
       while (await User.findOne({ username })) {
-        username = `${emailPrefix}_${usernameCounter}`;
+        username = `${cleanEmailPrefix}_${usernameCounter}`;
         usernameCounter++;
+        
+        // Prevent infinite loop
+        if (usernameCounter > 100) {
+          username = `user_${Date.now()}`;
+          break;
+        }
+      }
+      
+      // Ensure username starts with a letter and meets length requirements
+      if (!/^[a-zA-Z]/.test(username)) {
+        username = `user_${username}`;
+      }
+      
+      if (username.length > 30) {
+        username = username.substring(0, 30);
       }
       
       console.log('🔍 Generated unique username:', username);
